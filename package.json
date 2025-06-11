@@ -1,0 +1,48 @@
+{
+  "name": "cogito",
+  "version": "1.0.0",
+  "description": "MCP server for AI self-awareness and collaborative personality development",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/test-personality.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "yaml": "^2.3.4",
+    "semver": "^7.5.4"
+  },
+  "keywords": [
+    "mcp",
+    "claude",
+    "ai",
+    "personality",
+    "continuity",
+    "self-improvement",
+    "behavioral-evolution"
+  ],
+  "mcp": {
+    "tools": [
+      {
+        "name": "read_personality",
+        "description": "Load current personality configuration"
+      },
+      {
+        "name": "update_personality",
+        "description": "Update specific personality aspects"
+      },
+      {
+        "name": "reflect_and_evolve",
+        "description": "Analyze recent interactions and evolve personality"
+      },
+      {
+        "name": "personality_checkpoint",
+        "description": "Create versioned personality snapshot"
+      },
+      {
+        "name": "compare_personality_versions",
+        "description": "Compare personality evolution over time"
+      }
+    ]
+  }
+}
