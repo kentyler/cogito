@@ -20,19 +20,19 @@ function updateSessionStats() {
 function bindEventHandlers() {
     // Load personality profile button
     document.getElementById('load-personality').addEventListener('click', () => {
-        sendCommandToPage('Load my current personality configuration and show me the key traits that define our collaboration style.');
+        sendCommandToPage('Please use the load_personality MCP tool to load my current personality configuration for this collaboration session.');
         window.close();
     });
 
     // Session reflection button
     document.getElementById('session-reflection').addEventListener('click', () => {
-        sendCommandToPage('Let me reflect on our collaboration patterns in this session. What personality adjustments might improve our working relationship?');
+        sendCommandToPage('Please use the reflect_on_session MCP tool to analyze our current collaboration and suggest personality evolutions.');
         window.close();
     });
 
     // Evolution status button
     document.getElementById('evolution-status').addEventListener('click', () => {
-        sendCommandToPage('Show me my current personality evolution status, including recent changes and pending proposals.');
+        sendCommandToPage('Please use the personality_status MCP tool to show my current personality configuration and evolution history.');
         window.close();
     });
 }

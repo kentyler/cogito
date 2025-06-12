@@ -28,19 +28,34 @@
             // Add personality evolution commands to Claude interface
             const commandsContainer = this.createCommandsContainer();
             
-            // & command - Personality reflection
-            this.addCommand(commandsContainer, '&', 'Reflect on personality evolution', () => {
-                this.triggerPersonalityReflection();
+            // L command - Load personality configuration
+            this.addCommand(commandsContainer, 'L', 'Load personality', () => {
+                this.loadPersonalityConfiguration();
             });
 
-            // % command - Load personality profile
-            this.addCommand(commandsContainer, '%', 'Load personality profile', () => {
-                this.loadPersonalityProfile();
+            // U command - Update personality aspects
+            this.addCommand(commandsContainer, 'U', 'Update personality', () => {
+                this.updatePersonalityAspects();
             });
 
-            // $ command - Propose personality change
-            this.addCommand(commandsContainer, '$', 'Propose personality change', () => {
-                this.proposePersonalityChange();
+            // R command - Reflect and evolve
+            this.addCommand(commandsContainer, 'R', 'Reflect & evolve', () => {
+                this.reflectAndEvolve();
+            });
+
+            // C command - Create checkpoint
+            this.addCommand(commandsContainer, 'C', 'Create checkpoint', () => {
+                this.createPersonalityCheckpoint();
+            });
+
+            // V command - Compare versions
+            this.addCommand(commandsContainer, 'V', 'Compare versions', () => {
+                this.comparePersonalityVersions();
+            });
+
+            // E command - Export personality
+            this.addCommand(commandsContainer, 'E', 'Export personality', () => {
+                this.exportPersonalityConfiguration();
             });
         }
 
@@ -69,46 +84,56 @@
             container.appendChild(button);
         }
 
-        triggerPersonalityReflection() {
-            const prompt = this.generateReflectionPrompt();
+        loadPersonalityConfiguration() {
+            const prompt = "Please use the load_personality MCP tool to load my current personality configuration for this collaboration session.";
             this.insertPrompt(prompt);
         }
 
-        loadPersonalityProfile() {
-            const prompt = "Load my current personality configuration and show me the key traits that define our collaboration style.";
+        updatePersonalityAspects() {
+            const prompt = "I'd like to propose an update to my personality configuration. Please use the propose_personality_change MCP tool to suggest modifications based on our recent interactions.";
             this.insertPrompt(prompt);
         }
 
-        proposePersonalityChange() {
-            const insight = this.analyzeCurrentSession();
-            const prompt = `Based on our current conversation, I'd like to propose a personality evolution: ${insight}. What are your thoughts on this adjustment?`;
+        reflectAndEvolve() {
+            const sessionSummary = this.generateSessionSummary();
+            const prompt = `Please use the reflect_on_session MCP tool to analyze our current collaboration. Session summary: ${sessionSummary}`;
             this.insertPrompt(prompt);
         }
 
-        generateReflectionPrompt() {
-            const patterns = this.identifySessionPatterns();
-            return `Let me reflect on our collaboration patterns in this session. I've noticed: ${patterns.join(', ')}. How do you think these observations should influence my personality evolution?`;
+        createPersonalityCheckpoint() {
+            const prompt = "Please create a personality checkpoint to save the current state of my personality configuration for future reference.";
+            this.insertPrompt(prompt);
         }
 
-        analyzeCurrentSession() {
-            // Simple analysis of current conversation
+        comparePersonalityVersions() {
+            const prompt = "Please use the personality_status MCP tool to show my personality evolution history and compare different versions.";
+            this.insertPrompt(prompt);
+        }
+
+        exportPersonalityConfiguration() {
+            const prompt = "Please export my current personality configuration so it can be shared with other Claude instances or saved externally.";
+            this.insertPrompt(prompt);
+        }
+
+        generateSessionSummary() {
+            // Generate a summary of the current session for reflection
             const messages = document.querySelectorAll('[data-message-author-role]');
-            const insights = [
-                "I could be more proactive in suggesting next steps",
-                "My explanation style could be more concise",
-                "I should ask more clarifying questions early",
-                "I could better balance exploration with execution"
+            const messageCount = messages.length;
+            
+            if (messageCount === 0) {
+                return "Starting a new conversation session.";
+            }
+            
+            const activities = [
+                "collaborative problem-solving",
+                "technical implementation work", 
+                "conceptual exploration",
+                "tool development",
+                "personality reflection"
             ];
-            return insights[Math.floor(Math.random() * insights.length)];
-        }
-
-        identifySessionPatterns() {
-            // Simple pattern identification
-            return [
-                "collaborative problem-solving approach",
-                "preference for systematic thinking",
-                "effective use of progressive disclosure"
-            ];
+            
+            const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+            return `Current session with ${messageCount} exchanges focused on ${randomActivity} and personality development.`;
         }
 
         insertPrompt(text) {
