@@ -27,99 +27,108 @@
         }
 
         addPersonalityCommands() {
-            // Add personality evolution commands to Claude interface
+            // Add personality evolution commands to Claude interface (using liminal-explorer approach)
             console.log('🧠 Adding personality commands...');
-            const commandsContainer = this.createCommandsContainer();
             
-            if (!commandsContainer) {
-                console.error('🧠 Failed to create commands container');
+            // Find the input container in Claude.ai (copied from liminal-explorer)
+            const chatInput = document.querySelector('div[contenteditable="true"]') ||
+                             document.querySelector('textarea[placeholder*="Talk to Claude"]');
+            
+            if (!chatInput) {
+                console.error('🧠 Could not find chat input');
                 return;
             }
-            
-            // L command - Load personality configuration
-            this.addCommand(commandsContainer, 'L', 'Load personality', () => {
-                this.loadPersonalityConfiguration();
-            });
 
-            // U command - Update personality aspects
-            this.addCommand(commandsContainer, 'U', 'Update personality', () => {
-                this.updatePersonalityAspects();
-            });
+            const inputContainer = chatInput.closest('div');
+            if (!inputContainer || document.getElementById('cogito-command-panel')) return;
 
-            // R command - Reflect and evolve
-            this.addCommand(commandsContainer, 'R', 'Reflect & evolve', () => {
-                this.reflectAndEvolve();
-            });
+            // Create command panel with HTML (liminal-explorer approach)
+            const panel = document.createElement('div');
+            panel.id = 'cogito-command-panel';
+            panel.innerHTML = `
+              <div class="cogito-header">
+                <span>🧠 AI Personality Evolution</span>
+                <button id="cogito-toggle" class="cogito-toggle">○</button>
+              </div>
+              <div class="cogito-commands" id="cogito-commands">
+                <div class="command-row">
+                  <div class="command-group">
+                    <span class="group-label">Core</span>
+                    <button class="command-btn" data-command="L" title="Load personality configuration">L</button>
+                    <button class="command-btn" data-command="U" title="Update personality aspects">U</button>
+                    <button class="command-btn" data-command="R" title="Reflect and evolve">R</button>
+                  </div>
+                  <div class="command-group">
+                    <span class="group-label">Management</span>
+                    <button class="command-btn" data-command="C" title="Create checkpoint">C</button>
+                    <button class="command-btn" data-command="V" title="Compare versions">V</button>
+                    <button class="command-btn" data-command="E" title="Export personality">E</button>
+                    <button class="command-btn" data-command="D" title="Direct edit">D</button>
+                  </div>
+                </div>
+              </div>
+            `;
 
-            // C command - Create checkpoint
-            this.addCommand(commandsContainer, 'C', 'Create checkpoint', () => {
-                this.createPersonalityCheckpoint();
-            });
-
-            // V command - Compare versions
-            this.addCommand(commandsContainer, 'V', 'Compare versions', () => {
-                this.comparePersonalityVersions();
-            });
-
-            // E command - Export personality
-            this.addCommand(commandsContainer, 'E', 'Export personality', () => {
-                this.exportPersonalityConfiguration();
-            });
-
-            // D command - Direct edit
-            this.addCommand(commandsContainer, 'D', 'Direct edit', () => {
-                this.directEditPersonality();
-            });
-        }
-
-        createCommandsContainer() {
-            let container = document.getElementById('cogito-commands');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'cogito-commands';
-                container.className = 'cogito-commands-container';
-                
-                // Find Claude's input area and add commands nearby
-                const inputArea = document.querySelector('[data-testid="send-button"]')?.closest('div');
-                if (inputArea) {
-                    inputArea.parentNode.insertBefore(container, inputArea);
-                }
+            // Insert panel above input (liminal-explorer approach)
+            const parentContainer = inputContainer.parentElement;
+            if (parentContainer) {
+              parentContainer.insertBefore(panel, inputContainer);
             }
-            return container;
-        }
 
-        addCommand(container, symbol, description, action) {
-            const button = document.createElement('button');
-            button.className = 'cogito-command-btn';
-            button.innerHTML = `<span class="command-symbol">${symbol}</span> ${description}`;
-            button.title = `Cogito: ${description}`;
+            // Add event listeners using liminal-explorer approach
+            document.getElementById('cogito-toggle').addEventListener('click', () => this.toggle());
             
-            // Add multiple event listeners to ensure clicks work
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log(`Cogito command clicked: ${symbol} - ${description}`);
-                alert(`Cogito command: ${symbol} - ${description}`); // Temporary test
-                action();
+            document.querySelectorAll('.command-btn').forEach(btn => {
+              btn.addEventListener('click', (e) => {
+                const command = e.target.dataset.command;
+                console.log(`Cogito command clicked: ${command}`);
+                this.executeCommand(command);
+              });
             });
             
-            button.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log(`Cogito onclick: ${symbol} - ${description}`);
-                action();
-            };
-            
-            container.appendChild(button);
-            console.log(`Added command button: ${symbol} - ${description}`);
+            console.log('🧠 Personality commands added successfully');
         }
 
-        loadPersonalityConfiguration() {
-            const prompt = "Please use the load_personality MCP tool to load my current personality configuration for this collaboration session.";
+
+        executeCommand(command) {
+            console.log(`🧠 Executing personality command: ${command}`);
+            
+            // Map commands to their prompts
+            const commandMap = {
+                'L': 'Please use the load_personality MCP tool to load my current personality configuration for this collaboration session.',
+                'U': 'I\'d like to propose an update to my personality configuration. Please use the propose_personality_change MCP tool to suggest modifications based on our recent interactions.',
+                'R': `Please use the reflect_on_session MCP tool to analyze our current collaboration. Session summary: ${this.generateSessionSummary()}`,
+                'C': 'Please create a personality checkpoint to save the current state of my personality configuration for future reference.',
+                'V': 'Please use the personality_status MCP tool to show my personality evolution history and compare different versions.',
+                'E': 'Please export my current personality configuration so it can be shared with other Claude instances or saved externally.',
+                'D': 'I want to make a direct edit to my personality configuration. Please use the direct_edit_personality MCP tool. What aspect would you like me to modify? (communication_style, working_patterns, philosophical_leanings, curiosity_areas, cautions_and_constraints, collaborator_context)'
+            };
+
+            const prompt = commandMap[command];
+            if (!prompt) {
+                console.error(`Unknown command: ${command}`);
+                return;
+            }
+
             this.insertPrompt(prompt);
             
-            // Listen for personality loading to update collaborator name
-            this.watchForPersonalityLoad();
+            // If loading personality, watch for collaborator name
+            if (command === 'L') {
+                this.watchForPersonalityLoad();
+            }
+        }
+
+        toggle() {
+            const commands = document.getElementById('cogito-commands');
+            const toggle = document.getElementById('cogito-toggle');
+            
+            if (commands && toggle) {
+                const isVisible = commands.style.display !== 'none';
+                commands.style.display = isVisible ? 'none' : 'block';
+                toggle.textContent = isVisible ? '●' : '○';
+                toggle.title = isVisible ? 'Show commands' : 'Hide commands';
+                console.log(`🧠 Commands panel ${isVisible ? 'hidden' : 'shown'}`);
+            }
         }
 
         watchForPersonalityLoad() {
@@ -155,37 +164,6 @@
             setTimeout(() => observer.disconnect(), 10000);
         }
 
-        updatePersonalityAspects() {
-            const prompt = "I'd like to propose an update to my personality configuration. Please use the propose_personality_change MCP tool to suggest modifications based on our recent interactions.";
-            this.insertPrompt(prompt);
-        }
-
-        reflectAndEvolve() {
-            const sessionSummary = this.generateSessionSummary();
-            const prompt = `Please use the reflect_on_session MCP tool to analyze our current collaboration. Session summary: ${sessionSummary}`;
-            this.insertPrompt(prompt);
-        }
-
-        createPersonalityCheckpoint() {
-            const prompt = "Please create a personality checkpoint to save the current state of my personality configuration for future reference.";
-            this.insertPrompt(prompt);
-        }
-
-        comparePersonalityVersions() {
-            const prompt = "Please use the personality_status MCP tool to show my personality evolution history and compare different versions.";
-            this.insertPrompt(prompt);
-        }
-
-        exportPersonalityConfiguration() {
-            const prompt = "Please export my current personality configuration so it can be shared with other Claude instances or saved externally.";
-            this.insertPrompt(prompt);
-        }
-
-        directEditPersonality() {
-            const prompt = "I want to make a direct edit to my personality configuration. Please use the direct_edit_personality MCP tool. What aspect would you like me to modify? (communication_style, working_patterns, philosophical_leanings, curiosity_areas, cautions_and_constraints, collaborator_context)";
-            this.insertPrompt(prompt);
-        }
-
         generateSessionSummary() {
             // Generate a summary of the current session for reflection
             const messages = document.querySelectorAll('[data-message-author-role]');
@@ -208,49 +186,47 @@
         }
 
         insertPrompt(text) {
-            console.log('Inserting prompt:', text.substring(0, 50) + '...');
+            console.log('🧠 Inserting prompt:', text.substring(0, 50) + '...');
             
-            // Try multiple selectors for Claude's input
-            const textArea = document.querySelector('div[contenteditable="true"]') ||
-                            document.querySelector('textarea[placeholder*="Message"]') ||
-                            document.querySelector('[data-testid="composer-input"]');
+            // Use liminal-explorer's approach
+            const chatInput = document.querySelector('div[contenteditable="true"]') ||
+                             document.querySelector('textarea[placeholder*="Talk to Claude"]');
             
-            if (!textArea) {
-                console.error('Could not find Claude input area');
+            if (!chatInput) {
+                console.error('🧠 Could not find chat input');
                 return;
             }
 
-            // Clear and insert new text
-            textArea.focus();
-            
-            if (textArea.tagName === 'TEXTAREA') {
-                textArea.value = text;
+            // Insert into chat input (liminal-explorer approach)
+            if (chatInput.contentEditable === 'true') {
+              // For contenteditable div
+              chatInput.textContent = text;
+              // Trigger input events
+              chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+              chatInput.dispatchEvent(new Event('change', { bubbles: true }));
             } else {
-                textArea.innerHTML = text;
-                textArea.textContent = text;
+              // For textarea
+              chatInput.value = text;
+              chatInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
             
-            // Trigger events to enable send button
-            textArea.dispatchEvent(new Event('input', { bubbles: true }));
-            textArea.dispatchEvent(new Event('change', { bubbles: true }));
-            textArea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            chatInput.focus();
             
-            // Auto-send after a brief delay
+            // Auto-send after brief delay (liminal-explorer approach)
             setTimeout(() => {
-                const sendButton = document.querySelector('[data-testid="send-button"]') ||
-                                  document.querySelector('button[aria-label*="Send"]') ||
-                                  document.querySelector('button:has(svg)') ||
-                                  document.querySelector('.send-button');
-                
-                console.log('Send button found:', !!sendButton, sendButton?.disabled);
-                
-                if (sendButton && !sendButton.disabled) {
-                    sendButton.click();
-                    console.log('Message sent!');
-                } else {
-                    console.log('Send button not available or disabled');
-                }
-            }, 1000);
+              // Look for Claude.ai send button
+              const sendButton = document.querySelector('button[type="submit"]') ||
+                                document.querySelector('button[aria-label*="Send"]') ||
+                                document.querySelector('svg[data-icon="send"]')?.closest('button') ||
+                                document.querySelector('button:last-of-type');
+              
+              console.log('🧠 Send button found:', !!sendButton, sendButton?.disabled);
+              
+              if (sendButton && !sendButton.disabled) {
+                sendButton.click();
+                console.log('🧠 Message sent!');
+              }
+            }, 500);
         }
 
         trackInteractions() {
@@ -296,41 +272,98 @@
         }
     }
 
-    // Styles for Cogito interface
+    // Styles for Cogito interface (using liminal-explorer structure)
     const styles = `
-        .cogito-commands-container {
-            display: flex;
-            gap: 8px;
+        #cogito-command-panel {
+            background: #2d3748;
+            border: 1px solid #667eea;
+            border-radius: 8px;
             margin: 8px 0;
-            flex-wrap: wrap;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-
-        .cogito-command-btn {
+        
+        .cogito-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px 8px 0 0;
             color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
             font-size: 12px;
             font-weight: 500;
+        }
+        
+        .cogito-toggle {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            position: relative;
-            z-index: 9999;
-            pointer-events: auto;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        .cogito-command-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        
+        .cogito-toggle:hover {
+            background: rgba(255,255,255,0.2);
         }
-
-        .cogito-command-btn .command-symbol {
+        
+        .cogito-commands {
+            padding: 12px;
+            display: block;
+        }
+        
+        .command-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .command-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .group-label {
+            display: block;
+            color: #a0aec0;
+            font-size: 10px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .command-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 1px solid #667eea;
+            color: white;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            margin: 2px;
+            cursor: pointer;
+            font-size: 12px;
             font-weight: bold;
-            margin-right: 4px;
-            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .command-btn:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            border-color: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .command-btn:active {
+            transform: translateY(0);
         }
 
         .cogito-personality-indicator {
@@ -349,12 +382,19 @@
         }
 
         @media (prefers-color-scheme: dark) {
-            .cogito-command-btn {
-                background: linear-gradient(135deg, #4c63d2 0%, #5a4d7a 100%);
+            #cogito-command-panel {
+                background: #1a202c;
+                border-color: #4c63d2;
             }
             
-            .cogito-command-btn:hover {
+            .command-btn {
+                background: linear-gradient(135deg, #4c63d2 0%, #5a4d7a 100%);
+                border-color: #4c63d2;
+            }
+            
+            .command-btn:hover {
                 background: linear-gradient(135deg, #4457c2 0%, #504268 100%);
+                border-color: #4457c2;
             }
 
             .cogito-personality-indicator {
