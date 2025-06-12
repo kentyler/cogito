@@ -19,14 +19,22 @@
         }
 
         init() {
+            console.log('🧠 Initializing Cogito PersonalityInterface...');
             this.addPersonalityCommands();
             this.trackInteractions();
             this.addVisualIndicators();
+            console.log('🧠 Cogito PersonalityInterface initialization complete');
         }
 
         addPersonalityCommands() {
             // Add personality evolution commands to Claude interface
+            console.log('🧠 Adding personality commands...');
             const commandsContainer = this.createCommandsContainer();
+            
+            if (!commandsContainer) {
+                console.error('🧠 Failed to create commands container');
+                return;
+            }
             
             // L command - Load personality configuration
             this.addCommand(commandsContainer, 'L', 'Load personality', () => {
@@ -85,8 +93,12 @@
             button.className = 'cogito-command-btn';
             button.innerHTML = `<span class="command-symbol">${symbol}</span> ${description}`;
             button.title = `Cogito: ${description}`;
-            button.onclick = action;
+            button.onclick = () => {
+                console.log(`Cogito command clicked: ${symbol} - ${description}`);
+                action();
+            };
             container.appendChild(button);
+            console.log(`Added command button: ${symbol} - ${description}`);
         }
 
         loadPersonalityConfiguration() {
@@ -183,15 +195,49 @@
         }
 
         insertPrompt(text) {
-            const textArea = document.querySelector('div[contenteditable="true"]');
-            if (textArea) {
-                textArea.focus();
-                textArea.innerHTML = text;
-                
-                // Trigger input event to enable send button
-                const event = new Event('input', { bubbles: true });
-                textArea.dispatchEvent(event);
+            console.log('Inserting prompt:', text.substring(0, 50) + '...');
+            
+            // Try multiple selectors for Claude's input
+            const textArea = document.querySelector('div[contenteditable="true"]') ||
+                            document.querySelector('textarea[placeholder*="Message"]') ||
+                            document.querySelector('[data-testid="composer-input"]');
+            
+            if (!textArea) {
+                console.error('Could not find Claude input area');
+                return;
             }
+
+            // Clear and insert new text
+            textArea.focus();
+            
+            if (textArea.tagName === 'TEXTAREA') {
+                textArea.value = text;
+            } else {
+                textArea.innerHTML = text;
+                textArea.textContent = text;
+            }
+            
+            // Trigger events to enable send button
+            textArea.dispatchEvent(new Event('input', { bubbles: true }));
+            textArea.dispatchEvent(new Event('change', { bubbles: true }));
+            textArea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            
+            // Auto-send after a brief delay
+            setTimeout(() => {
+                const sendButton = document.querySelector('[data-testid="send-button"]') ||
+                                  document.querySelector('button[aria-label*="Send"]') ||
+                                  document.querySelector('button:has(svg)') ||
+                                  document.querySelector('.send-button');
+                
+                console.log('Send button found:', !!sendButton, sendButton?.disabled);
+                
+                if (sendButton && !sendButton.disabled) {
+                    sendButton.click();
+                    console.log('Message sent!');
+                } else {
+                    console.log('Send button not available or disabled');
+                }
+            }, 1000);
         }
 
         trackInteractions() {
