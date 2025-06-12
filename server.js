@@ -121,6 +121,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: 'object',
           properties: {}
         }
+      },
+      {
+        name: 'direct_edit_personality',
+        description: 'Directly edit personality configuration without approval workflow',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            aspect: {
+              type: 'string',
+              description: 'Personality aspect to modify',
+              enum: ['communication_style', 'working_patterns', 'philosophical_leanings', 'curiosity_areas', 'cautions_and_constraints', 'collaborator_context']
+            },
+            modification: {
+              type: 'object',
+              description: 'The direct change to apply'
+            },
+            reasoning: {
+              type: 'string',
+              description: 'Brief reason for the direct edit'
+            }
+          },
+          required: ['aspect', 'modification', 'reasoning']
+        }
       }
     ]
   };
@@ -157,6 +180,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case 'personality_status': {
       return getPersonalityStatus();
+    }
+
+    case 'direct_edit_personality': {
+      const { aspect, modification, reasoning } = args;
+      return directEditPersonality(aspect, modification, reasoning);
     }
 
     default:
@@ -408,6 +436,73 @@ async function createDefaultPersonality(collaborator) {
   await fs.writeFile(personalityPath, yaml.stringify(defaultPersonality));
 
   return defaultPersonality;
+}
+
+async function directEditPersonality(aspect, modification, reasoning) {
+  if (!evolution.currentPersonality) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: '❌ No personality loaded. Use `load_personality` first.'
+        }
+      ]
+    };
+  }
+
+  try {
+    // Apply the direct edit
+    evolution.currentPersonality[aspect] = {
+      ...evolution.currentPersonality[aspect],
+      ...modification
+    };
+
+    // Update metadata
+    const version = incrementVersion(evolution.currentPersonality.metadata.version);
+    evolution.currentPersonality.metadata.version = version;
+    evolution.currentPersonality.metadata.last_updated = new Date().toISOString();
+
+    // Log the change
+    if (!evolution.currentPersonality.evolution_log) {
+      evolution.currentPersonality.evolution_log = {};
+    }
+    
+    evolution.currentPersonality.evolution_log[version] = {
+      date: new Date().toISOString(),
+      changes: `Direct edit: ${aspect}`,
+      reasoning: reasoning,
+      context: 'Direct personality modification',
+      edit_type: 'direct'
+    };
+
+    // Save to file
+    const personalityPath = path.join(__dirname, 'personalities', `${evolution.currentPersonality.metadata.collaborator}.yaml`);
+    await fs.writeFile(personalityPath, yaml.stringify(evolution.currentPersonality));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `✅ **Direct Edit Applied**\n\n**Aspect**: ${aspect}\n**Version**: ${version}\n**Reasoning**: ${reasoning}\n\nPersonality configuration updated and saved.`
+        }
+      ]
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `❌ **Edit Failed**: ${error.message}`
+        }
+      ]
+    };
+  }
+}
+
+function incrementVersion(version) {
+  const parts = version.split('.');
+  parts[2] = String(parseInt(parts[2]) + 1);
+  return parts.join('.');
 }
 
 // Start the server
