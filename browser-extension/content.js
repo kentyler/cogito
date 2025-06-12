@@ -57,6 +57,11 @@
             this.addCommand(commandsContainer, 'E', 'Export personality', () => {
                 this.exportPersonalityConfiguration();
             });
+
+            // D command - Direct edit
+            this.addCommand(commandsContainer, 'D', 'Direct edit', () => {
+                this.directEditPersonality();
+            });
         }
 
         createCommandsContainer() {
@@ -112,6 +117,11 @@
 
         exportPersonalityConfiguration() {
             const prompt = "Please export my current personality configuration so it can be shared with other Claude instances or saved externally.";
+            this.insertPrompt(prompt);
+        }
+
+        directEditPersonality() {
+            const prompt = "I want to make a direct edit to my personality configuration. Please use the direct_edit_personality MCP tool. What aspect would you like me to modify? (communication_style, working_patterns, philosophical_leanings, curiosity_areas, cautions_and_constraints, collaborator_context)";
             this.insertPrompt(prompt);
         }
 
