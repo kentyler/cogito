@@ -92,6 +92,42 @@
         loadPersonalityConfiguration() {
             const prompt = "Please use the load_personality MCP tool to load my current personality configuration for this collaboration session.";
             this.insertPrompt(prompt);
+            
+            // Listen for personality loading to update collaborator name
+            this.watchForPersonalityLoad();
+        }
+
+        watchForPersonalityLoad() {
+            // Watch for MCP responses that contain personality information
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE && node.textContent) {
+                            const text = node.textContent;
+                            // Look for personality loading confirmation
+                            const collaboratorMatch = text.match(/Personality loaded for (\w+)/i) || 
+                                                    text.match(/collaborator[":]\s*["]?(\w+)["]?/i);
+                            
+                            if (collaboratorMatch) {
+                                const collaboratorName = collaboratorMatch[1];
+                                chrome.storage.local.set({ collaboratorName });
+                                chrome.runtime.sendMessage({
+                                    action: 'updatePersonality',
+                                    collaborator: collaboratorName
+                                });
+                            }
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Stop watching after 10 seconds
+            setTimeout(() => observer.disconnect(), 10000);
         }
 
         updatePersonalityAspects() {

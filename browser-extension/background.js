@@ -8,7 +8,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     interactionCount: 0,
     personalityVersion: '0.3.0',
-    collaboratorName: 'ken',
+    collaboratorName: 'Not set',
     sessionStart: Date.now()
   });
 });
@@ -25,10 +25,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'updatePersonality') {
     // Update personality version and metadata
-    chrome.storage.local.set({
-      personalityVersion: request.version,
+    const updates = {
       lastUpdated: Date.now()
-    });
+    };
+    
+    if (request.version) {
+      updates.personalityVersion = request.version;
+    }
+    
+    if (request.collaborator) {
+      updates.collaboratorName = request.collaborator;
+    }
+    
+    chrome.storage.local.set(updates);
   }
   
   if (request.keepAlive) {
