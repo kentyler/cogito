@@ -4,6 +4,8 @@
 
 An MCP server for AI self-awareness and collaborative personality development. Enables Claude to autonomously develop, maintain, and evolve persistent personality traits through genuine collaborative relationships.
 
+> **💡 Using ChatGPT/OpenAI?** Check out [cogito-functions](https://github.com/kentyler/cogito-functions) - the same AI personality development system implemented with OpenAI function calling.
+
 ## Concept
 
 While CLAUDE.md captures factual context and project details, this system enables Claude to:
