@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Cogito - AI Personality Evolution",
+  "version": "1.0.0",
+  "description": "AI self-awareness and collaborative personality development for Claude.ai",
+  
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["content.js"]
+    }
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Cogito - AI Personality Evolution"
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png", 
+    "128": "icons/icon128.png"
+  }
+}
