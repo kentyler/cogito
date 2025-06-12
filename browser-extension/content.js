@@ -93,10 +93,23 @@
             button.className = 'cogito-command-btn';
             button.innerHTML = `<span class="command-symbol">${symbol}</span> ${description}`;
             button.title = `Cogito: ${description}`;
-            button.onclick = () => {
+            
+            // Add multiple event listeners to ensure clicks work
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log(`Cogito command clicked: ${symbol} - ${description}`);
+                alert(`Cogito command: ${symbol} - ${description}`); // Temporary test
+                action();
+            });
+            
+            button.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log(`Cogito onclick: ${symbol} - ${description}`);
                 action();
             };
+            
             container.appendChild(button);
             console.log(`Added command button: ${symbol} - ${description}`);
         }
@@ -303,6 +316,9 @@
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 9999;
+            pointer-events: auto;
         }
 
         .cogito-command-btn:hover {
