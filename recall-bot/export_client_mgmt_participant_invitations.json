@@ -1,0 +1,84 @@
+{
+  "schema": "client_mgmt",
+  "table": "participant_invitations",
+  "structure": [
+    {
+      "column_name": "id",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "column_default": "nextval('client_mgmt.participant_invitations_id_seq'::regclass)",
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "invited_by",
+      "data_type": "bigint",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "email",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "client_id",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "invitation_token",
+      "data_type": "text",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "expires_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "NO",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "accepted_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone",
+      "is_nullable": "YES",
+      "column_default": "now()",
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "invited_to_role",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": "'member'::text",
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "personal_message",
+      "data_type": "text",
+      "is_nullable": "YES",
+      "column_default": null,
+      "character_maximum_length": null
+    },
+    {
+      "column_name": "status",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "column_default": "'pending'::character varying",
+      "character_maximum_length": 20
+    }
+  ],
+  "data": []
+}

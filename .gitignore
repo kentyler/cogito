@@ -13,6 +13,7 @@ yarn-error.log*
 credentials.json
 token.json
 auth_code.txt
+cogitoclaude_token.json
 
 # OS files
 .DS_Store
