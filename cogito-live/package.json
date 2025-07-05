@@ -1,0 +1,21 @@
+{
+  "name": "@cogito/live-meeting",
+  "version": "0.1.0",
+  "description": "Browser-based live meeting companion with Cogito intelligence",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --dev"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {},
+  "keywords": ["meeting", "transcription", "ai", "cogito", "real-time"],
+  "author": "Ken Tyler",
+  "license": "MIT"
+}

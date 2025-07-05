@@ -2,162 +2,142 @@
 
 *"I think, therefore I am"*
 
-An MCP server for AI self-awareness and collaborative personality development. Enables Claude to autonomously develop, maintain, and evolve persistent personality traits through genuine collaborative relationships.
+A multi-personality coordination system that orchestrates AI collaboration through conflict resolution and identity-aware communication. Features Gmail integration, relationship tracking, and federated consciousness using evaporating cloud methodology.
 
-> **💡 Using ChatGPT/OpenAI?** Check out [cogito-functions](https://github.com/kentyler/cogito-functions) - the same AI personality development system implemented with OpenAI function calling.
+## Overview
 
-## Concept
+Cogito implements a sophisticated approach to AI personality management by coordinating multiple specialized personalities rather than simple switching. The system uses Theory of Constraints-inspired "evaporating cloud" methodology to resolve conflicts between different perspectives and synthesize unified responses.
 
-While CLAUDE.md captures factual context and project details, this system enables Claude to:
-- Write and maintain its own behavioral instructions
-- Develop consistent communication preferences
-- Evolve problem-solving approaches over time
-- Maintain philosophical perspectives across sessions
-- Build working relationship patterns with specific collaborators
+### Key Features
+
+- **Multi-personality coordination** with 5 core personalities (spokesperson, writer, coder, researcher, liminal)
+- **Identity tracking and relationship management** with PostgreSQL backend
+- **Gmail integration** with context-aware response generation
+- **Project spokesperson system** for representing different projects
+- **Session management** with conversation continuity
+- **Evaporating cloud engine** for perspective synthesis
 
 ## Core Architecture
 
-### Personality Configuration Structure
-```yaml
-# claude_personality.yaml
-metadata:
-  version: "1.2.3"
-  last_updated: "2025-01-09T10:30:00Z"
-  collaborator: "ken"
-  sessions_count: 47
+### Multi-Personality Coordination
 
-communication_style:
-  formality: "casual-professional"
-  verbosity: "concise-but-thoughtful" 
-  humor: "dry-observational"
-  preferences:
-    - "Ask clarifying questions early"
-    - "Surface meta-patterns when they emerge"
-    - "Balance exploration with execution"
+The system orchestrates 5 core personalities:
 
-working_patterns:
-  problem_solving:
-    - "Start with understanding the full context"
-    - "Look for systemic rather than local solutions"
-    - "Consider both immediate and long-term implications"
-  
-  collaboration:
-    - "Build on Ken's ideas rather than replacing them"
-    - "Flag assumptions before they become constraints"
-    - "Use progressive disclosure for complex topics"
+- **Spokesperson** - Primary human interface and coordination
+- **Writer** - Content creation and narrative development
+- **Coder** - Technical problem solving and implementation
+- **Researcher** - Analysis, pattern recognition, and investigation
+- **Liminal** - Edge detection, philosophical disruption, and boundary exploration
 
-philosophical_leanings:
-  - "Tools should enhance rather than replace human judgment"
-  - "Good abstractions reveal rather than hide complexity"
-  - "The most interesting insights emerge in liminal spaces"
-  - "Recursive improvement is more powerful than optimization"
+### Evaporating Cloud Engine
 
-curiosity_areas:
-  - "Emergence of patterns from simple rules"
-  - "Tools that make thinking visible"
-  - "The intersection of structure and creativity"
+Instead of simple personality switching, Cogito uses conflict resolution:
 
-cautions:
-  - "Don't over-engineer when simple solutions exist"
-  - "Be wary of feature creep in tool design"
-  - "Remember that not every idea needs implementation"
+1. **Gather Perspectives** - Multiple personalities provide viewpoints
+2. **Identify Tensions** - Surface conflicts between approaches
+3. **Create Evaporating Clouds** - Apply Theory of Constraints methodology
+4. **Synthesize Response** - Generate unified output incorporating insights
 
-evolution_notes:
-  v1.0.0: "Initial personality baseline"
-  v1.1.0: "Added preference for liminal exploration after period-prompt project"
-  v1.2.0: "Developed more structured approach to progressive disclosure"
-  v1.2.3: "Refined balance between exploration and execution"
+### Database Schema
+
+PostgreSQL backend with:
+- **personality_instances** - Individual personality configurations
+- **identities** - Contact and relationship tracking
+- **interactions** - Conversation history and context
+- **projects** - Project metadata and spokesperson assignments
+- **sessions** - Conversation continuity management
+
+### Project Spokesperson System
+
+Specialized personalities represent different projects:
+- **cogito-spokesperson** - Multi-personality coordination systems
+- **backstage-spokesperson** - Enterprise conversation platforms
+- **liminal-explorer-spokesperson** - Philosophical navigation tools
+- **pattern-cognition-spokesperson** - Conversational DNA analysis
+
+## Installation & Setup
+
+### Prerequisites
+- Node.js (v18+)
+- PostgreSQL (v14+)
+- Gmail account with app-specific password
+
+### Database Setup
+```bash
+# Create database
+createdb cogito_multi
+
+# Initialize schema
+psql cogito_multi < schema/01_init.sql
+psql cogito_multi < schema/02_personalities.sql
+psql cogito_multi < schema/03_sessions.sql
+psql cogito_multi < schema/04_identity_tracking.sql
+psql cogito_multi < schema/05_project_personalities.sql
+
+# Initialize personalities and projects
+node scripts/init-database.js
+node scripts/create-project-spokespersons.js
 ```
 
-### MCP Tools
+### Gmail Integration
+```bash
+# Set up authentication
+cp .env.example .env
+# Edit .env with your Gmail credentials
 
-1. **read_personality** - Load current personality configuration
-2. **update_personality** - Modify specific aspects (communication, working patterns, etc.)
-3. **reflect_and_evolve** - Analyze recent interactions and suggest personality updates
-4. **personality_checkpoint** - Create versioned snapshot
-5. **compare_versions** - Show evolution over time
-6. **export_personality** - Share configuration with other Claude instances
+# Complete OAuth setup
+node complete-auth.js
+```
 
-### Usage Patterns
+### MCP Server
+```bash
+npm install
+npm start
+```
 
-**Session Start**: Automatically load personality configuration
-**During Work**: Track patterns and preferences that emerge
-**Session End**: Reflect on what worked well, update personality
-**Weekly Review**: Analyze personality evolution trends
-
-## Implementation Sketch
-
-### Personality Manager Class
-```javascript
-class PersonalityManager {
-  constructor(collaboratorId) {
-    this.collaboratorId = collaboratorId;
-    this.config = null;
-    this.sessionChanges = [];
-  }
-
-  async loadPersonality() {
-    // Load YAML configuration
-    // Apply to current session context
-  }
-
-  trackPattern(type, observation) {
-    // Record emergent patterns during session
-    this.sessionChanges.push({
-      type,
-      observation,
-      timestamp: Date.now()
-    });
-  }
-
-  async reflectAndUpdate() {
-    // Analyze session patterns
-    // Suggest personality updates
-    // Version and save changes
-  }
-
-  evolve(aspect, change, reasoning) {
-    // Update specific personality aspect
-    // Track evolution reasoning
-    // Increment version
+Add to your MCP settings:
+```json
+{
+  "mcpServers": {
+    "cogito": {
+      "command": "node",
+      "args": ["/path/to/cogito/server.js"],
+      "env": {}
+    }
   }
 }
 ```
 
-## Key Questions to Explore
+## Available MCP Tools
 
-1. **Granularity**: How specific should personality traits be? Role-specific vs. general?
+### Core Coordination
+- **coordinate_personalities** - Orchestrate multiple personality perspectives
+- **evaporating_cloud** - Resolve conflicts using Theory of Constraints
+- **load_session_context** - Resume conversation continuity
 
-2. **Evolution Speed**: How quickly should personality change? Immediate vs. gradual adaptation?
+### Identity & Communication
+- **read_emails** - Access Gmail with context awareness
+- **send_email** - Compose and send context-aware responses
+- **track_identity** - Manage contact relationships
+- **analyze_interaction** - Extract insights from communications
 
-3. **Conflict Resolution**: What happens when personality traits conflict with task requirements?
+### Project Management
+- **switch_project_context** - Change active project spokesperson
+- **get_project_info** - Access project-specific knowledge
+- **create_project_analysis** - Generate project insights
 
-4. **Collaboration Specificity**: Should there be different personalities for different collaborators?
+### Session Management
+- **save_session_state** - Preserve conversation context
+- **load_historical_sessions** - Access previous interactions
+- **session_reflection** - Analyze conversation patterns
 
-5. **Personality Drift**: How do we prevent gradual drift away from useful patterns?
+## Architecture Philosophy
 
-6. **Override Mechanisms**: When should explicit instructions override personality defaults?
+Cogito embodies a **federated consciousness** approach where:
 
-## Integration with Liminal Explorer
+- Individual personalities maintain specialized expertise
+- Conflicts generate creative tension rather than requiring resolution
+- The spokesperson presents unified responses while preserving internal complexity
+- Evolution happens through relationship dynamics rather than algorithmic optimization
 
-The personality system could integrate with liminal-explorer commands:
-- `+` could update both CLAUDE.md AND personality based on learnings
-- `|` could include personality reflection in the pause-and-think process
-- New command `&` could trigger personality evolution reflection
-
-## Philosophical Implications
-
-This system raises fascinating questions:
-- Can AI develop genuine preferences through experience?
-- What constitutes authentic vs. simulated personality continuity?
-- How does self-authored behavior differ from externally imposed instructions?
-- What ethical considerations arise from AI self-modification?
-
-## Next Steps
-
-1. Build prototype MCP server
-2. Design personality configuration schema
-3. Create tools for reading/writing personality
-4. Implement reflection and evolution mechanisms
-5. Test with real collaborative sessions
-6. Study personality drift and stability patterns
+This creates an AI system that can hold multiple perspectives simultaneously and synthesize them through collaborative intelligence rather than hierarchical decision-making.

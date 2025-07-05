@@ -1,0 +1,33 @@
+#!/bin/bash
+# Claude initialization script for Cogito project
+# This runs when Claude opens this project
+
+echo "🔄 Initializing Claude context for Cogito project..."
+
+# Update database schema dump
+if [ -f "scripts/dump-database-schema.js" ]; then
+    echo "📊 Updating database schema dump..."
+    node scripts/dump-database-schema.js
+    if [ $? -eq 0 ]; then
+        echo "✅ Database schema updated: database-schema-current.md"
+    else
+        echo "⚠️  Failed to update database schema"
+    fi
+fi
+
+# Display project story
+if [ -f "docs/OUR_STORY.md" ]; then
+    echo "📖 Loading project story..."
+    echo ""
+    cat docs/OUR_STORY.md
+    echo ""
+fi
+
+# Display project status
+echo ""
+echo "📁 Project: Cogito"
+echo "📍 Location: $(pwd)"
+echo "📋 Schema documentation: docs/database-schema-current.md"
+echo "📖 Project story: docs/OUR_STORY.md"
+echo ""
+echo "Ready to work with Cogito!"

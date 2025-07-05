@@ -1,0 +1,15 @@
+#!/bin/bash
+# Cogito MCP Server launcher script
+
+COGITO_DIR="/home/ken/claude-projects/cogito"
+
+# Check if already running
+if pgrep -f "node.*server.js" > /dev/null; then
+    echo "✅ Cogito MCP server is already running"
+    exit 0
+fi
+
+# Start the server
+cd "$COGITO_DIR"
+echo "🚀 Starting Cogito MCP server..."
+npm start

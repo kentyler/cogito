@@ -9,6 +9,11 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Gmail credentials and tokens (NEVER commit these)
+credentials.json
+token.json
+auth_code.txt
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -35,5 +40,15 @@ coverage/
 tmp/
 temp/
 
-# Personality evolution data (optional - can be committed for sharing)
+# Python virtual environments
+embedding_env/
+meeting-env/
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+
+
+# Personality evolution data (optional - can be committed for sharing)  
 # personalities/*.yaml
