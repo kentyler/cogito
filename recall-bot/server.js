@@ -180,18 +180,39 @@ class RealTimeTranscript {
     const {speaker, text} = message;
     const lowerText = text.toLowerCase();
     
-    // Question patterns for Cogito
-    const questionPatterns = [
-      /\bcogito[,\s]/i,
-      /hey\s+cogito/i,
-      /question\s+for\s+cogito/i,
-      /cogito[,\s]+(what|how|why|when|where|can|could|would)/i,
-      /@cogito/i
-    ];
+    // Check for start protocol: "tango delta"
+    if (/\btango\s+delta\b/i.test(text)) {
+      console.log(`🎯 Tango Delta detected from ${speaker} - starting question capture`);
+      if (!this.activeQuestions) this.activeQuestions = new Map();
+      this.activeQuestions.set(speaker, {
+        startMessage: text,
+        questionParts: [text],
+        startTime: Date.now()
+      });
+      return;
+    }
     
-    if (questionPatterns.some(pattern => pattern.test(text))) {
-      console.log(`🤖 Question detected from ${speaker}: ${text}`);
-      this.handleQuestionToClaude(speaker, text);
+    // Check for end protocol: "victor over"
+    if (/\bvictor\s+over\b/i.test(text)) {
+      if (this.activeQuestions && this.activeQuestions.has(speaker)) {
+        console.log(`🏁 Victor Over detected from ${speaker} - processing complete question`);
+        const questionData = this.activeQuestions.get(speaker);
+        questionData.questionParts.push(text);
+        
+        // Combine all parts into full question
+        const fullQuestion = questionData.questionParts.join(' ');
+        this.handleQuestionToClaude(speaker, fullQuestion);
+        
+        // Clear the active question
+        this.activeQuestions.delete(speaker);
+      }
+      return;
+    }
+    
+    // If we have an active question for this speaker, add to it
+    if (this.activeQuestions && this.activeQuestions.has(speaker)) {
+      console.log(`📝 Adding to active question from ${speaker}: ${text}`);
+      this.activeQuestions.get(speaker).questionParts.push(text);
     }
   }
   
