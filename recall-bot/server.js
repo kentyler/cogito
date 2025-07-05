@@ -212,10 +212,10 @@ wss.on('connection', (ws, req) => {
         // Generate embedding for the accumulated text
         const embedding = await generateEmbedding(buffer.text.trim());
         
-        // Create a turn for this chunk with embedding
+        // Create a turn for this chunk (without embedding for now)
         const turnResult = await pool.query(
-          `INSERT INTO turns (participant_id, content, source_type, metadata, content_vector) 
-           VALUES ($1, $2, $3, $4, $5) RETURNING turn_id`,
+          `INSERT INTO turns (participant_id, content, source_type, metadata) 
+           VALUES ($1, $2, $3, $4) RETURNING turn_id`,
           [
             attendee.id,
             buffer.text.trim(),
@@ -224,9 +224,9 @@ wss.on('connection', (ws, req) => {
               startTimestamp: buffer.startTimestamp,
               endTimestamp: buffer.lastTimestamp,
               bot_id: botId,
-              word_count: wordCount
-            },
-            embedding ? JSON.stringify(embedding) : null
+              word_count: wordCount,
+              has_embedding: !!embedding
+            }
           ]
         );
         const turn = turnResult.rows[0];
@@ -250,7 +250,7 @@ wss.on('connection', (ws, req) => {
           [meeting.block_id, turn.turn_id, sequenceResult.rows[0].next_order]
         );
         
-        console.log(`Stored ${wordCount} words for ${speakerName} with embedding`);
+        console.log(`Stored ${wordCount} words for ${speakerName}`);
       }
       
     } catch (error) {
