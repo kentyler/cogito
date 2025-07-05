@@ -142,8 +142,131 @@ app.get('/api/check-transcription/:botId', async (req, res) => {
   }
 });
 
-// Track transcript accumulation per bot
+// Track transcript accumulation per bot (for storage)
 const transcriptBuffers = new Map();
+
+// Track full meeting transcripts in memory (for real-time interaction)
+const meetingTranscripts = new Map();
+
+class RealTimeTranscript {
+  constructor(botId) {
+    this.botId = botId;
+    this.fullTranscript = '';
+    this.messageHistory = [];
+    this.participantContributions = new Map();
+    this.startTime = Date.now();
+  }
+  
+  addMessage(speaker, text, timestamp) {
+    const message = {speaker, text, timestamp, id: Date.now()};
+    
+    // Store in full transcript
+    this.fullTranscript += `[${new Date(timestamp).toLocaleTimeString()}] ${speaker}: ${text}\n`;
+    this.messageHistory.push(message);
+    
+    // Update participant contributions
+    if (!this.participantContributions.has(speaker)) {
+      this.participantContributions.set(speaker, '');
+    }
+    this.participantContributions.set(speaker, 
+      this.participantContributions.get(speaker) + ' ' + text
+    );
+    
+    // Check for questions to Cogito
+    this.checkForQuestions(message);
+  }
+  
+  checkForQuestions(message) {
+    const {speaker, text} = message;
+    const lowerText = text.toLowerCase();
+    
+    // Question patterns for Cogito
+    const questionPatterns = [
+      /\bcogito[,\s]/i,
+      /hey\s+cogito/i,
+      /question\s+for\s+cogito/i,
+      /cogito[,\s]+(what|how|why|when|where|can|could|would)/i,
+      /@cogito/i
+    ];
+    
+    if (questionPatterns.some(pattern => pattern.test(text))) {
+      console.log(`🤖 Question detected from ${speaker}: ${text}`);
+      this.handleQuestionToClaude(speaker, text);
+    }
+  }
+  
+  async handleQuestionToClaude(speaker, questionText) {
+    try {
+      // Get recent context (last 500 words)
+      const context = this.getRecentContext(500);
+      
+      console.log(`🧠 Processing question for Claude: "${questionText}"`);
+      console.log(`📝 Context length: ${context.length} characters`);
+      
+      // TODO: Add Claude API call here
+      const response = await this.queryClaudeWithContext(speaker, questionText, context);
+      
+      // Send response to Zoom chat via Recall.ai
+      await this.sendChatResponse(response);
+      
+    } catch (error) {
+      console.error('Error handling Claude question:', error);
+    }
+  }
+  
+  getRecentContext(wordLimit = 500) {
+    const words = this.fullTranscript.split(' ');
+    return words.slice(-wordLimit).join(' ');
+  }
+  
+  getParticipants() {
+    return Array.from(this.participantContributions.keys());
+  }
+  
+  getMeetingDuration() {
+    return Math.round((Date.now() - this.startTime) / 1000 / 60); // minutes
+  }
+  
+  async queryClaudeWithContext(speaker, questionText, context) {
+    try {
+      // For now, return a placeholder response
+      // TODO: Integrate with Anthropic API
+      console.log(`💭 Would ask Claude: "${questionText}" with ${context.length} chars of context`);
+      
+      return `Hi ${speaker}! I heard your question: "${questionText}". I'm processing this with the full meeting context. (Claude integration coming soon!)`;
+      
+    } catch (error) {
+      console.error('Error querying Claude:', error);
+      return `Sorry ${speaker}, I had trouble processing your question. Please try again.`;
+    }
+  }
+  
+  async sendChatResponse(responseText) {
+    try {
+      // Send chat message via Recall.ai bot
+      const chatResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${this.botId}/send_chat_message/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${process.env.RECALL_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: `🤖 Cogito: ${responseText}`
+        })
+      });
+      
+      if (chatResponse.ok) {
+        console.log(`✅ Sent chat response: ${responseText.substring(0, 50)}...`);
+      } else {
+        const error = await chatResponse.text();
+        console.error('Failed to send chat message:', error);
+      }
+      
+    } catch (error) {
+      console.error('Error sending chat response:', error);
+    }
+  }
+}
 
 // WebSocket handler for real-time transcription
 wss.on('connection', (ws, req) => {
@@ -189,6 +312,13 @@ wss.on('connection', (ws, req) => {
       // Combine words into text
       const text = words.map(w => w.text).join(' ');
       const timestamp = words[0]?.start_time || Date.now();
+      
+      // REAL-TIME: Add to full transcript and check for questions
+      if (!meetingTranscripts.has(botId)) {
+        meetingTranscripts.set(botId, new RealTimeTranscript(botId));
+      }
+      const realTimeTranscript = meetingTranscripts.get(botId);
+      realTimeTranscript.addMessage(speakerName, text, timestamp);
       
       // Initialize buffer for this speaker if needed
       const bufferKey = `${botId}:${speakerName}`;
