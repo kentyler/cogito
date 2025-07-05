@@ -5,6 +5,7 @@ const { Pool } = require('pg');
 const fetch = require('node-fetch');
 const crypto = require('crypto');
 const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -16,6 +17,7 @@ console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 console.log('RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL);
 console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('RECALL_API_KEY exists:', !!process.env.RECALL_API_KEY);
+console.log('ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
 
 // Initialize OpenAI - with fallback for deployment issues
 let openai;
@@ -32,6 +34,23 @@ try {
 } catch (error) {
   console.warn('⚠️  OpenAI initialization failed:', error.message);
   openai = null;
+}
+
+// Initialize Claude/Anthropic
+let anthropic;
+try {
+  if (process.env.ANTHROPIC_API_KEY) {
+    anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY
+    });
+    console.log('✅ Claude/Anthropic initialized successfully');
+  } else {
+    console.warn('⚠️  ANTHROPIC_API_KEY not found, Claude features disabled');
+    anthropic = null;
+  }
+} catch (error) {
+  console.warn('⚠️  Claude/Anthropic initialization failed:', error.message);
+  anthropic = null;
 }
 
 // Initialize PostgreSQL connection to Render database
@@ -250,15 +269,46 @@ class RealTimeTranscript {
   
   async queryClaudeWithContext(speaker, questionText, context) {
     try {
-      // For now, return a placeholder response
-      // TODO: Integrate with Anthropic API
-      console.log(`💭 Would ask Claude: "${questionText}" with ${context.length} chars of context`);
+      if (!anthropic) {
+        console.log(`⚠️  Claude not available, using fallback response`);
+        return `Hi ${speaker}! I heard your question but Claude API is not configured. Please check the ANTHROPIC_API_KEY.`;
+      }
+
+      console.log(`🧠 Asking Claude: "${questionText}" with ${context.length} chars of context`);
       
-      return `Hi ${speaker}! I heard your question: "${questionText}". I'm processing this with the full meeting context. (Claude integration coming soon!)`;
+      // Prepare context for Claude
+      const meetingContext = context.trim();
+      const participants = this.getParticipants().join(', ');
+      const duration = this.getMeetingDuration();
+      
+      const prompt = `You are Cogito, an AI assistant participating in a live meeting via a bot. Here's the context:
+
+MEETING PARTICIPANTS: ${participants}
+MEETING DURATION: ${duration} minutes
+RECENT CONVERSATION:
+${meetingContext}
+
+CURRENT QUESTION from ${speaker}: ${questionText}
+
+Please respond helpfully as a meeting participant. Keep your response concise (under 150 words) since it will be sent to the meeting chat. Be conversational and reference the meeting context when relevant.`;
+
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 200,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+
+      const claudeResponse = response.content[0].text;
+      console.log(`✅ Claude responded: ${claudeResponse.substring(0, 100)}...`);
+      
+      return claudeResponse;
       
     } catch (error) {
       console.error('Error querying Claude:', error);
-      return `Sorry ${speaker}, I had trouble processing your question. Please try again.`;
+      return `Sorry ${speaker}, I had trouble processing your question with Claude. Error: ${error.message}`;
     }
   }
   
