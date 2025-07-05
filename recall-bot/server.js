@@ -199,9 +199,9 @@ class RealTimeTranscript {
     const {speaker, text} = message;
     const lowerText = text.toLowerCase();
     
-    // Check for start protocol: "nine nine"
-    if (/\bnine\s+nine\b/i.test(text)) {
-      console.log(`🎯 Nine Nine detected from ${speaker} - starting question capture`);
+    // Check for start protocol: "ninety nine"
+    if (/\bninety[\s\-]*nine\b/i.test(text)) {
+      console.log(`🎯 Ninety Nine detected from ${speaker} - starting question capture`);
       if (!this.activeQuestions) this.activeQuestions = new Map();
       this.activeQuestions.set(speaker, {
         startMessage: text,
@@ -211,10 +211,10 @@ class RealTimeTranscript {
       return;
     }
     
-    // Check for end protocol: "six six"
-    if (/\bsix\s+six\b/i.test(text)) {
+    // Check for end protocol: "sixty six"
+    if (/\bsixty[\s\-]*six\b/i.test(text)) {
       if (this.activeQuestions && this.activeQuestions.has(speaker)) {
-        console.log(`🏁 Six Six detected from ${speaker} - processing complete question`);
+        console.log(`🏁 Sixty Six detected from ${speaker} - processing complete question`);
         const questionData = this.activeQuestions.get(speaker);
         
         // Don't include the end protocol in the question
