@@ -223,7 +223,7 @@ wss.on('connection', (ws, req) => {
             { 
               startTimestamp: buffer.startTimestamp,
               endTimestamp: buffer.lastTimestamp,
-              bot_id: transcript.bot_id,
+              bot_id: botId,
               word_count: wordCount
             },
             embedding ? JSON.stringify(embedding) : null
@@ -234,8 +234,8 @@ wss.on('connection', (ws, req) => {
         // Clear the buffer
         transcriptBuffers.set(bufferKey, {
           text: '',
-          startTimestamp: transcript.timestamp,
-          lastTimestamp: transcript.timestamp
+          startTimestamp: timestamp,
+          lastTimestamp: timestamp
         });
         
         // Get next sequence order for this block
@@ -250,7 +250,7 @@ wss.on('connection', (ws, req) => {
           [meeting.block_id, turn.turn_id, sequenceResult.rows[0].next_order]
         );
         
-        console.log(`Stored ${wordCount} words for ${transcript.speaker} with embedding`);
+        console.log(`Stored ${wordCount} words for ${speakerName} with embedding`);
       }
       
     } catch (error) {
