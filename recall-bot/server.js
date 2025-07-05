@@ -199,28 +199,32 @@ class RealTimeTranscript {
     const {speaker, text} = message;
     const lowerText = text.toLowerCase();
     
-    // Check for start protocol: "tango delta"
-    if (/\btango\s+delta\b/i.test(text)) {
-      console.log(`🎯 Tango Delta detected from ${speaker} - starting question capture`);
+    // Check for start protocol: "nine nine"
+    if (/\bnine\s+nine\b/i.test(text)) {
+      console.log(`🎯 Nine Nine detected from ${speaker} - starting question capture`);
       if (!this.activeQuestions) this.activeQuestions = new Map();
       this.activeQuestions.set(speaker, {
         startMessage: text,
-        questionParts: [text],
+        questionParts: [],  // Don't include the protocol words
         startTime: Date.now()
       });
       return;
     }
     
-    // Check for end protocol: "victor over"
-    if (/\bvictor\s+over\b/i.test(text)) {
+    // Check for end protocol: "six six"
+    if (/\bsix\s+six\b/i.test(text)) {
       if (this.activeQuestions && this.activeQuestions.has(speaker)) {
-        console.log(`🏁 Victor Over detected from ${speaker} - processing complete question`);
+        console.log(`🏁 Six Six detected from ${speaker} - processing complete question`);
         const questionData = this.activeQuestions.get(speaker);
-        questionData.questionParts.push(text);
         
-        // Combine all parts into full question
-        const fullQuestion = questionData.questionParts.join(' ');
-        this.handleQuestionToClaude(speaker, fullQuestion);
+        // Don't include the end protocol in the question
+        const fullQuestion = questionData.questionParts.join(' ').trim();
+        
+        if (fullQuestion) {
+          this.handleQuestionToClaude(speaker, fullQuestion);
+        } else {
+          console.log(`⚠️  No question content captured for ${speaker}`);
+        }
         
         // Clear the active question
         this.activeQuestions.delete(speaker);
