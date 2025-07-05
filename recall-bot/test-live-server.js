@@ -24,7 +24,7 @@ async function testLiveServer() {
       meeting_name: "Live Server Test Meeting"
     };
     
-    const botResponse = await fetch(`${baseUrl}/create-bot`, {
+    const botResponse = await fetch(`${baseUrl}/api/create-bot`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

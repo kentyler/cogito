@@ -53,6 +53,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'cogito-recall-bot', version: '1.1' });
 });
 
+// Debug endpoint to check environment variables
+app.get('/debug/env', (req, res) => {
+  res.json({
+    RENDER_EXTERNAL_URL: process.env.RENDER_EXTERNAL_URL || 'undefined',
+    PORT: process.env.PORT || 'undefined',
+    hasRecallKey: !!process.env.RECALL_API_KEY,
+    hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+    hasDatabaseURL: !!process.env.DATABASE_URL
+  });
+});
+
 // Track transcript accumulation per bot
 const transcriptBuffers = new Map();
 
