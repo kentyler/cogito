@@ -10,10 +10,29 @@ const app = express();
 const server = require('http').createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Debug environment variables
+console.log('🔍 Environment variable check:');
+console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+console.log('RENDER_EXTERNAL_URL:', process.env.RENDER_EXTERNAL_URL);
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+console.log('RECALL_API_KEY exists:', !!process.env.RECALL_API_KEY);
+
+// Initialize OpenAI - with fallback for deployment issues
+let openai;
+try {
+  if (process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    console.log('✅ OpenAI initialized successfully');
+  } else {
+    console.warn('⚠️  OPENAI_API_KEY not found, OpenAI features disabled');
+    openai = null;
+  }
+} catch (error) {
+  console.warn('⚠️  OpenAI initialization failed:', error.message);
+  openai = null;
+}
 
 // Initialize PostgreSQL connection to Render database
 console.log('🔄 Connecting to Render PostgreSQL database');
