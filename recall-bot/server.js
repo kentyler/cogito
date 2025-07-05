@@ -227,14 +227,17 @@ app.post('/api/create-bot', async (req, res) => {
             provider: {
               meeting_captions: {}
             }
-          }
-        },
-        transcription_options: {
-          provider: "meeting_captions",
-          real_time_transcription: {
-            destination_url: websocketUrl,
-            partial_results: true
-          }
+          },
+          realtime_endpoints: [
+            {
+              type: "websocket",
+              url: websocketUrl,
+              events: [
+                "transcript.data", 
+                "transcript.partial_data"
+              ]
+            }
+          ]
         },
         webhook_url: `https://${process.env.RENDER_EXTERNAL_URL}/webhook`
       })
