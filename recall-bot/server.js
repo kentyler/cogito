@@ -236,9 +236,14 @@ app.post('/api/create-bot', async (req, res) => {
     console.log('Creating bot for meeting:', meeting_url);
     
     // Get the external URL for WebSocket connection
-    const websocketUrl = process.env.RENDER_EXTERNAL_URL 
-      ? `wss://${process.env.RENDER_EXTERNAL_URL}/transcript`
-      : `ws://localhost:${process.env.PORT || 8080}/transcript`;
+    let websocketUrl;
+    if (process.env.RENDER_EXTERNAL_URL) {
+      // Remove protocol if present
+      const cleanUrl = process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '');
+      websocketUrl = `wss://${cleanUrl}/transcript`;
+    } else {
+      websocketUrl = `ws://localhost:${process.env.PORT || 8080}/transcript`;
+    }
     
     console.log('WebSocket URL for real-time transcription:', websocketUrl);
     
