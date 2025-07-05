@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cogito Live Meeting Companion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🧠 Cogito Live Meeting Companion</h1>
+      <div class="status-bar">
+        <span id="connection-status" class="status-indicator disconnected">● Disconnected</span>
+        <span id="meeting-status" class="meeting-status">No active meeting</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Left Panel: Transcript -->
+      <div class="panel transcript-panel">
+        <div class="panel-header">
+          <h2>📝 Live Transcript</h2>
+          <button id="clear-transcript" class="icon-button" title="Clear transcript">🗑️</button>
+        </div>
+        <div id="transcript" class="transcript-content">
+          <div class="transcript-placeholder">
+            Click "Start Meeting" to begin transcription...
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Insights -->
+      <div class="panel insights-panel">
+        <div class="panel-header">
+          <h2>💡 Cogito Insights</h2>
+          <button id="toggle-voice" class="icon-button" title="Toggle voice">🔊</button>
+        </div>
+        <div id="insights" class="insights-content">
+          <div class="insights-placeholder">
+            Insights will appear here as the conversation progresses...
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <input 
+          type="text" 
+          id="participant-name" 
+          placeholder="Your name (optional)"
+          class="name-input"
+        />
+        <button id="start-meeting" class="control-button primary">
+          🎤 Start Meeting
+        </button>
+        <button id="stop-meeting" class="control-button danger" disabled>
+          ⏹️ Stop Meeting
+        </button>
+      </div>
+      
+      <div class="audio-controls">
+        <div class="audio-level">
+          <span>Audio Level:</span>
+          <div class="level-meter">
+            <div id="audio-level" class="level-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
