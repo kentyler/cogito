@@ -92,41 +92,62 @@ wss.on('connection', (ws, req) => {
   
   ws.on('message', async (data) => {
     try {
-      const transcript = JSON.parse(data.toString());
-      console.log('Received transcript:', transcript);
+      const message = JSON.parse(data.toString());
+      console.log('Received transcript:', message);
+      
+      // Extract bot_id from the nested structure
+      const botId = message.data?.bot?.id;
+      if (!botId) {
+        console.error('No bot ID found in transcript message');
+        return;
+      }
       
       // Find the meeting by recall_bot_id
       const meetingResult = await pool.query(
         'SELECT block_id FROM block_meetings WHERE recall_bot_id = $1',
-        [transcript.bot_id]
+        [botId]
       );
       const meeting = meetingResult.rows[0];
       
       if (!meeting) {
-        console.error('No meeting found for bot:', transcript.bot_id);
+        console.error('No meeting found for bot:', botId);
         return;
       }
       
+      // Extract transcript data from the nested structure
+      const transcriptData = message.data?.data;
+      if (!transcriptData?.words || !transcriptData?.participant) {
+        console.error('Invalid transcript data structure');
+        return;
+      }
+      
+      const speakerName = transcriptData.participant.name || 'Unknown Speaker';
+      const words = transcriptData.words;
+      
       // Get or create attendee for this speaker
-      const attendee = await getOrCreateAttendee(meeting.block_id, transcript.speaker);
+      const attendee = await getOrCreateAttendee(meeting.block_id, speakerName);
+      
+      // Combine words into text
+      const text = words.map(w => w.text).join(' ');
+      const timestamp = words[0]?.start_time || Date.now();
       
       // Initialize buffer for this speaker if needed
-      const bufferKey = `${transcript.bot_id}:${transcript.speaker}`;
+      const bufferKey = `${botId}:${speakerName}`;
       if (!transcriptBuffers.has(bufferKey)) {
         transcriptBuffers.set(bufferKey, {
           text: '',
-          startTimestamp: transcript.timestamp,
-          lastTimestamp: transcript.timestamp
+          startTimestamp: timestamp,
+          lastTimestamp: timestamp
         });
       }
       
       const buffer = transcriptBuffers.get(bufferKey);
-      buffer.text += ' ' + transcript.text;
-      buffer.lastTimestamp = transcript.timestamp;
+      buffer.text += ' ' + text;
+      buffer.lastTimestamp = timestamp;
       
-      // Check if we should process the buffer (every ~100 words or speaker change)
+      // Check if we should process the buffer (every ~100 words)
       const wordCount = buffer.text.trim().split(/\s+/).length;
-      const shouldProcess = wordCount >= 100 || transcript.is_final;
+      const shouldProcess = wordCount >= 100;
       
       if (shouldProcess && buffer.text.trim().length > 0) {
         // Generate embedding for the accumulated text

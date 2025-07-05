@@ -15,7 +15,7 @@ async function checkLatestActivity() {
     const latestMeeting = await renderPool.query(`
       SELECT * FROM conversation.block_meetings 
       WHERE recall_bot_id = $1
-    `, ['c8f9a34a-8a7c-4312-82aa-6277b2617505']);
+    `, ['b87fb021-fd43-4ec5-8841-8edafacca862']);
     
     if (latestMeeting.rows.length > 0) {
       const meeting = latestMeeting.rows[0];
