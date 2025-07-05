@@ -314,7 +314,9 @@ wss.on('connection', (ws, req) => {
       const timestamp = words[0]?.start_time || Date.now();
       
       // REAL-TIME: Add to full transcript and check for questions
+      console.log(`📝 Processing real-time message: "${text}" from ${speakerName}`);
       if (!meetingTranscripts.has(botId)) {
+        console.log(`🆕 Creating new real-time transcript for bot ${botId}`);
         meetingTranscripts.set(botId, new RealTimeTranscript(botId));
       }
       const realTimeTranscript = meetingTranscripts.get(botId);
