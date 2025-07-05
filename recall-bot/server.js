@@ -83,6 +83,65 @@ app.get('/debug/env', (req, res) => {
   });
 });
 
+// Check transcription data endpoint
+app.get('/api/check-transcription/:botId', async (req, res) => {
+  try {
+    const { botId } = req.params;
+    
+    // Get meeting info
+    const meetingResult = await pool.query(
+      'SELECT * FROM block_meetings WHERE recall_bot_id = $1',
+      [botId]
+    );
+    
+    if (meetingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    
+    const meeting = meetingResult.rows[0];
+    
+    // Get attendees
+    const attendeesResult = await pool.query(
+      'SELECT * FROM block_attendees WHERE block_id = $1',
+      [meeting.block_id]
+    );
+    
+    // Get turns
+    const turnsResult = await pool.query(
+      `SELECT t.*, bt.sequence_order 
+       FROM turns t
+       JOIN block_turns bt ON t.turn_id = bt.turn_id
+       WHERE bt.block_id = $1
+       ORDER BY bt.sequence_order DESC
+       LIMIT 10`,
+      [meeting.block_id]
+    );
+    
+    res.json({
+      meeting: {
+        block_id: meeting.block_id,
+        status: meeting.status,
+        created_at: meeting.created_at
+      },
+      attendees: attendeesResult.rows.map(a => ({
+        name: a.name,
+        story: a.story
+      })),
+      turns: turnsResult.rows.map(t => ({
+        content: t.content.substring(0, 100) + '...',
+        source_type: t.source_type,
+        has_embedding: !!t.content_vector,
+        created_at: t.created_at
+      })),
+      total_turns: turnsResult.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Error checking transcription:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Track transcript accumulation per bot
 const transcriptBuffers = new Map();
 
