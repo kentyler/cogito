@@ -8,6 +8,7 @@ const OpenAI = require('openai');
 const Anthropic = require('@anthropic-ai/sdk');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 
 const app = express();
 const server = require('http').createServer(app);
@@ -85,13 +86,19 @@ pool.connect()
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware
+// Session middleware with PostgreSQL store
 app.use(session({
+  store: new pgSession({
+    pool: pool, // Use existing PostgreSQL connection pool
+    tableName: 'user_sessions', // Table will be created automatically
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || 'cogito-recall-bot-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));

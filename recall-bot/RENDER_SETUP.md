@@ -10,6 +10,8 @@ DATABASE_URL         # Automatically set if using Render PostgreSQL
 RECALL_API_KEY       # Your Recall.ai API key
 ANTHROPIC_API_KEY    # Claude API key for intelligent responses
 OPENAI_API_KEY       # Optional - for embeddings
+SESSION_SECRET       # Random secure string for session encryption
+NODE_ENV             # Set to "production" on Render
 ```
 
 ### 2. Deploy
