@@ -6,6 +6,8 @@ const fetch = require('node-fetch');
 const crypto = require('crypto');
 const OpenAI = require('openai');
 const Anthropic = require('@anthropic-ai/sdk');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -81,6 +83,18 @@ pool.connect()
 
 // Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'cogito-recall-bot-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
 
 // Temporary migration endpoint (remove after migration)
 const { addMigrationEndpoint } = require('./migrate-endpoint');
@@ -89,6 +103,83 @@ addMigrationEndpoint(app);
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'cogito-recall-bot', version: '1.1' });
+});
+
+// Authentication middleware
+function requireAuth(req, res, next) {
+  if (req.session && req.session.user) {
+    return next();
+  } else {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+}
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+    
+    // Query user from client_mgmt.users table
+    const userResult = await pool.query(
+      'SELECT user_id, email, password_hash FROM client_mgmt.users WHERE email = $1',
+      [email]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Verify password
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    // Create session
+    req.session.user = {
+      user_id: user.user_id,
+      email: user.email
+    };
+    
+    res.json({ 
+      success: true, 
+      message: 'Login successful',
+      user: { email: user.email }
+    });
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Logout endpoint
+app.post('/api/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ success: true, message: 'Logged out' });
+  });
+});
+
+// Check authentication status
+app.get('/api/auth-status', (req, res) => {
+  if (req.session && req.session.user) {
+    res.json({ 
+      authenticated: true, 
+      user: { email: req.session.user.email }
+    });
+  } else {
+    res.json({ authenticated: false });
+  }
 });
 
 // Serve bot creator UI at /create-bot subfolder
@@ -514,8 +605,8 @@ async function getOrCreateAttendee(blockId, speakerName) {
   return newAttendeeResult.rows[0];
 }
 
-// API endpoint to create a meeting bot
-app.post('/api/create-bot', async (req, res) => {
+// API endpoint to create a meeting bot (protected)
+app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, client_id, meeting_name } = req.body;
     
@@ -597,8 +688,8 @@ app.post('/api/create-bot', async (req, res) => {
     console.log('Block created:', block.block_id);
     
     // Create meeting-specific data
-    // Default invited_by_user_id to 1 (must exist in database as UUID)
-    const invitedByUserId = 1;
+    // Use authenticated user's ID
+    const invitedByUserId = req.session.user.user_id;
     
     const meetingResult = await pool.query(
       `INSERT INTO block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, status) 
