@@ -132,7 +132,7 @@ app.post('/api/login', async (req, res) => {
     
     // Query user from client_mgmt.users table
     const userResult = await pool.query(
-      'SELECT user_id, email, password_hash FROM client_mgmt.users WHERE email = $1',
+      'SELECT id, email, password_hash FROM client_mgmt.users WHERE email = $1',
       [email]
     );
     
@@ -151,7 +151,7 @@ app.post('/api/login', async (req, res) => {
     
     // Create session
     req.session.user = {
-      user_id: user.user_id,
+      user_id: user.id,
       email: user.email
     };
     
