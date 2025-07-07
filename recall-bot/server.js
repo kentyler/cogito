@@ -597,10 +597,13 @@ app.post('/api/create-bot', async (req, res) => {
     console.log('Block created:', block.block_id);
     
     // Create meeting-specific data
+    // Handle client_id - if it's not a number, set to null for public users
+    const numericClientId = client_id && !isNaN(client_id) ? parseInt(client_id) : null;
+    
     const meetingResult = await pool.query(
       `INSERT INTO block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, status) 
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [block.block_id, botData.id, meeting_url, client_id, 'joining']
+      [block.block_id, botData.id, meeting_url, numericClientId, 'joining']
     );
     const meeting = meetingResult.rows[0];
     console.log('Meeting record created:', meeting.block_id);
