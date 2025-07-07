@@ -99,9 +99,15 @@ app.use(session({
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
+
+console.log('Session config:', {
+  secure: process.env.NODE_ENV === 'production',
+  nodeEnv: process.env.NODE_ENV
+});
 
 // Temporary migration endpoint (remove after migration)
 const { addMigrationEndpoint } = require('./migrate-endpoint');
@@ -114,6 +120,10 @@ app.get('/health', (req, res) => {
 
 // Authentication middleware
 function requireAuth(req, res, next) {
+  console.log('Auth check - Session ID:', req.sessionID);
+  console.log('Auth check - Session data:', req.session);
+  console.log('Auth check - Has user:', !!(req.session && req.session.user));
+  
   if (req.session && req.session.user) {
     return next();
   } else {
@@ -176,10 +186,21 @@ app.post('/api/login', async (req, res) => {
       email: user.email
     };
     
-    res.json({ 
-      success: true, 
-      message: 'Login successful',
-      user: { email: user.email }
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Session creation failed' });
+      }
+      
+      console.log('Session saved successfully:', req.sessionID);
+      console.log('Session user:', req.session.user);
+      
+      res.json({ 
+        success: true, 
+        message: 'Login successful',
+        user: { email: user.email }
+      });
     });
     
   } catch (error) {
