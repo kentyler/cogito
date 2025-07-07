@@ -289,7 +289,9 @@
         // Check authentication status on page load
         async function checkAuthStatus() {
             try {
-                const response = await fetch('/api/auth-status');
+                const response = await fetch('/api/auth-status', {
+                    credentials: 'same-origin'
+                });
                 const data = await response.json();
                 
                 if (data.authenticated) {
@@ -333,6 +335,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify({ email, password }),
                 });
                 
@@ -359,6 +362,7 @@
             try {
                 const response = await fetch('/api/logout', {
                     method: 'POST',
+                    credentials: 'same-origin'
                 });
                 
                 if (response.ok) {
@@ -396,6 +400,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    credentials: 'same-origin', // Include cookies for session
                     body: JSON.stringify({
                         meeting_url: meetingUrl,
                         meeting_name: meetingName || undefined
