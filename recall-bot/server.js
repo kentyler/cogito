@@ -91,6 +91,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'cogito-recall-bot', version: '1.1' });
 });
 
+// Serve bot creator UI at /create-bot subfolder
+app.use('/create-bot', express.static('public'));
+
 // Debug endpoint to check environment variables
 app.get('/debug/env', (req, res) => {
   res.json({
