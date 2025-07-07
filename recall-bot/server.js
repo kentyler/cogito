@@ -142,8 +142,21 @@ app.post('/api/login', async (req, res) => {
     
     const user = userResult.rows[0];
     
+    // Debug logging
+    console.log('Login attempt for:', email);
+    console.log('User found:', user.id, user.email);
+    console.log('Has password hash:', !!user.password_hash);
+    console.log('Password hash length:', user.password_hash ? user.password_hash.length : 0);
+    
+    // Check if user has a password hash
+    if (!user.password_hash) {
+      console.log('User has no password set:', user.email);
+      return res.status(401).json({ error: 'User account not activated. Please contact administrator.' });
+    }
+    
     // Verify password
     const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    console.log('Password match result:', passwordMatch);
     
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
