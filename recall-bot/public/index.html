@@ -275,8 +275,8 @@
                     },
                     body: JSON.stringify({
                         meeting_url: meetingUrl,
-                        meeting_name: meetingName || undefined,
-                        client_id: 'public-user' // Default client ID for public users
+                        meeting_name: meetingName || undefined
+                        // client_id omitted for public users (will be null in database)
                     }),
                 });
                 
