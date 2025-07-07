@@ -131,12 +131,20 @@ app.post('/api/login', async (req, res) => {
     }
     
     // Query user from client_mgmt.users table
+    console.log('Looking up user with email:', email);
     const userResult = await pool.query(
-      'SELECT id, email, password_hash FROM client_mgmt.users WHERE email = $1',
+      'SELECT id, email, password_hash FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
       [email]
     );
     
+    console.log('Query returned', userResult.rows.length, 'users');
+    
     if (userResult.rows.length === 0) {
+      // Let's see what emails exist for debugging
+      const allUsersResult = await pool.query(
+        'SELECT id, email FROM client_mgmt.users WHERE id IN (1, 2)'
+      );
+      console.log('Available users:', allUsersResult.rows);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
