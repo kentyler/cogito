@@ -86,6 +86,9 @@ pool.connect()
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Trust proxy for Render deployment
+app.set('trust proxy', 1);
+
 // Session middleware with PostgreSQL store
 app.use(session({
   store: new pgSession({
@@ -195,6 +198,16 @@ app.post('/api/login', async (req, res) => {
       
       console.log('Session saved successfully:', req.sessionID);
       console.log('Session user:', req.session.user);
+      
+      // Check if session was actually saved to database
+      pool.query('SELECT * FROM user_sessions WHERE sid = $1', [req.sessionID])
+        .then(result => {
+          console.log('Session in database:', result.rows.length > 0 ? 'YES' : 'NO');
+          if (result.rows.length > 0) {
+            console.log('Session data:', result.rows[0].sess);
+          }
+        })
+        .catch(err => console.error('Session check error:', err));
       
       res.json({ 
         success: true, 
