@@ -184,7 +184,33 @@
         <h1>Cogito Meeting Bot</h1>
         <p class="subtitle">Add AI-powered intelligence to your meeting</p>
         
-        <form id="botForm">
+        <!-- Login Form -->
+        <form id="loginForm" style="display: none;">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    placeholder="your.email@example.com"
+                    required
+                />
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    placeholder="Your password"
+                    required
+                />
+            </div>
+            
+            <button type="submit" id="loginBtn">Login</button>
+        </form>
+        
+        <!-- Bot Creation Form -->
+        <form id="botForm" style="display: none;">
             <div class="form-group">
                 <label for="meetingUrl">Meeting URL</label>
                 <input 
@@ -207,6 +233,12 @@
             </div>
             
             <button type="submit" id="submitBtn">Add Cogito to Meeting</button>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <button type="button" id="logoutBtn" style="background: #6b7280; padding: 8px 16px; font-size: 14px;">
+                    Logout
+                </button>
+            </div>
         </form>
         
         <div id="status" class="status"></div>
@@ -241,9 +273,12 @@
     </div>
     
     <script>
-        const form = document.getElementById('botForm');
+        const loginForm = document.getElementById('loginForm');
+        const botForm = document.getElementById('botForm');
+        const loginBtn = document.getElementById('loginBtn');
         const submitBtn = document.getElementById('submitBtn');
         const status = document.getElementById('status');
+        let currentUser = null;
         
         function showStatus(message, type) {
             status.textContent = message;
@@ -251,7 +286,95 @@
             status.style.display = 'block';
         }
         
-        form.addEventListener('submit', async (e) => {
+        // Check authentication status on page load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth-status');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    currentUser = data.user;
+                    showBotForm();
+                } else {
+                    showLoginForm();
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showLoginForm();
+            }
+        }
+        
+        function showLoginForm() {
+            loginForm.style.display = 'block';
+            botForm.style.display = 'none';
+        }
+        
+        function showBotForm() {
+            loginForm.style.display = 'none';
+            botForm.style.display = 'block';
+            
+            // Update subtitle to show logged in user
+            document.querySelector('.subtitle').textContent = `Logged in as ${currentUser.email}`;
+        }
+        
+        // Handle login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentUser = data.user;
+                    showBotForm();
+                    showStatus('Login successful!', 'success');
+                } else {
+                    showStatus(data.error || 'Login failed', 'error');
+                }
+            } catch (error) {
+                showStatus('Network error. Please try again.', 'error');
+                console.error('Login error:', error);
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+        
+        // Handle logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                });
+                
+                if (response.ok) {
+                    currentUser = null;
+                    showLoginForm();
+                    showStatus('Logged out successfully', 'info');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        });
+        
+        // Initialize page
+        checkAuthStatus();
+        
+        botForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const meetingUrl = document.getElementById('meetingUrl').value;
@@ -284,7 +407,7 @@
                 
                 if (response.ok) {
                     showStatus('Success! Cogito is joining your meeting. Look for "Cogito" in the participants list.', 'success');
-                    form.reset();
+                    botForm.reset();
                 } else {
                     showStatus(data.error || 'Failed to create bot. Please try again.', 'error');
                 }
