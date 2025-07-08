@@ -247,6 +247,9 @@ app.get('/api/auth-status', (req, res) => {
 // Serve bot creator UI at /create-bot subfolder
 app.use('/create-bot', express.static('public'));
 
+// Serve conversational REPL UI at /repl
+app.use('/repl', express.static('../conversational-repl/public'));
+
 // Debug endpoint to check environment variables
 app.get('/debug/env', (req, res) => {
   res.json({
@@ -323,6 +326,9 @@ const transcriptBuffers = new Map();
 // Track full meeting transcripts in memory (for real-time interaction)
 const meetingTranscripts = new Map();
 
+// Track chat message polling for each bot
+const chatPollers = new Map();
+
 class RealTimeTranscript {
   constructor(botId) {
     this.botId = botId;
@@ -330,6 +336,8 @@ class RealTimeTranscript {
     this.messageHistory = [];
     this.participantContributions = new Map();
     this.startTime = Date.now();
+    this.activeQuestions = new Map(); // Track active questions from chat
+    this.lastChatMessageId = null; // Track last processed chat message
   }
   
   addMessage(speaker, text, timestamp) {
@@ -347,8 +355,7 @@ class RealTimeTranscript {
       this.participantContributions.get(speaker) + ' ' + text
     );
     
-    // Check for questions to Cogito
-    this.checkForQuestions(message);
+    // Voice cue detection disabled - using chat commands only
   }
   
   checkForQuestions(message) {
@@ -623,12 +630,105 @@ wss.on('connection', (ws, req) => {
   
   ws.on('close', () => {
     console.log('Recall.ai bot disconnected');
+    // Stop chat polling when bot disconnects
+    if (chatPollers.has(botId)) {
+      clearInterval(chatPollers.get(botId));
+      chatPollers.delete(botId);
+      console.log(`Stopped chat polling for bot ${botId}`);
+    }
   });
   
   ws.on('error', (error) => {
     console.error('WebSocket error:', error);
   });
+  
+  // Start chat message polling for this bot
+  startChatPolling(botId);
 });
+
+// Chat polling function
+async function startChatPolling(botId) {
+  console.log(`Starting chat polling for bot ${botId}`);
+  
+  const pollInterval = setInterval(async () => {
+    try {
+      const response = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/chat_messages/`, {
+        headers: {
+          'Authorization': `Token ${process.env.RECALL_API_KEY}`
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`Chat polling failed for bot ${botId}:`, response.status);
+        return;
+      }
+      
+      const chatData = await response.json();
+      const chatMessages = chatData.results || [];
+      
+      // Get the real-time transcript for this bot
+      const realTimeTranscript = meetingTranscripts.get(botId);
+      if (!realTimeTranscript) return;
+      
+      // Process new chat messages
+      const newMessages = chatMessages.filter(msg => {
+        // Only process messages after the last processed one
+        if (!realTimeTranscript.lastChatMessageId) return true;
+        return msg.id > realTimeTranscript.lastChatMessageId;
+      });
+      
+      for (const message of newMessages) {
+        await processChatMessage(botId, message, realTimeTranscript);
+        realTimeTranscript.lastChatMessageId = message.id;
+      }
+      
+    } catch (error) {
+      console.error(`Error polling chat for bot ${botId}:`, error);
+    }
+  }, 5000); // Poll every 5 seconds
+  
+  chatPollers.set(botId, pollInterval);
+}
+
+// Process individual chat message for @cc commands
+async function processChatMessage(botId, message, realTimeTranscript) {
+  const content = message.content?.trim();
+  const sender = message.sender?.name || 'Unknown';
+  
+  console.log(`💬 Chat message from ${sender}: "${content}"`);
+  
+  if (content === '@cc') {
+    if (realTimeTranscript.activeQuestions.has(sender)) {
+      // End question capture
+      console.log(`🏁 @cc END detected from ${sender} - processing complete question`);
+      const questionData = realTimeTranscript.activeQuestions.get(sender);
+      
+      const fullQuestion = questionData.questionParts.join(' ').trim();
+      
+      if (fullQuestion) {
+        await realTimeTranscript.handleQuestionToClaude(sender, fullQuestion);
+      } else {
+        console.log(`⚠️  No question content captured for ${sender}`);
+      }
+      
+      realTimeTranscript.activeQuestions.delete(sender);
+    } else {
+      // Start question capture
+      console.log(`🎯 @cc START detected from ${sender} - starting question capture`);
+      realTimeTranscript.activeQuestions.set(sender, {
+        startMessage: content,
+        questionParts: [],
+        startTime: Date.now()
+      });
+    }
+  } else {
+    // Check if this is a question part for an active question
+    if (realTimeTranscript.activeQuestions.has(sender)) {
+      console.log(`📝 Adding chat content to question from ${sender}: ${content}`);
+      realTimeTranscript.activeQuestions.get(sender).questionParts.push(content);
+    }
+  }
+}
 
 // Helper function to generate embedding for text
 async function generateEmbedding(text) {
@@ -826,6 +926,112 @@ app.post('/webhook', async (req, res) => {
   } catch (error) {
     console.error('Webhook error:', error);
     res.status(500).send('Error processing webhook');
+  }
+});
+
+// Conversational REPL endpoint
+app.post('/api/conversational-turn', requireAuth, async (req, res) => {
+  try {
+    const { content, conversation_id } = req.body;
+    const user_id = req.session.user.user_id;
+    
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+    
+    // Store the user's prompt as a turn
+    const userTurnResult = await pool.query(
+      'INSERT INTO conversation.turns (participant_id, content, source_type, metadata) VALUES ($1, $2, $3, $4) RETURNING turn_id, created_at',
+      [user_id, content, 'conversational-repl-user', { conversation_id }]
+    );
+    
+    const userTurn = userTurnResult.rows[0];
+    
+    // Generate LLM response
+    let llmResponse;
+    try {
+      if (anthropic) {
+        const prompt = `You are powering a Conversational REPL that generates executable UI components.
+
+When responding, output valid ClojureScript data structures that include:
+- :response-type (text, list, spreadsheet, diagram, email, etc.)
+- :data (the core content)
+- :interactions (functions for user interactions)
+
+User prompt: "${content}"
+
+Respond with a ClojureScript data structure. Examples:
+
+For lists:
+{:response-type :list
+ :items ["Item 1" "Item 2" "Item 3"]
+ :interactions {:on-click "handle-click"}}
+
+For spreadsheets:
+{:response-type :spreadsheet
+ :title "Data Analysis"
+ :headers ["Name" "Value" "Status"]
+ :data [["Alice" "100" "Active"] ["Bob" "200" "Inactive"]]}
+
+For text:
+{:response-type :text
+ :content "Your response here"}
+
+Choose the most appropriate response type based on the user's request.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        });
+        
+        let responseText = message.content[0].text;
+        
+        // Try to parse as ClojureScript data structure
+        try {
+          // Simple parsing - look for {:response-type pattern
+          if (responseText.includes(':response-type')) {
+            llmResponse = responseText.trim();
+          } else {
+            // Fallback to text response
+            llmResponse = `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
+          }
+        } catch (parseError) {
+          llmResponse = `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
+        }
+        
+      } else {
+        llmResponse = `{:response-type :text :content "Claude not available - check ANTHROPIC_API_KEY"}`;
+      }
+    } catch (llmError) {
+      console.error('LLM Error:', llmError);
+      llmResponse = `{:response-type :text :content "Error generating response: ${llmError.message}"}`;
+    }
+    
+    // Store the LLM response as a turn
+    const llmTurnResult = await pool.query(
+      'INSERT INTO conversation.turns (participant_id, content, source_type, metadata) VALUES ($1, $2, $3, $4) RETURNING turn_id, created_at',
+      [user_id, llmResponse, 'conversational-repl-llm', { 
+        conversation_id, 
+        user_turn_id: userTurn.turn_id,
+        response_type: 'clojure-data'
+      }]
+    );
+    
+    const llmTurn = llmTurnResult.rows[0];
+    
+    res.json({
+      id: llmTurn.turn_id,
+      user_turn_id: userTurn.turn_id,
+      prompt: content,
+      response: llmResponse,
+      conversation_id: conversation_id || userTurn.turn_id,
+      created_at: llmTurn.created_at
+    });
+    
+  } catch (error) {
+    console.error('Conversational REPL error:', error);
+    res.status(500).json({ error: 'Failed to process conversational turn' });
   }
 });
 
