@@ -888,6 +888,12 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
             }
           ]
         },
+        chat: {
+          on_bot_join: {
+            send_to: "everyone",
+            message: "🤖 Cogito has joined the meeting! Type @cc to ask me questions."
+          }
+        },
         webhook_url: `https://${process.env.RENDER_EXTERNAL_URL}/webhook`
       })
     });
