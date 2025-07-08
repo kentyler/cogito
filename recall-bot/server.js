@@ -730,31 +730,50 @@ async function startChatPolling(botId) {
       // Use the new participant_events endpoint instead of legacy chat-messages
       // Get the participant_events ID from the bot data
       const participantEventsId = botData.recordings?.[0]?.media_shortcuts?.participant_events?.id;
+      const participantEventsStatus = botData.recordings?.[0]?.media_shortcuts?.participant_events?.status?.code;
       
       if (!participantEventsId) {
         console.log(`⚠️  No participant_events ID found for bot ${botId}`);
         return;
       }
       
-      const participantEventsEndpoint = `https://us-west-2.recall.ai/api/v1/bot/${botId}/participant_events/${participantEventsId}/`;
-      console.log(`🔍 Fetching participant events from: ${participantEventsEndpoint}`);
+      if (participantEventsStatus !== 'completed') {
+        console.log(`⏳ Participant events still ${participantEventsStatus} for bot ${botId}, skipping this poll`);
+        return;
+      }
       
-      const response = await fetch(participantEventsEndpoint, {
-        headers: {
-          'Authorization': `Token ${process.env.RECALL_API_KEY}`
-        }
-      });
+      // Try both endpoint formats since documentation shows different regions
+      const endpoints = [
+        `https://us-east-1.recall.ai/api/v1/participant_events/${participantEventsId}/`,
+        `https://us-west-2.recall.ai/api/v1/participant_events/${participantEventsId}/`
+      ];
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Chat polling failed for bot ${botId}:`, response.status, errorText.substring(0, 200));
-        
-        // If 404, the bot might be done - stop polling
-        if (response.status === 404) {
-          console.log(`Bot ${botId} not found - stopping chat polling`);
-          clearInterval(chatPollers.get(botId));
-          chatPollers.delete(botId);
+      let response = null;
+      let workingEndpoint = null;
+      
+      for (const endpoint of endpoints) {
+        console.log(`🔍 Trying participant events endpoint: ${endpoint}`);
+        try {
+          response = await fetch(endpoint, {
+            headers: {
+              'Authorization': `Token ${process.env.RECALL_API_KEY}`
+            }
+          });
+          
+          if (response.ok) {
+            workingEndpoint = endpoint;
+            console.log(`✅ Working participant events endpoint: ${endpoint}`);
+            break;
+          } else {
+            console.log(`❌ ${endpoint} returned ${response.status}`);
+          }
+        } catch (e) {
+          console.log(`❌ ${endpoint} failed: ${e.message}`);
         }
+      }
+      
+      if (!workingEndpoint) {
+        console.log(`⚠️  No working participant events endpoint found for bot ${botId}`);
         return;
       }
       
