@@ -410,10 +410,16 @@ class RealTimeTranscript {
       console.log(`🧠 Processing question for Claude: "${questionText}"`);
       console.log(`📝 Context length: ${context.length} characters`);
       
-      // TODO: Add Claude API call here
+      // Save the question as a turn
+      await this.saveTurnToDatabase(speaker, questionText, 'chat-question');
+      
+      // Get Claude response
       const response = await this.queryClaudeWithContext(speaker, questionText, context);
       
-      // Send response to Zoom chat via Recall.ai
+      // Save Claude response as a turn
+      await this.saveTurnToDatabase('Cogito', response, 'claude-response');
+      
+      // Send response to meeting chat
       await this.sendChatResponse(response);
       
     } catch (error) {
@@ -479,6 +485,55 @@ Please respond helpfully as a meeting participant. Keep your response concise (u
     }
   }
   
+  async saveTurnToDatabase(speaker, content, sourceType) {
+    try {
+      // Get meeting info for this bot
+      const meetingResult = await pool.query(
+        'SELECT * FROM block_meetings WHERE recall_bot_id = $1',
+        [this.botId]
+      );
+      
+      if (meetingResult.rows.length === 0) {
+        console.error(`No meeting found for bot ${this.botId}`);
+        return;
+      }
+      
+      const meeting = meetingResult.rows[0];
+      
+      // Get or create attendee
+      const attendee = await getOrCreateAttendee(meeting.block_id, speaker);
+      
+      // Insert turn
+      const turnResult = await pool.query(
+        'INSERT INTO conversation.turns (participant_id, content, source_type, metadata) VALUES ($1, $2, $3, $4) RETURNING turn_id, created_at',
+        [attendee.id, content, sourceType, { 
+          bot_id: this.botId, 
+          block_id: meeting.block_id,
+          chat_interaction: true 
+        }]
+      );
+      
+      const turn = turnResult.rows[0];
+      
+      // Get next sequence order
+      const sequenceResult = await pool.query(
+        'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM block_turns WHERE block_id = $1',
+        [meeting.block_id]
+      );
+      
+      // Link turn to meeting block
+      await pool.query(
+        'INSERT INTO block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
+        [meeting.block_id, turn.turn_id, sequenceResult.rows[0].next_order]
+      );
+      
+      console.log(`💾 Saved ${sourceType} turn to database for ${speaker}`);
+      
+    } catch (error) {
+      console.error('Error saving turn to database:', error);
+    }
+  }
+
   async sendChatResponse(responseText) {
     try {
       // Send chat message via Recall.ai bot
