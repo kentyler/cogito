@@ -581,9 +581,8 @@ wss.on('connection', (ws, req) => {
       // Start chat polling when we first get a bot ID
       if (!currentBotId) {
         currentBotId = botId;
-        // Note: Chat polling disabled for Zoom - not supported by Recall.ai
-        // startChatPolling(botId);
-        console.log('💬 Chat polling disabled - Zoom does not support chat message webhooks');
+        console.log('💬 Starting chat polling for Google Meet - chat interaction supported');
+        // Note: Removed chat polling in favor of webhooks - see /webhook/chat endpoint
       }
       
       // Find the meeting by recall_bot_id

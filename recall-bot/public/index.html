@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cogito Meeting Bot - Add AI to Your Meeting</title>
+    <title>Cogito Meeting Bot - AI Assistant for Google Meet</title>
     <style>
         * {
             margin: 0;
@@ -182,7 +182,7 @@
 <body>
     <div class="container">
         <h1>Cogito Meeting Bot</h1>
-        <p class="subtitle">Add AI-powered intelligence to your meeting</p>
+        <p class="subtitle">AI assistant for Google Meet with interactive chat</p>
         
         <!-- Login Form -->
         <form id="loginForm" style="display: none;">
@@ -216,10 +216,10 @@
                 <input 
                     type="url" 
                     id="meetingUrl" 
-                    placeholder="https://zoom.us/j/123456789"
+                    placeholder="https://meet.google.com/abc-defg-hij"
                     required
                 />
-                <p class="help-text">Paste your Zoom meeting link here</p>
+                <p class="help-text">Paste your Google Meet link here (chat interaction supported)</p>
             </div>
             
             <div class="form-group">
@@ -245,25 +245,32 @@
         
         <div class="protocol-info">
             <h4>How to Ask Cogito Questions During the Meeting</h4>
-            <p style="margin-bottom: 10px; color: #d63031; font-weight: 500;">
-                ⚠️ Chat interaction is not supported in Zoom meetings
+            <p style="margin-bottom: 10px; color: #16a085; font-weight: 500;">
+                ✅ Full chat interaction supported in Google Meet
             </p>
             <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
-                Cogito will join your meeting and record the transcript, but Zoom doesn't support chat message integration with bots. The bot will still capture all spoken conversation.
+                Type in the meeting chat using the @cc command to ask Cogito questions and get intelligent responses based on the conversation context.
             </p>
             
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
-                <strong>What Cogito does in Zoom:</strong>
-                <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>Joins your meeting as "Cogito"</li>
-                    <li>Records full conversation transcript</li>
-                    <li>Saves all meeting data to database</li>
-                    <li>Generates meeting summary after call ends</li>
-                </ul>
+            <div style="margin-bottom: 15px;">
+                <strong>Single message (easiest):</strong>
+                <div class="protocol-example">
+                    @cc What were the main action items we discussed? @cc
+                </div>
             </div>
             
-            <p style="font-size: 14px; color: #666;">
-                For chat interaction, use Google Meet or Microsoft Teams instead of Zoom.
+            <div style="margin-bottom: 15px;">
+                <strong>Multi-message (for longer questions):</strong>
+                <div class="protocol-example">
+                    @cc<br>
+                    What were the main action items we discussed?<br>
+                    Can you also summarize the key decisions?<br>
+                    @cc
+                </div>
+            </div>
+            
+            <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                Both formats work! Cogito will respond in the meeting chat with intelligent answers based on the conversation.
             </p>
         </div>
         
@@ -275,11 +282,11 @@
             </div>
             <div class="feature">
                 <span class="feature-icon">✓</span>
-                <span class="feature-text">Answers questions in real-time via chat</span>
+                <span class="feature-text">Answers questions in real-time via Google Meet chat</span>
             </div>
             <div class="feature">
                 <span class="feature-icon">✓</span>
-                <span class="feature-text">Understands context and provides intelligent responses</span>
+                <span class="feature-text">Understands conversation context and provides intelligent responses</span>
             </div>
             <div class="feature">
                 <span class="feature-icon">✓</span>
@@ -401,8 +408,8 @@
             const meetingName = document.getElementById('meetingName').value;
             
             // Basic validation
-            if (!meetingUrl.includes('zoom.us/j/') && !meetingUrl.includes('zoom.us/my/')) {
-                showStatus('Please enter a valid Zoom meeting URL', 'error');
+            if (!meetingUrl.includes('meet.google.com/')) {
+                showStatus('Please enter a valid Google Meet URL', 'error');
                 return;
             }
             
