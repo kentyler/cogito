@@ -564,6 +564,7 @@ Please respond helpfully as a meeting participant. Keep your response concise (u
 // WebSocket handler for real-time transcription
 wss.on('connection', (ws, req) => {
   console.log('Recall.ai bot connected for real-time transcription');
+  let currentBotId = null;
   
   ws.on('message', async (data) => {
     try {
@@ -575,6 +576,12 @@ wss.on('connection', (ws, req) => {
       if (!botId) {
         console.error('No bot ID found in transcript message');
         return;
+      }
+      
+      // Start chat polling when we first get a bot ID
+      if (!currentBotId) {
+        currentBotId = botId;
+        startChatPolling(botId);
       }
       
       // Find the meeting by recall_bot_id
@@ -686,19 +693,16 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     console.log('Recall.ai bot disconnected');
     // Stop chat polling when bot disconnects
-    if (chatPollers.has(botId)) {
-      clearInterval(chatPollers.get(botId));
-      chatPollers.delete(botId);
-      console.log(`Stopped chat polling for bot ${botId}`);
+    if (currentBotId && chatPollers.has(currentBotId)) {
+      clearInterval(chatPollers.get(currentBotId));
+      chatPollers.delete(currentBotId);
+      console.log(`Stopped chat polling for bot ${currentBotId}`);
     }
   });
   
   ws.on('error', (error) => {
     console.error('WebSocket error:', error);
   });
-  
-  // Start chat message polling for this bot
-  startChatPolling(botId);
 });
 
 // Chat polling function
