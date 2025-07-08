@@ -938,15 +938,19 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     
     // Get the external URL for WebSocket connection
     let websocketUrl;
+    let webhookUrl;
     if (process.env.RENDER_EXTERNAL_URL) {
       // Remove protocol if present
       const cleanUrl = process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '');
       websocketUrl = `wss://${cleanUrl}/transcript`;
+      webhookUrl = `https://${cleanUrl}/webhook/chat`;
     } else {
       websocketUrl = `ws://localhost:${process.env.PORT || 8080}/transcript`;
+      webhookUrl = `http://localhost:${process.env.PORT || 8080}/webhook/chat`;
     }
     
     console.log('WebSocket URL for real-time transcription:', websocketUrl);
+    console.log('Webhook URL for chat messages:', webhookUrl);
     
     // Create bot with Recall.ai
     const recallResponse = await fetch('https://us-west-2.recall.ai/api/v1/bot/', {
@@ -975,7 +979,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
             },
             {
               type: "webhook",
-              url: `https://${process.env.RENDER_EXTERNAL_URL}/webhook/chat`,
+              url: webhookUrl,
               events: ["participant_events.chat_message"]
             }
           ]
@@ -986,7 +990,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
             message: "🤖 Cogito has joined the meeting! Type @cc to ask me questions."
           }
         },
-        webhook_url: `https://${process.env.RENDER_EXTERNAL_URL}/webhook`
+        webhook_url: `https://${process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '')}/webhook`
       })
     });
     
