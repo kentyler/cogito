@@ -803,29 +803,60 @@ async function processChatMessage(botId, message, realTimeTranscript) {
   
   console.log(`💬 Chat message from ${sender}: "${content}"`);
   
-  if (content === '@cc') {
-    if (realTimeTranscript.activeQuestions.has(sender)) {
-      // End question capture
-      console.log(`🏁 @cc END detected from ${sender} - processing complete question`);
-      const questionData = realTimeTranscript.activeQuestions.get(sender);
-      
-      const fullQuestion = questionData.questionParts.join(' ').trim();
-      
-      if (fullQuestion) {
-        await realTimeTranscript.handleQuestionToClaude(sender, fullQuestion);
-      } else {
-        console.log(`⚠️  No question content captured for ${sender}`);
+  // Check for @cc pattern anywhere in the message
+  const ccPattern = /@cc/gi;
+  const ccMatches = content.match(ccPattern);
+  
+  if (ccMatches) {
+    // Check if this is a single-line question: "@cc question text @cc"
+    if (ccMatches.length >= 2) {
+      // Extract question between first and last @cc
+      const parts = content.split(/@cc/i);
+      if (parts.length >= 3) {
+        // Get the middle part(s) - everything between first and last @cc
+        const questionText = parts.slice(1, -1).join('@cc').trim();
+        
+        if (questionText) {
+          console.log(`🎯 Single-line @cc question from ${sender}: "${questionText}"`);
+          await realTimeTranscript.handleQuestionToClaude(sender, questionText);
+          return;
+        }
       }
-      
-      realTimeTranscript.activeQuestions.delete(sender);
-    } else {
-      // Start question capture
-      console.log(`🎯 @cc START detected from ${sender} - starting question capture`);
-      realTimeTranscript.activeQuestions.set(sender, {
-        startMessage: content,
-        questionParts: [],
-        startTime: Date.now()
-      });
+    }
+    
+    // Handle single @cc (start or end of multi-message question)
+    if (ccMatches.length === 1) {
+      if (realTimeTranscript.activeQuestions.has(sender)) {
+        // End question capture - extract any text before/after @cc
+        console.log(`🏁 @cc END detected from ${sender} - processing complete question`);
+        const questionData = realTimeTranscript.activeQuestions.get(sender);
+        
+        // Add any text from this message (excluding @cc)
+        const textWithoutCc = content.replace(/@cc/i, '').trim();
+        if (textWithoutCc) {
+          questionData.questionParts.push(textWithoutCc);
+        }
+        
+        const fullQuestion = questionData.questionParts.join(' ').trim();
+        
+        if (fullQuestion) {
+          await realTimeTranscript.handleQuestionToClaude(sender, fullQuestion);
+        } else {
+          console.log(`⚠️  No question content captured for ${sender}`);
+        }
+        
+        realTimeTranscript.activeQuestions.delete(sender);
+      } else {
+        // Start question capture - extract any text after @cc
+        console.log(`🎯 @cc START detected from ${sender} - starting question capture`);
+        const textWithoutCc = content.replace(/@cc/i, '').trim();
+        
+        realTimeTranscript.activeQuestions.set(sender, {
+          startMessage: content,
+          questionParts: textWithoutCc ? [textWithoutCc] : [],
+          startTime: Date.now()
+        });
+      }
     }
   } else {
     // Check if this is a question part for an active question
