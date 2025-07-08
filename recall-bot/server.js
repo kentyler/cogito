@@ -711,27 +711,64 @@ async function startChatPolling(botId) {
   
   const pollInterval = setInterval(async () => {
     try {
-      const response = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/chat_messages/`, {
+      // First, let's check the bot details to see what endpoints are available
+      const botResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/`, {
         headers: {
           'Authorization': `Token ${process.env.RECALL_API_KEY}`
         }
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Chat polling failed for bot ${botId}:`, response.status, errorText);
-        
-        // If 404, the bot might be done - stop polling
-        if (response.status === 404) {
-          console.log(`Bot ${botId} not found - stopping chat polling`);
-          clearInterval(chatPollers.get(botId));
-          chatPollers.delete(botId);
+      if (!botResponse.ok) {
+        console.log(`Bot ${botId} details fetch failed: ${botResponse.status}`);
+        return;
+      }
+      
+      const botData = await botResponse.json();
+      console.log(`Bot ${botId} status: ${botData.status}, chat enabled: ${!!botData.chat}`);
+      
+      // Try different possible chat endpoint formats
+      const endpoints = [
+        `https://us-west-2.recall.ai/api/v1/bot/${botId}/chat_messages/`,
+        `https://us-west-2.recall.ai/api/v1/bot/${botId}/chat-messages/`,
+        `https://us-west-2.recall.ai/api/v1/bot/${botId}/messages/`,
+        `https://us-west-2.recall.ai/api/v1/bot/${botId}/chat/`,
+        `https://us-west-2.recall.ai/api/v2/bot/${botId}/chat_messages/`,
+        `https://us-west-2.recall.ai/api/v1/bots/${botId}/chat_messages/`
+      ];
+      
+      let response = null;
+      let workingEndpoint = null;
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
+          response = await fetch(endpoint, {
+            headers: {
+              'Authorization': `Token ${process.env.RECALL_API_KEY}`
+            }
+          });
+          
+          if (response.ok) {
+            workingEndpoint = endpoint;
+            console.log(`✅ Found working chat endpoint: ${endpoint}`);
+            break;
+          } else {
+            console.log(`❌ ${endpoint} returned ${response.status}`);
+          }
+        } catch (e) {
+          console.log(`❌ ${endpoint} failed with error: ${e.message}`);
         }
+      }
+      
+      if (!workingEndpoint) {
+        console.log(`⚠️  No working chat endpoint found for bot ${botId}`);
         return;
       }
       
       const chatData = await response.json();
-      const chatMessages = chatData.results || [];
+      const chatMessages = chatData.results || chatData.messages || chatData || [];
+      
+      console.log(`📊 Found ${chatMessages.length} total chat messages`);
       
       // Get the real-time transcript for this bot
       const realTimeTranscript = meetingTranscripts.get(botId);
@@ -743,6 +780,8 @@ async function startChatPolling(botId) {
         if (!realTimeTranscript.lastChatMessageId) return true;
         return msg.id > realTimeTranscript.lastChatMessageId;
       });
+      
+      console.log(`📥 Processing ${newMessages.length} new chat messages`);
       
       for (const message of newMessages) {
         await processChatMessage(botId, message, realTimeTranscript);
