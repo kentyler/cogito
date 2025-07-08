@@ -581,7 +581,9 @@ wss.on('connection', (ws, req) => {
       // Start chat polling when we first get a bot ID
       if (!currentBotId) {
         currentBotId = botId;
-        startChatPolling(botId);
+        // Note: Chat polling disabled for Zoom - not supported by Recall.ai
+        // startChatPolling(botId);
+        console.log('💬 Chat polling disabled - Zoom does not support chat message webhooks');
       }
       
       // Find the meeting by recall_bot_id
@@ -971,6 +973,11 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
                 "transcript.data", 
                 "transcript.partial_data"
               ]
+            },
+            {
+              type: "webhook",
+              url: `https://${process.env.RENDER_EXTERNAL_URL}/webhook/chat`,
+              events: ["participant_events.chat_message"]
             }
           ]
         },
@@ -1089,6 +1096,43 @@ app.post('/webhook', async (req, res) => {
   } catch (error) {
     console.error('Webhook error:', error);
     res.status(500).send('Error processing webhook');
+  }
+});
+
+// Webhook endpoint for chat messages (Google Meet, Teams - NOT Zoom)
+app.post('/webhook/chat', async (req, res) => {
+  console.log('📬 Received chat webhook from Recall.ai');
+  
+  try {
+    const event = req.body;
+    console.log('Chat webhook event type:', event.event);
+    console.log('Chat webhook event data:', JSON.stringify(event.data, null, 2));
+    
+    if (event.event === 'participant_events.chat_message') {
+      const botId = event.data.bot.id;
+      const chatMessage = {
+        content: event.data.data.data.text,
+        sender: {
+          name: event.data.data.participant.name
+        },
+        timestamp: event.data.data.timestamp.absolute
+      };
+      
+      console.log(`📬 Processing chat message from ${chatMessage.sender.name} for bot ${botId}: "${chatMessage.content}"`);
+      
+      // Get the real-time transcript for this bot
+      const realTimeTranscript = meetingTranscripts.get(botId);
+      if (realTimeTranscript) {
+        await processChatMessage(botId, chatMessage, realTimeTranscript);
+      } else {
+        console.log(`⚠️  No active transcript found for bot ${botId}`);
+      }
+    }
+    
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing chat webhook:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
