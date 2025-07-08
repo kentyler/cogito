@@ -718,7 +718,15 @@ async function startChatPolling(botId) {
       });
       
       if (!response.ok) {
-        console.error(`Chat polling failed for bot ${botId}:`, response.status);
+        const errorText = await response.text();
+        console.error(`Chat polling failed for bot ${botId}:`, response.status, errorText);
+        
+        // If 404, the bot might be done - stop polling
+        if (response.status === 404) {
+          console.log(`Bot ${botId} not found - stopping chat polling`);
+          clearInterval(chatPollers.get(botId));
+          chatPollers.delete(botId);
+        }
         return;
       }
       
