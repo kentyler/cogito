@@ -727,11 +727,19 @@ async function startChatPolling(botId) {
       console.log(`🤖 Bot ${botId} full data:`, JSON.stringify(botData, null, 2));
       console.log(`Bot ${botId} status: ${botData.status}, chat enabled: ${!!botData.chat}`);
       
-      // Use the correct chat messages endpoint
-      const chatEndpoint = `https://us-west-2.recall.ai/api/v1/bot/${botId}/chat-messages/`;
-      console.log(`🔍 Fetching chat messages from: ${chatEndpoint}`);
+      // Use the new participant_events endpoint instead of legacy chat-messages
+      // Get the participant_events ID from the bot data
+      const participantEventsId = botData.recordings?.[0]?.media_shortcuts?.participant_events?.id;
       
-      const response = await fetch(chatEndpoint, {
+      if (!participantEventsId) {
+        console.log(`⚠️  No participant_events ID found for bot ${botId}`);
+        return;
+      }
+      
+      const participantEventsEndpoint = `https://us-west-2.recall.ai/api/v1/bot/${botId}/participant_events/${participantEventsId}/`;
+      console.log(`🔍 Fetching participant events from: ${participantEventsEndpoint}`);
+      
+      const response = await fetch(participantEventsEndpoint, {
         headers: {
           'Authorization': `Token ${process.env.RECALL_API_KEY}`
         }
@@ -750,8 +758,12 @@ async function startChatPolling(botId) {
         return;
       }
       
-      const chatData = await response.json();
-      const chatMessages = chatData.results || chatData.messages || chatData || [];
+      const participantEventsData = await response.json();
+      console.log(`📊 Participant events data:`, JSON.stringify(participantEventsData, null, 2));
+      
+      // Extract chat messages from participant events
+      // The new format likely has chat messages in a different structure
+      const chatMessages = participantEventsData.chat_messages || participantEventsData.messages || [];
       
       console.log(`📊 Found ${chatMessages.length} total chat messages`);
       
