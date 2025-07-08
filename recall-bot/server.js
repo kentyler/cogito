@@ -712,7 +712,7 @@ async function startChatPolling(botId) {
   const pollInterval = setInterval(async () => {
     try {
       // First, let's check the bot details 
-      const botResponse = await fetch(`https://us-east-1.recall.ai/api/v1/bot/${botId}/`, {
+      const botResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/`, {
         headers: {
           'Authorization': `Token ${process.env.RECALL_API_KEY}`
         }
@@ -728,7 +728,7 @@ async function startChatPolling(botId) {
       console.log(`Bot ${botId} status: ${botData.status}, chat enabled: ${!!botData.chat}`);
       
       // Use the correct chat messages endpoint
-      const chatEndpoint = `https://us-east-1.recall.ai/api/v1/bot/${botId}/chat-messages/`;
+      const chatEndpoint = `https://us-west-2.recall.ai/api/v1/bot/${botId}/chat-messages/`;
       console.log(`🔍 Fetching chat messages from: ${chatEndpoint}`);
       
       const response = await fetch(chatEndpoint, {
