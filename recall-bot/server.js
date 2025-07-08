@@ -781,6 +781,10 @@ async function processChatMessage(botId, message, realTimeTranscript) {
     if (realTimeTranscript.activeQuestions.has(sender)) {
       console.log(`📝 Adding chat content to question from ${sender}: ${content}`);
       realTimeTranscript.activeQuestions.get(sender).questionParts.push(content);
+    } else {
+      // Regular chat comment - save as turn
+      console.log(`💾 Saving regular chat comment from ${sender}`);
+      await realTimeTranscript.saveTurnToDatabase(sender, content, 'chat-comment');
     }
   }
 }
