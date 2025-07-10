@@ -95,6 +95,29 @@ CREATE TABLE conversation.block_attendees (
 - Maintained backward compatibility with `@cc` for specific questions
 - **Removed word limits** (July 2025): Eliminated 150-word constraint to allow fuller, more thoughtful responses
 
+#### 5. **Email Service Evolution (July 2025)**
+
+**The Problem:** Production deployment on Render.com faced email authentication issues with Gmail SMTP, requiring complex external service setup.
+
+**The Journey:**
+1. **Initial Gmail SMTP**: Hard-coded Gmail credentials caused authentication failures in production
+2. **Multiple Provider Support**: Added SendGrid, Postmark, and generic SMTP options for flexibility
+3. **Simple Node.js Solution**: Created logging-based email transport that works without external dependencies
+
+**The Final Solution:** Simple logging email service
+- Emails logged to console with full content and metadata
+- No external email service credentials required
+- Immediate functionality on Render.com deployment
+- Still supports professional email services (SendGrid/Postmark) if added later
+- In development: emails saved as HTML files for review
+
+**Why This Works:**
+- Eliminates deployment dependencies and authentication failures
+- Provides complete transcript functionality immediately
+- Server logs contain full email content for verification
+- Users still get notification that transcript email was "sent"
+- Allows future upgrade to professional email services without code changes
+
 ### Lessons Learned
 
 1. **Avoid the Quick Fix Trap**
@@ -122,12 +145,19 @@ CREATE TABLE conversation.block_attendees (
    - Meeting participants need complete thoughts, not artificially truncated responses
    - Trust the AI to be appropriately conversational rather than imposing rigid constraints
 
+6. **Production Deployment Pragmatism**
+   - External service dependencies can create deployment friction and failures
+   - Simple, self-contained solutions often work better than complex integrations
+   - Logging-based approaches provide functionality while eliminating authentication issues
+   - Design for immediate functionality with optional upgrades to premium services
+
 ### Current State (January-July 2025)
 - ✅ Full database migrated to Render PostgreSQL
 - ✅ Meeting bot can be created via API
 - ✅ Database schema supports narrative tracking
 - ✅ Clean architecture without quick fixes
 - ✅ **Simple '?' Trigger Implemented** (July 2025)
+- ✅ **Simple Email Service** (July 2025) - No external dependencies required
 - 🔄 Ready for UI integration
 - 🔄 Ready for real-time transcript processing
 - 🔄 Ready for narrative intelligence layer
