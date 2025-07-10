@@ -10,6 +10,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const nodemailer = require('nodemailer');
+const { createLoggingTransporter } = require('./simple-mail-server');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -123,18 +124,9 @@ if (process.env.SENDGRID_API_KEY) {
   });
   console.log('📧 Using custom SMTP service');
 } else {
-  // No email service configured - create a mock transporter
-  emailTransporter = {
-    sendMail: async (options) => {
-      console.log('📧 Mock email (no service configured):');
-      console.log(`To: ${options.to}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log(`Content length: ${options.html?.length || options.text?.length || 0} chars`);
-      return { messageId: 'mock-' + Date.now() };
-    },
-    verify: (callback) => callback(null, true)
-  };
-  console.log('📧 Using mock email service (no credentials configured)');
+  // No external email service configured - use simple logging transporter
+  emailTransporter = createLoggingTransporter();
+  console.log('📧 Using simple logging email service (no external credentials needed)');
 }
 
 // Test email configuration
