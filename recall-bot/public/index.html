@@ -232,6 +232,12 @@
                 <p class="help-text">Give your meeting a memorable name</p>
             </div>
             
+            <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="font-size: 14px; color: #666; margin: 0;">
+                    📧 When your meeting ends, we'll automatically email the complete transcript to <strong id="userEmail"></strong>
+                </p>
+            </div>
+            
             <button type="submit" id="submitBtn">Add Cogito to Google Meet</button>
             
             <div style="margin-top: 20px; text-align: center;">
@@ -249,7 +255,7 @@
                 ✅ Full chat interaction supported in Google Meet
             </p>
             <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
-                Type in the meeting chat using the @cc command to ask Cogito questions and get intelligent responses based on the conversation context.
+                Type <strong>?</strong> in the meeting chat to get Cogito's thoughts on the current conversation, or use <strong>@cc</strong> for specific questions.
             </p>
             
             <div style="margin-bottom: 15px;">
@@ -340,6 +346,9 @@
             
             // Update subtitle to show logged in user
             document.querySelector('.subtitle').textContent = `Logged in as ${currentUser.email}`;
+            
+            // Show user email in transcript notification
+            document.getElementById('userEmail').textContent = currentUser.email;
         }
         
         // Handle login
