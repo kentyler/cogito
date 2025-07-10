@@ -83,16 +83,59 @@ pool.connect()
     console.error('❌ PostgreSQL connection failed:', err.message);
   });
 
-// Email configuration
-const emailTransporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
-  }
-});
+// Email configuration - multiple provider support for Render.com
+let emailTransporter;
+
+if (process.env.SENDGRID_API_KEY) {
+  // SendGrid (Render addon)
+  emailTransporter = nodemailer.createTransport({
+    host: 'smtp.sendgrid.net',
+    port: 587,
+    secure: false,
+    auth: {
+      user: 'apikey',
+      pass: process.env.SENDGRID_API_KEY
+    }
+  });
+  console.log('📧 Using SendGrid email service');
+} else if (process.env.POSTMARK_API_TOKEN) {
+  // Postmark
+  emailTransporter = nodemailer.createTransport({
+    host: 'smtp.postmarkapp.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.POSTMARK_API_TOKEN,
+      pass: process.env.POSTMARK_API_TOKEN
+    }
+  });
+  console.log('📧 Using Postmark email service');
+} else if (process.env.SMTP_HOST) {
+  // Generic SMTP
+  emailTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+  console.log('📧 Using custom SMTP service');
+} else {
+  // No email service configured - create a mock transporter
+  emailTransporter = {
+    sendMail: async (options) => {
+      console.log('📧 Mock email (no service configured):');
+      console.log(`To: ${options.to}`);
+      console.log(`Subject: ${options.subject}`);
+      console.log(`Content length: ${options.html?.length || options.text?.length || 0} chars`);
+      return { messageId: 'mock-' + Date.now() };
+    },
+    verify: (callback) => callback(null, true)
+  };
+  console.log('📧 Using mock email service (no credentials configured)');
+}
 
 // Test email configuration
 emailTransporter.verify((error, success) => {
@@ -1112,8 +1155,12 @@ async function sendTranscriptEmail(blockId, userEmail, meetingUrl, meetingName) 
     `;
     
     // Send email
+    const fromEmail = process.env.FROM_EMAIL || 
+                     process.env.EMAIL_USER || 
+                     'cogito@cogito-meetings.onrender.com';
+    
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'cogito@example.com',
+      from: fromEmail,
       to: userEmail,
       subject: `Meeting Transcript - ${meetingName || 'Unnamed Meeting'}`,
       html: emailContent
