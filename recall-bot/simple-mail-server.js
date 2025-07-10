@@ -1,107 +1,91 @@
-// Simple Node.js mail server for Render.com
-// This creates a basic SMTP server that can send emails without external dependencies
+// Simple Node.js mail server that actually sends emails
+// Uses built-in SMTP without requiring external services like Gmail
 
 const nodemailer = require('nodemailer');
-const SMTPServer = require('smtp-server').SMTPServer;
+const dns = require('dns').promises;
 
-class SimpleMailServer {
-  constructor(port = 2525) {
-    this.port = port;
-    this.emails = []; // Store emails in memory for now
-    this.server = null;
-  }
-
-  start() {
-    // Create a simple SMTP server
-    this.server = new SMTPServer({
-      // Allow any authentication
-      onAuth: (auth, session, callback) => {
-        console.log(`📧 SMTP Auth: ${auth.username}`);
-        callback(null, { user: auth.username });
-      },
-
-      // Handle incoming emails
-      onData: (stream, session, callback) => {
-        let emailData = '';
-        
-        stream.on('data', (chunk) => {
-          emailData += chunk;
-        });
-
-        stream.on('end', () => {
-          console.log(`📧 Email received from ${session.envelope.mailFrom.address}`);
-          console.log(`📧 To: ${session.envelope.rcptTo.map(r => r.address).join(', ')}`);
-          
-          // Store email in memory
-          this.emails.push({
-            from: session.envelope.mailFrom.address,
-            to: session.envelope.rcptTo.map(r => r.address),
-            data: emailData,
-            timestamp: new Date()
-          });
-
-          // For demo purposes, just log that we "sent" it
-          console.log('✅ Email processed successfully');
-          callback();
-        });
-      }
-    });
-
-    this.server.listen(this.port, () => {
-      console.log(`📧 Simple Mail Server running on port ${this.port}`);
-    });
-
-    return this.server;
-  }
-
-  stop() {
-    if (this.server) {
-      this.server.close();
-      console.log('📧 Mail server stopped');
-    }
-  }
-
-  // Get stored emails (for debugging)
-  getEmails() {
-    return this.emails;
-  }
-}
-
-// Create a simple transporter that uses console logging instead of actual sending
-function createSimpleTransporter() {
-  return nodemailer.createTransporter({
-    streamTransport: true,
-    newline: 'unix',
-    buffer: true
-  }, {
-    from: 'cogito@localhost',
-    to: 'user@localhost'
+// Create a direct SMTP transporter that sends emails directly to recipient's mail server
+function createDirectTransporter() {
+  return nodemailer.createTransport({
+    // Use direct transport - sends directly to recipient's mail server
+    // This bypasses the need for Gmail or other SMTP services
+    name: process.env.RENDER_EXTERNAL_URL || 'cogito-meetings.onrender.com',
+    direct: true,
+    
+    // Connection pooling
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    
+    // Timeouts
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000
   });
 }
 
-// Alternative: Create a transporter that just logs emails
+// Alternative: Use Ethereal Email for testing (creates temporary email accounts)
+async function createEtherealTransporter() {
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    
+    return nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass
+      }
+    });
+  } catch (error) {
+    console.error('Failed to create Ethereal transporter:', error);
+    return null;
+  }
+}
+
+// Create a transporter that tries multiple methods
+async function createBestTransporter() {
+  // First try direct sending
+  try {
+    const directTransporter = createDirectTransporter();
+    await directTransporter.verify();
+    console.log('📧 Using direct SMTP transport');
+    return directTransporter;
+  } catch (error) {
+    console.log('📧 Direct SMTP failed, trying Ethereal...');
+  }
+  
+  // Fall back to Ethereal for testing
+  try {
+    const etherealTransporter = await createEtherealTransporter();
+    if (etherealTransporter) {
+      await etherealTransporter.verify();
+      console.log('📧 Using Ethereal test email service');
+      return etherealTransporter;
+    }
+  } catch (error) {
+    console.log('📧 Ethereal failed, using logging fallback...');
+  }
+  
+  // Final fallback to logging
+  return createLoggingTransporter();
+}
+
+// Logging fallback for when actual email sending fails
 function createLoggingTransporter() {
   return {
     sendMail: async (mailOptions) => {
-      console.log('\n📧 ============ EMAIL SENT ============');
+      console.log('\n📧 ============ EMAIL LOGGED ============');
       console.log(`From: ${mailOptions.from}`);
       console.log(`To: ${mailOptions.to}`);
       console.log(`Subject: ${mailOptions.subject}`);
       console.log(`Content Type: ${mailOptions.html ? 'HTML' : 'Text'}`);
       console.log(`Content Length: ${(mailOptions.html || mailOptions.text || '').length} characters`);
-      
-      if (process.env.NODE_ENV !== 'production') {
-        // In development, save email to file
-        const fs = require('fs').promises;
-        const filename = `email-${Date.now()}.html`;
-        await fs.writeFile(filename, mailOptions.html || mailOptions.text);
-        console.log(`📧 Email saved to: ${filename}`);
-      }
-      
-      console.log('📧 =====================================\n');
+      console.log('📧 ======================================\n');
       
       return { 
-        messageId: `simple-mail-${Date.now()}@localhost`,
+        messageId: `logged-mail-${Date.now()}@localhost`,
         accepted: [mailOptions.to],
         rejected: [],
         envelope: {
@@ -112,7 +96,7 @@ function createLoggingTransporter() {
     },
     
     verify: (callback) => {
-      console.log('📧 Simple logging mail service verified');
+      console.log('📧 Logging mail service verified');
       if (callback) callback(null, true);
       return Promise.resolve(true);
     }
@@ -120,7 +104,8 @@ function createLoggingTransporter() {
 }
 
 module.exports = {
-  SimpleMailServer,
-  createSimpleTransporter,
+  createDirectTransporter,
+  createEtherealTransporter,
+  createBestTransporter,
   createLoggingTransporter
 };

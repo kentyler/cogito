@@ -10,7 +10,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const nodemailer = require('nodemailer');
-const { createLoggingTransporter } = require('./simple-mail-server');
+const { createBestTransporter } = require('./simple-mail-server');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -87,56 +87,61 @@ pool.connect()
 // Email configuration - multiple provider support for Render.com
 let emailTransporter;
 
-if (process.env.SENDGRID_API_KEY) {
-  // SendGrid (Render addon)
-  emailTransporter = nodemailer.createTransport({
-    host: 'smtp.sendgrid.net',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'apikey',
-      pass: process.env.SENDGRID_API_KEY
+async function initializeEmailService() {
+  if (process.env.SENDGRID_API_KEY) {
+    // SendGrid (Render addon)
+    emailTransporter = nodemailer.createTransport({
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY
+      }
+    });
+    console.log('📧 Using SendGrid email service');
+  } else if (process.env.POSTMARK_API_TOKEN) {
+    // Postmark
+    emailTransporter = nodemailer.createTransport({
+      host: 'smtp.postmarkapp.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.POSTMARK_API_TOKEN,
+        pass: process.env.POSTMARK_API_TOKEN
+      }
+    });
+    console.log('📧 Using Postmark email service');
+  } else if (process.env.SMTP_HOST) {
+    // Generic SMTP
+    emailTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+    console.log('📧 Using custom SMTP service');
+  } else {
+    // No external email service configured - use best available method
+    emailTransporter = await createBestTransporter();
+    console.log('📧 Email service initialized without external credentials');
+  }
+
+  // Test email configuration
+  emailTransporter.verify((error, success) => {
+    if (error) {
+      console.log('❌ Email configuration failed:', error.message);
+    } else {
+      console.log('✅ Email server is ready');
     }
   });
-  console.log('📧 Using SendGrid email service');
-} else if (process.env.POSTMARK_API_TOKEN) {
-  // Postmark
-  emailTransporter = nodemailer.createTransport({
-    host: 'smtp.postmarkapp.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.POSTMARK_API_TOKEN,
-      pass: process.env.POSTMARK_API_TOKEN
-    }
-  });
-  console.log('📧 Using Postmark email service');
-} else if (process.env.SMTP_HOST) {
-  // Generic SMTP
-  emailTransporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-  console.log('📧 Using custom SMTP service');
-} else {
-  // No external email service configured - use simple logging transporter
-  emailTransporter = createLoggingTransporter();
-  console.log('📧 Using simple logging email service (no external credentials needed)');
 }
 
-// Test email configuration
-emailTransporter.verify((error, success) => {
-  if (error) {
-    console.log('❌ Email configuration failed:', error.message);
-  } else {
-    console.log('✅ Email server is ready');
-  }
-});
+// Initialize email service
+initializeEmailService().catch(console.error);
 
 // Middleware
 app.use(express.json());
