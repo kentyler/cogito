@@ -73,6 +73,28 @@ CREATE TABLE conversation.block_attendees (
 - Direct PostgreSQL connection with schema access
 - Webhook endpoints for Recall.ai bot status updates
 
+#### 4. **Simple '?' Trigger (July 2025)**
+
+**The Insight:** Real-world usage revealed that the bot hears conversation context instantly, so users don't need to type out explanations. They just need a simple way to say "what do you think?"
+
+**The Problem with @cc:** The original `@cc question text @cc` format required users to:
+- Type out context the bot already heard
+- Remember the bracketing syntax
+- Interrupt conversation flow with lengthy explanations
+
+**The Solution:** Single character trigger `?`
+- Users just type `?` in chat
+- Bot responds with perspective on current conversation
+- No context explanation needed - bot already heard everything
+- Natural, minimal interruption to meeting flow
+
+**Implementation:**
+- Modified chat message processing to recognize standalone `?`
+- Created new contextual prompt for Claude: "respond as if you're a thoughtful meeting participant"
+- Updated UI instructions to promote the simpler interaction pattern
+- Maintained backward compatibility with `@cc` for specific questions
+- **Removed word limits** (July 2025): Eliminated 150-word constraint to allow fuller, more thoughtful responses
+
 ### Lessons Learned
 
 1. **Avoid the Quick Fix Trap**
@@ -90,11 +112,22 @@ CREATE TABLE conversation.block_attendees (
    - Each participant's evolving narrative is tracked separately
    - Meeting bot should be a thinking participant, not just a recorder
 
-### Current State (January 2025)
+4. **User Experience Simplification**
+   - Real-world usage patterns reveal what actually works vs what we think will work
+   - The simplest interface is usually the best interface
+   - Context awareness eliminates the need for context explanation
+
+5. **Response Quality Over Brevity**
+   - Initial 150-word limit was arbitrary and constraining
+   - Meeting participants need complete thoughts, not artificially truncated responses
+   - Trust the AI to be appropriately conversational rather than imposing rigid constraints
+
+### Current State (January-July 2025)
 - ✅ Full database migrated to Render PostgreSQL
 - ✅ Meeting bot can be created via API
 - ✅ Database schema supports narrative tracking
 - ✅ Clean architecture without quick fixes
+- ✅ **Simple '?' Trigger Implemented** (July 2025)
 - 🔄 Ready for UI integration
 - 🔄 Ready for real-time transcript processing
 - 🔄 Ready for narrative intelligence layer

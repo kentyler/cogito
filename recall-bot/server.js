@@ -9,6 +9,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
+const nodemailer = require('nodemailer');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -81,6 +82,26 @@ pool.connect()
   .catch(err => {
     console.error('❌ PostgreSQL connection failed:', err.message);
   });
+
+// Email configuration
+const emailTransporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+});
+
+// Test email configuration
+emailTransporter.verify((error, success) => {
+  if (error) {
+    console.log('❌ Email configuration failed:', error.message);
+  } else {
+    console.log('✅ Email server is ready');
+  }
+});
 
 // Middleware
 app.use(express.json());
@@ -427,6 +448,31 @@ class RealTimeTranscript {
     }
   }
   
+  async handleContextualQuestion(speaker) {
+    try {
+      // Get recent context (last 500 words)
+      const context = this.getRecentContext(500);
+      
+      console.log(`❓ Processing contextual '?' trigger from ${speaker}`);
+      console.log(`📝 Context length: ${context.length} characters`);
+      
+      // Save the trigger as a turn
+      await this.saveTurnToDatabase(speaker, '?', 'contextual-trigger');
+      
+      // Get Claude response based on context
+      const response = await this.queryClaudeContextually(speaker, context);
+      
+      // Save Claude response as a turn
+      await this.saveTurnToDatabase('Cogito', response, 'claude-response');
+      
+      // Send response to meeting chat
+      await this.sendChatResponse(response);
+      
+    } catch (error) {
+      console.error('Error handling contextual question:', error);
+    }
+  }
+  
   getRecentContext(wordLimit = 500) {
     const words = this.fullTranscript.split(' ');
     return words.slice(-wordLimit).join(' ');
@@ -463,11 +509,11 @@ ${meetingContext}
 
 CURRENT QUESTION from ${speaker}: ${questionText}
 
-Please respond helpfully as a meeting participant. Keep your response concise (under 150 words) since it will be sent to the meeting chat. Be conversational and reference the meeting context when relevant.`;
+Please respond helpfully as a meeting participant. Be conversational and reference the meeting context when relevant.`;
 
       const response = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 200,
+        max_tokens: 1000,
         messages: [{
           role: 'user',
           content: prompt
@@ -482,6 +528,51 @@ Please respond helpfully as a meeting participant. Keep your response concise (u
     } catch (error) {
       console.error('Error querying Claude:', error);
       return `Sorry ${speaker}, I had trouble processing your question with Claude. Error: ${error.message}`;
+    }
+  }
+  
+  async queryClaudeContextually(speaker, context) {
+    try {
+      if (!anthropic) {
+        console.log(`⚠️  Claude not available, using fallback response`);
+        return `Hi ${speaker}! I heard the conversation but Claude API is not configured. Please check the ANTHROPIC_API_KEY.`;
+      }
+
+      console.log(`❓ Asking Claude for contextual response with ${context.length} chars of context`);
+      
+      // Prepare context for Claude
+      const meetingContext = context.trim();
+      const participants = this.getParticipants().join(', ');
+      const duration = this.getMeetingDuration();
+      
+      const prompt = `You are Cogito, an AI assistant participating in a live meeting via a bot. ${speaker} just typed "?" which means they want your perspective on the current conversation.
+
+MEETING PARTICIPANTS: ${participants}
+MEETING DURATION: ${duration} minutes
+RECENT CONVERSATION:
+${meetingContext}
+
+${speaker} is asking for your thoughts on what's being discussed right now. Provide a helpful perspective, insight, or relevant contribution to the conversation. You've been listening to everything, so respond as if you're a thoughtful meeting participant who has something valuable to add.
+
+Be conversational and focus on what would be most helpful given the current discussion.`;
+
+      const response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      });
+
+      const claudeResponse = response.content[0].text;
+      console.log(`✅ Claude responded contextually: ${claudeResponse.substring(0, 100)}...`);
+      
+      return claudeResponse;
+      
+    } catch (error) {
+      console.error('Error querying Claude contextually:', error);
+      return `Sorry ${speaker}, I had trouble providing a contextual response. Error: ${error.message}`;
     }
   }
   
@@ -820,6 +911,13 @@ async function processChatMessage(botId, message, realTimeTranscript) {
   
   console.log(`💬 Chat message from ${sender}: "${content}"`);
   
+  // Check for simple ? trigger (just a question mark, possibly with whitespace)
+  if (content === '?' || content.match(/^\s*\?\s*$/)) {
+    console.log(`❓ Simple '?' trigger from ${sender} - responding to current conversation context`);
+    await realTimeTranscript.handleContextualQuestion(sender);
+    return;
+  }
+  
   // Check for @cc pattern anywhere in the message
   const ccPattern = /@cc/gi;
   const ccMatches = content.match(ccPattern);
@@ -925,6 +1023,117 @@ async function getOrCreateAttendee(blockId, speakerName) {
   return newAttendeeResult.rows[0];
 }
 
+// Function to send transcript email
+async function sendTranscriptEmail(blockId, userEmail, meetingUrl, meetingName) {
+  try {
+    console.log(`Sending transcript email to ${userEmail} for meeting ${blockId}`);
+    
+    // Get all turns for this meeting in sequence order
+    const turns = await pool.query(`
+      SELECT 
+        t.content,
+        t.source_type,
+        t.timestamp,
+        t.participant_id,
+        t.metadata,
+        bt.sequence_order,
+        p.name as participant_name,
+        ba.name as attendee_name
+      FROM conversation.turns t
+      JOIN conversation.block_turns bt ON bt.turn_id = t.turn_id
+      LEFT JOIN conversation.participants p ON p.id = t.participant_id
+      LEFT JOIN conversation.block_attendees ba ON ba.block_id = bt.block_id 
+        AND ba.name = t.metadata->>'speaker'
+      WHERE bt.block_id = $1
+      ORDER BY bt.sequence_order
+    `, [blockId]);
+    
+    if (turns.rows.length === 0) {
+      console.log('No transcript content found for meeting');
+      return;
+    }
+    
+    // Generate email content
+    const speechTurns = turns.rows.filter(t => t.source_type === 'recall_bot');
+    const chatTurns = turns.rows.filter(t => ['chat-question', 'chat-comment', 'claude-response'].includes(t.source_type));
+    
+    let emailContent = `
+    <h2>Meeting Transcript</h2>
+    <p><strong>Meeting:</strong> ${meetingName || 'Unnamed Meeting'}</p>
+    <p><strong>Date:</strong> ${new Date(turns.rows[0].timestamp).toLocaleString()}</p>
+    <p><strong>URL:</strong> <a href="${meetingUrl}">${meetingUrl}</a></p>
+    <p><strong>Total Activity:</strong> ${turns.rows.length} turns (${speechTurns.length} speech, ${chatTurns.length} chat)</p>
+    
+    <hr>
+    
+    <h3>Complete Transcript</h3>
+    `;
+    
+    // Add all turns in chronological order
+    for (const turn of turns.rows) {
+      const timestamp = new Date(turn.timestamp).toLocaleTimeString();
+      
+      if (turn.source_type === 'recall_bot') {
+        // Speech turn
+        const speaker = turn.metadata?.speaker || turn.attendee_name || turn.participant_name || 'Unknown Speaker';
+        emailContent += `
+        <div style="margin-bottom: 15px;">
+          <strong>[${timestamp}] ${speaker}:</strong><br>
+          ${turn.content.replace(/\n/g, '<br>')}
+        </div>
+        `;
+      } else {
+        // Chat turn
+        const chatter = turn.participant_name || 'Unknown';
+        const chatType = turn.source_type === 'claude-response' ? 'AI Response' : 'Chat';
+        emailContent += `
+        <div style="margin-bottom: 15px; background-color: #f0f8ff; padding: 10px; border-left: 3px solid #2563eb;">
+          <strong>[${timestamp}] 💬 ${chatter} (${chatType}):</strong><br>
+          ${turn.content.replace(/\n/g, '<br>')}
+        </div>
+        `;
+      }
+    }
+    
+    // Calculate stats
+    const totalWords = turns.rows.reduce((sum, turn) => sum + turn.content.split(/\s+/).length, 0);
+    
+    emailContent += `
+    <hr>
+    <p><strong>Statistics:</strong></p>
+    <ul>
+      <li>Total words: ${totalWords}</li>
+      <li>Speech turns: ${speechTurns.length}</li>
+      <li>Chat interactions: ${chatTurns.length}</li>
+      <li>Duration: ${new Date(turns.rows[0].timestamp).toLocaleString()} - ${new Date(turns.rows[turns.rows.length - 1].timestamp).toLocaleString()}</li>
+    </ul>
+    
+    <p><em>This transcript was automatically generated by Cogito Meeting Bot.</em></p>
+    `;
+    
+    // Send email
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'cogito@example.com',
+      to: userEmail,
+      subject: `Meeting Transcript - ${meetingName || 'Unnamed Meeting'}`,
+      html: emailContent
+    };
+    
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`✅ Transcript email sent successfully to ${userEmail}`);
+    
+    // Mark as sent in database
+    await pool.query(`
+      UPDATE conversation.block_meetings 
+      SET email_sent = TRUE 
+      WHERE block_id = $1
+    `, [blockId]);
+    
+  } catch (error) {
+    console.error('Error sending transcript email:', error);
+  }
+}
+
 // API endpoint to create a meeting bot (protected)
 app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
@@ -987,7 +1196,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
         chat: {
           on_bot_join: {
             send_to: "everyone",
-            message: "🤖 Cogito has joined the meeting! Type @cc to ask me questions."
+            message: "🤖 Cogito has joined the meeting! Type ? for my thoughts on the conversation, or @cc for specific questions."
           }
         },
         webhook_url: `https://${process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '')}/webhook`
@@ -1008,14 +1217,15 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     
     console.log('Creating block and meeting record for bot:', botData.id);
     
-    // Create a block for this meeting
+    // Create a block for this meeting with user who created it
     const blockResult = await pool.query(
-      `INSERT INTO blocks (name, description, block_type, metadata) 
-       VALUES ($1, $2, $3, $4) RETURNING *`,
+      `INSERT INTO blocks (name, description, block_type, created_by_user_id, metadata) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [
         meeting_name || `Meeting ${new Date().toISOString()}`,
         `Meeting from ${meeting_url}`,
         'meeting',
+        req.session.user.user_id,
         { created_by: 'recall_bot', recall_bot_id: botData.id }
       ]
     );
@@ -1023,13 +1233,14 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     console.log('Block created:', block.block_id);
     
     // Create meeting-specific data
-    // Use authenticated user's ID
+    // Use authenticated user's ID and email
     const invitedByUserId = req.session.user.user_id;
+    const userEmail = req.session.user.email;
     
     const meetingResult = await pool.query(
-      `INSERT INTO block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, status) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [block.block_id, botData.id, meeting_url, invitedByUserId, 'joining']
+      `INSERT INTO block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, transcript_email, status) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [block.block_id, botData.id, meeting_url, invitedByUserId, userEmail, 'joining']
     );
     const meeting = meetingResult.rows[0];
     console.log('Meeting record created:', meeting.block_id);
@@ -1090,9 +1301,38 @@ app.post('/webhook', async (req, res) => {
       const updateValues = [event.bot_id, ...Object.values(updateData)];
       
       await pool.query(
-        `UPDATE block_meetings SET ${updateFields} WHERE recall_bot_id = $1`,
+        `UPDATE conversation.block_meetings SET ${updateFields} WHERE recall_bot_id = $1`,
         updateValues
       );
+      
+      // Send email if meeting is completed and email hasn't been sent yet
+      if (event.status === 'completed') {
+        const meetingInfo = await pool.query(`
+          SELECT 
+            bm.block_id,
+            bm.transcript_email,
+            bm.meeting_url,
+            bm.email_sent,
+            b.name as meeting_name
+          FROM conversation.block_meetings bm
+          JOIN conversation.blocks b ON b.block_id = bm.block_id
+          WHERE bm.recall_bot_id = $1
+        `, [event.bot_id]);
+        
+        if (meetingInfo.rows.length > 0) {
+          const meeting = meetingInfo.rows[0];
+          
+          if (meeting.transcript_email && !meeting.email_sent) {
+            console.log(`Sending transcript email to ${meeting.transcript_email}`);
+            await sendTranscriptEmail(
+              meeting.block_id,
+              meeting.transcript_email,
+              meeting.meeting_url,
+              meeting.meeting_name
+            );
+          }
+        }
+      }
     }
     
     res.status(200).send('OK');
