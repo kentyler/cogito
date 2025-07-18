@@ -72,3 +72,8 @@ __pycache__/
 
 # Personality evolution data (optional - can be committed for sharing)  
 # personalities/*.yaml
+
+# ClojureScript/Shadow-cljs
+conversational-repl/public/js/compiled/
+conversational-repl/public/js/cljs-runtime/
+conversational-repl/.shadow-cljs/
