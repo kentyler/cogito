@@ -11,6 +11,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const nodemailer = require('nodemailer');
 const { createBestTransporter } = require('./simple-mail-server');
+const ThinkingToolsSystem = require('./thinking-tools');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -71,8 +72,18 @@ const pool = new Pool({
 
 // Set search path for schema access
 pool.on('connect', (client) => {
-  client.query('SET search_path = public, conversation, client_mgmt');
+  client.query('SET search_path = public, conversation, client_mgmt, tools');
 });
+
+// Initialize Thinking Tools System
+let thinkingTools;
+try {
+  thinkingTools = new ThinkingToolsSystem(pool, anthropic);
+  console.log('✅ Thinking Tools System initialized');
+} catch (error) {
+  console.warn('⚠️  Thinking Tools System initialization failed:', error.message);
+  thinkingTools = null;
+}
 
 // Test database connection on startup
 pool.connect()
@@ -157,7 +168,7 @@ app.use(session({
     tableName: 'user_sessions', // Table will be created automatically
     createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || 'cogito-recall-bot-secret-key',
+  secret: process.env.SESSION_SECRET || 'cogito-repl-secret-key',
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -174,8 +185,8 @@ console.log('Session config:', {
 });
 
 // Temporary migration endpoint (remove after migration)
-const { addMigrationEndpoint } = require('./migrate-endpoint');
-addMigrationEndpoint(app);
+// const { addMigrationEndpoint } = require('./migrate-endpoint'); // File doesn't exist
+// addMigrationEndpoint(app);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -187,12 +198,27 @@ function requireAuth(req, res, next) {
   console.log('Auth check - Session ID:', req.sessionID);
   console.log('Auth check - Session data:', req.session);
   console.log('Auth check - Has user:', !!(req.session && req.session.user));
+  console.log('Auth check - Headers:', req.headers['x-user-id'], req.headers['x-user-email']);
   
+  // Check session first
   if (req.session && req.session.user) {
+    req.user = {
+      id: req.session.user.user_id || req.session.user.id,
+      email: req.session.user.email
+    };
     return next();
-  } else {
-    return res.status(401).json({ error: 'Authentication required' });
   }
+  
+  // Fallback to headers from cogito-repl proxy
+  if (req.headers['x-user-id'] && req.headers['x-user-email']) {
+    req.user = {
+      id: parseInt(req.headers['x-user-id']),
+      email: req.headers['x-user-email']
+    };
+    return next();
+  }
+  
+  return res.status(401).json({ error: 'Authentication required' });
 }
 
 // Login endpoint
@@ -320,6 +346,89 @@ app.get('/debug/env', (req, res) => {
     hasOpenAIKey: !!process.env.OPENAI_API_KEY,
     hasDatabaseURL: !!process.env.DATABASE_URL
   });
+});
+
+// Get meeting status endpoint
+app.get('/api/meeting-status/:botId', requireAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    
+    // Get meeting info from database
+    const meetingResult = await pool.query(`
+      SELECT 
+        bm.*,
+        b.name as meeting_name,
+        b.created_at as block_created_at
+      FROM conversation.block_meetings bm
+      JOIN conversation.blocks b ON b.block_id = bm.block_id
+      WHERE bm.recall_bot_id = $1
+    `, [botId]);
+    
+    if (meetingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    
+    const meeting = meetingResult.rows[0];
+    
+    // Get turn count
+    const turnsResult = await pool.query(`
+      SELECT COUNT(*) as turn_count 
+      FROM conversation.block_turns 
+      WHERE block_id = $1
+    `, [meeting.block_id]);
+    
+    // Try to get current status from Recall.ai
+    let recallStatus = null;
+    let recallError = null;
+    try {
+      const botResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/`, {
+        headers: {
+          'Authorization': `Token ${process.env.RECALL_API_KEY}`
+        }
+      });
+      
+      if (botResponse.ok) {
+        const botData = await botResponse.json();
+        recallStatus = {
+          status: botData.status,
+          meeting_url: botData.meeting_url,
+          created_at: botData.created_at,
+          chat_enabled: !!botData.chat
+        };
+      } else {
+        recallError = `Recall API returned ${botResponse.status}`;
+      }
+    } catch (error) {
+      recallError = error.message;
+    }
+    
+    // Calculate time in current status
+    const minutesInStatus = Math.round((Date.now() - new Date(meeting.created_at).getTime()) / 1000 / 60);
+    
+    res.json({
+      meeting: {
+        block_id: meeting.block_id,
+        name: meeting.meeting_name,
+        database_status: meeting.status,
+        recall_status: recallStatus,
+        recall_error: recallError,
+        email_sent: meeting.email_sent,
+        transcript_email: meeting.transcript_email,
+        created_at: meeting.created_at,
+        minutes_in_status: minutesInStatus,
+        turn_count: parseInt(turnsResult.rows[0].turn_count)
+      },
+      recommendations: {
+        should_force_send: meeting.status === 'joining' && minutesInStatus > 10 && parseInt(turnsResult.rows[0].turn_count) > 0,
+        reason: meeting.status === 'joining' && minutesInStatus > 10 ? 
+          `Meeting stuck in 'joining' for ${minutesInStatus} minutes` : null
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error checking meeting status:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Check transcription data endpoint
@@ -490,19 +599,73 @@ class RealTimeTranscript {
   
   async handleContextualQuestion(speaker) {
     try {
-      // Get recent context (last 500 words)
-      const context = this.getRecentContext(500);
+      // Get recent conversation transcript (what was actually spoken)
+      const transcriptContext = this.getRecentContext(500);
       
       console.log(`❓ Processing contextual '?' trigger from ${speaker}`);
-      console.log(`📝 Context length: ${context.length} characters`);
+      console.log(`📝 Analyzing recent conversation transcript: ${transcriptContext.length} characters`);
       
       // Save the trigger as a turn
       await this.saveTurnToDatabase(speaker, '?', 'contextual-trigger');
       
-      // Get Claude response based on context
-      const response = await this.queryClaudeContextually(speaker, context);
+      // Get meeting info for thinking tools analysis
+      const meetingResult = await pool.query(
+        'SELECT * FROM block_meetings WHERE recall_bot_id = $1',
+        [this.botId]
+      );
       
-      // Save Claude response as a turn
+      let response;
+      
+      if (meetingResult.rows.length > 0 && thinkingTools) {
+        const meeting = meetingResult.rows[0];
+        
+        // Analyze the spoken conversation for thinking tool patterns
+        console.log('🔧 Analyzing spoken conversation for thinking tool patterns...');
+        const analysis = await thinkingTools.analyzeConversationPatterns(transcriptContext, meeting.block_id);
+        
+        if (analysis.patterns_detected && analysis.patterns_detected.length > 0) {
+          console.log(`🎯 Detected patterns in conversation: ${analysis.patterns_detected.join(', ')}`);
+          console.log(`🎯 Analysis reasoning: ${analysis.reasoning}`);
+          
+          // Get client ID (assuming invited_by_user_id maps to client somehow)
+          // For now, use a default client ID of 1
+          const clientId = 1;
+          
+          // Find available tools for these patterns
+          const availableTools = await thinkingTools.findToolsForPatterns(analysis.patterns_detected, clientId);
+          const accessibleTools = availableTools.filter(tool => tool.has_access);
+          
+          if (accessibleTools.length > 0) {
+            console.log(`🔧 Found ${accessibleTools.length} applicable tools for conversation patterns`);
+            
+            // Generate tool suggestion based on what was actually said
+            const toolSuggestion = await thinkingTools.generateToolSuggestion(
+              analysis.patterns_detected,
+              accessibleTools,
+              transcriptContext
+            );
+            
+            if (toolSuggestion) {
+              response = toolSuggestion;
+              console.log(`🎯 Suggesting thinking tool based on conversation: ${accessibleTools[0].tool_name}`);
+            } else {
+              // Fall back to regular contextual response about the conversation
+              response = await this.queryClaudeContextually(speaker, transcriptContext);
+            }
+          } else {
+            console.log('🔧 No accessible tools found for detected conversation patterns');
+            response = await this.queryClaudeContextually(speaker, transcriptContext);
+          }
+        } else {
+          console.log('🔧 No thinking tool patterns detected in conversation');
+          response = await this.queryClaudeContextually(speaker, transcriptContext);
+        }
+      } else {
+        // Fall back to regular contextual response if tools not available
+        response = await this.queryClaudeContextually(speaker, transcriptContext);
+      }
+      
+      // Save response as a turn
       await this.saveTurnToDatabase('Cogito', response, 'claude-response');
       
       // Send response to meeting chat
@@ -745,6 +908,20 @@ wss.on('connection', (ws, req) => {
       const text = words.map(w => w.text).join(' ');
       const timestamp = words[0]?.start_time || Date.now();
       
+      // VOICE CUE DETECTION: Check for "This is [Name]" patterns
+      const speakerCue = detectSpeakerCue(text);
+      if (speakerCue) {
+        console.log(`🎤 Speaker cue detected: "${speakerCue.phrase}" -> ${speakerCue.detectedName}`);
+        
+        // If detected name differs from Recall.ai's speaker name, log for analysis
+        if (speakerCue.detectedName.toLowerCase() !== speakerName.toLowerCase()) {
+          console.log(`📝 Name mismatch: Recall.ai="${speakerName}" vs Voice="${speakerCue.detectedName}"`);
+        }
+        
+        // Force buffer processing for previous speaker when new speaker starts
+        await processPendingBuffers(botId, meeting.block_id);
+      }
+      
       // REAL-TIME: Add to full transcript and check for questions
       console.log(`📝 Processing real-time message: "${text}" from ${speakerName}`);
       if (!meetingTranscripts.has(botId)) {
@@ -768,9 +945,13 @@ wss.on('connection', (ws, req) => {
       buffer.text += ' ' + text;
       buffer.lastTimestamp = timestamp;
       
-      // Check if we should process the buffer (every ~100 words)
+      // Voice-cue-only chunking with safety fallbacks
       const wordCount = buffer.text.trim().split(/\s+/).length;
-      const shouldProcess = wordCount >= 100;
+      const timeSinceLastUpdate = timestamp - buffer.lastTimestamp;
+      const timeSinceStart = timestamp - buffer.startTimestamp;
+      
+      // Safety fallbacks: process if buffer is extremely large (500+ words) or very old (5+ minutes)
+      const shouldProcess = wordCount >= 500 || timeSinceStart >= 5 * 60 * 1000;
       
       if (shouldProcess && buffer.text.trim().length > 0) {
         // Generate embedding for the accumulated text
@@ -1027,6 +1208,95 @@ async function processChatMessage(botId, message, realTimeTranscript) {
 }
 
 // Helper function to generate embedding for text
+// Voice cue detection for speaker changes
+function detectSpeakerCue(text) {
+  const patterns = [
+    /this is (\w+)/i,
+    /(\w+) here/i,
+    /my name is (\w+)/i,
+    /i'm (\w+)/i,
+    /^(\w+):/,
+    /(\w+) speaking/i
+  ];
+  
+  for (let pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return {
+        phrase: match[0],
+        detectedName: match[1],
+        position: match.index,
+        confidence: getConfidenceScore(match[0], pattern)
+      };
+    }
+  }
+  return null;
+}
+
+function getConfidenceScore(phrase, pattern) {
+  // "This is X" gets highest confidence
+  if (pattern.source.includes('this is')) return 0.9;
+  if (pattern.source.includes('my name is')) return 0.8;
+  if (pattern.source.includes('speaking')) return 0.7;
+  if (pattern.source.includes('here')) return 0.6;
+  if (pattern.source.includes('^')) return 0.5; // Start of line patterns
+  return 0.4;
+}
+
+// Process all pending buffers when speaker changes
+async function processPendingBuffers(botId, blockId) {
+  console.log(`🔄 Processing pending buffers for bot ${botId} due to speaker change`);
+  
+  for (let [bufferKey, buffer] of transcriptBuffers.entries()) {
+    if (bufferKey.startsWith(`${botId}:`) && buffer.text.trim().length > 0) {
+      const speakerName = bufferKey.split(':')[1];
+      
+      try {
+        // Get attendee info
+        const attendee = await getOrCreateAttendee(blockId, speakerName);
+        
+        // Generate embedding
+        const embedding = await generateEmbedding(buffer.text.trim());
+        
+        // Create turn
+        const wordCount = buffer.text.trim().split(/\s+/).length;
+        const turnResult = await pool.query(
+          `INSERT INTO turns (participant_id, content, source_type, metadata) 
+           VALUES ($1, $2, $3, $4) RETURNING turn_id`,
+          [
+            attendee.id,
+            buffer.text.trim(),
+            'recall_bot_speaker_change',
+            { 
+              startTimestamp: buffer.startTimestamp,
+              endTimestamp: buffer.lastTimestamp,
+              bot_id: botId,
+              word_count: wordCount,
+              has_embedding: !!embedding,
+              trigger: 'speaker_cue_detected'
+            }
+          ]
+        );
+        
+        if (embedding) {
+          await pool.query(
+            'UPDATE turns SET content_embedding = $1 WHERE turn_id = $2',
+            [embedding, turnResult.rows[0].turn_id]
+          );
+        }
+        
+        console.log(`✅ Processed buffer for ${speakerName}: ${wordCount} words`);
+        
+        // Clear the buffer
+        transcriptBuffers.delete(bufferKey);
+        
+      } catch (error) {
+        console.error(`❌ Error processing buffer for ${speakerName}:`, error);
+      }
+    }
+  }
+}
+
 async function generateEmbedding(text) {
   try {
     const response = await openai.embeddings.create({
@@ -1178,7 +1448,233 @@ async function sendTranscriptEmail(blockId, userEmail, meetingUrl, meetingName) 
   }
 }
 
+// API endpoint to force send transcript for a stuck meeting
+app.post('/api/force-send-transcript/:botId', requireAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    
+    // Get meeting info
+    const meetingResult = await pool.query(`
+      SELECT 
+        bm.block_id,
+        bm.transcript_email,
+        bm.meeting_url,
+        bm.email_sent,
+        bm.status,
+        b.name as meeting_name
+      FROM conversation.block_meetings bm
+      JOIN conversation.blocks b ON b.block_id = bm.block_id
+      WHERE bm.recall_bot_id = $1
+    `, [botId]);
+    
+    if (meetingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    
+    const meeting = meetingResult.rows[0];
+    
+    if (meeting.email_sent) {
+      return res.status(400).json({ error: 'Transcript already sent' });
+    }
+    
+    if (!meeting.transcript_email) {
+      return res.status(400).json({ error: 'No email address configured for this meeting' });
+    }
+    
+    // Check if we have any transcript data
+    const turnsCheck = await pool.query(`
+      SELECT COUNT(*) as turn_count 
+      FROM conversation.block_turns 
+      WHERE block_id = $1
+    `, [meeting.block_id]);
+    
+    const turnCount = parseInt(turnsCheck.rows[0].turn_count);
+    
+    if (turnCount === 0) {
+      return res.status(400).json({ error: 'No transcript data available' });
+    }
+    
+    // Force send the transcript
+    await sendTranscriptEmail(
+      meeting.block_id,
+      meeting.transcript_email,
+      meeting.meeting_url,
+      meeting.meeting_name
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `Transcript sent to ${meeting.transcript_email}`,
+      turns_sent: turnCount
+    });
+    
+  } catch (error) {
+    console.error('Error forcing transcript send:', error);
+    res.status(500).json({ error: 'Failed to send transcript' });
+  }
+});
+
 // API endpoint to create a meeting bot (protected)
+// Get all bots for the authenticated user
+app.get('/api/bots', requireAuth, async (req, res) => {
+  try {
+    const result = await db.pool.query(`
+      SELECT 
+        b.id,
+        b.bot_id,
+        b.meeting_url,
+        b.meeting_name,
+        b.status,
+        b.created_at,
+        b.updated_at
+      FROM blocks b
+      WHERE b.participant_id = $1
+        AND b.bot_id IS NOT NULL
+        AND b.status IN ('active', 'joining', 'leaving')
+      ORDER BY b.created_at DESC
+    `, [req.user.id]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching bots:', error);
+    res.status(500).json({ error: 'Failed to fetch bots' });
+  }
+});
+
+// Test endpoint for debugging - remove after fixing
+app.get('/api/stuck-meetings-debug', async (req, res) => {
+  try {
+    console.log('Debug: Fetching stuck meetings...');
+    const result = await db.pool.query(`
+      SELECT 
+        bm.id,
+        bm.meeting_id,
+        bm.meeting_url,
+        bm.meeting_name,
+        bm.status,
+        bm.created_at,
+        bm.updated_at,
+        b.bot_id,
+        COALESCE(COUNT(t.id), 0) as turn_count
+      FROM block_meetings bm
+      LEFT JOIN blocks b ON bm.block_id = b.id
+      LEFT JOIN turns t ON b.id = t.block_id
+      WHERE bm.status = 'joining'
+      GROUP BY bm.id, bm.meeting_id, bm.meeting_url, bm.meeting_name, bm.status, bm.created_at, bm.updated_at, b.bot_id
+      ORDER BY bm.created_at DESC
+    `);
+    
+    console.log('Debug: Found stuck meetings:', result.rows.length);
+    console.log('Debug: Stuck meetings data:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Debug: Error fetching stuck meetings:', error);
+    res.status(500).json({ error: 'Failed to fetch stuck meetings' });
+  }
+});
+
+// Get stuck meetings (meetings stuck in 'joining' status) - temporarily without auth
+app.get('/api/stuck-meetings', async (req, res) => {
+  try {
+    console.log('Fetching stuck meetings...');
+    const result = await db.pool.query(`
+      SELECT 
+        bm.id,
+        bm.meeting_id,
+        bm.meeting_url,
+        bm.meeting_name,
+        bm.status,
+        bm.created_at,
+        bm.updated_at,
+        b.bot_id,
+        COALESCE(COUNT(t.id), 0) as turn_count
+      FROM block_meetings bm
+      LEFT JOIN blocks b ON bm.block_id = b.id
+      LEFT JOIN turns t ON b.id = t.block_id
+      WHERE bm.status = 'joining'
+      GROUP BY bm.id, bm.meeting_id, bm.meeting_url, bm.meeting_name, bm.status, bm.created_at, bm.updated_at, b.bot_id
+      ORDER BY bm.created_at DESC
+    `);
+    
+    console.log('Found stuck meetings:', result.rows.length);
+    console.log('Stuck meetings data:', result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching stuck meetings:', error);
+    res.status(500).json({ error: 'Failed to fetch stuck meetings' });
+  }
+});
+
+// Force complete a stuck meeting
+app.post('/api/stuck-meetings/:meetingId/complete', requireAuth, async (req, res) => {
+  try {
+    const { meetingId } = req.params;
+    
+    // Update the meeting status to completed
+    const result = await db.pool.query(`
+      UPDATE block_meetings 
+      SET status = 'completed', updated_at = NOW()
+      WHERE meeting_id = $1
+      RETURNING *
+    `, [meetingId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    
+    // Also update the associated block status if it exists
+    await db.pool.query(`
+      UPDATE blocks 
+      SET status = 'completed', updated_at = NOW()
+      WHERE id = (
+        SELECT block_id FROM block_meetings WHERE meeting_id = $1
+      )
+    `, [meetingId]);
+    
+    res.json({ 
+      success: true, 
+      message: 'Meeting marked as completed',
+      meeting: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error completing stuck meeting:', error);
+    res.status(500).json({ error: 'Failed to complete meeting' });
+  }
+});
+
+// Leave/shutdown a bot
+app.post('/api/bots/:botId/leave', requireAuth, async (req, res) => {
+  try {
+    const { botId } = req.params;
+    
+    // Update the bot status to leaving
+    await db.pool.query(`
+      UPDATE blocks 
+      SET status = 'leaving', updated_at = NOW()
+      WHERE bot_id = $1 AND participant_id = $2
+    `, [botId, req.user.id]);
+    
+    // Here you would typically call the Recall API to actually leave the meeting
+    // For now, we'll just simulate it by updating the status
+    setTimeout(async () => {
+      try {
+        await db.pool.query(`
+          UPDATE blocks 
+          SET status = 'inactive', updated_at = NOW()
+          WHERE bot_id = $1 AND participant_id = $2
+        `, [botId, req.user.id]);
+      } catch (error) {
+        console.error('Error updating bot status to inactive:', error);
+      }
+    }, 2000); // Simulate delay
+    
+    res.json({ success: true, message: 'Bot is leaving the meeting' });
+  } catch (error) {
+    console.error('Error leaving bot:', error);
+    res.status(500).json({ error: 'Failed to leave bot' });
+  }
+});
+
 app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, client_id, meeting_name } = req.body;
@@ -1528,6 +2024,101 @@ Choose the most appropriate response type based on the user's request.`;
     res.status(500).json({ error: 'Failed to process conversational turn' });
   }
 });
+
+// Function to check and handle stuck meetings
+async function checkStuckMeetings() {
+  try {
+    // Find meetings that have been in 'joining' status for more than 10 minutes
+    const stuckMeetings = await pool.query(`
+      SELECT 
+        bm.block_id,
+        bm.recall_bot_id,
+        bm.transcript_email,
+        bm.meeting_url,
+        bm.email_sent,
+        bm.status,
+        bm.created_at,
+        b.name as meeting_name
+      FROM conversation.block_meetings bm
+      JOIN conversation.blocks b ON b.block_id = bm.block_id
+      WHERE bm.status = 'joining' 
+        AND bm.created_at < NOW() - INTERVAL '10 minutes'
+        AND bm.email_sent IS NOT TRUE
+        AND bm.transcript_email IS NOT NULL
+    `);
+    
+    console.log(`Found ${stuckMeetings.rows.length} stuck meetings to check`);
+    
+    for (const meeting of stuckMeetings.rows) {
+      // Check if we have any transcript data for this meeting
+      const turnsCheck = await pool.query(`
+        SELECT COUNT(*) as turn_count 
+        FROM conversation.block_turns 
+        WHERE block_id = $1
+      `, [meeting.block_id]);
+      
+      const turnCount = parseInt(turnsCheck.rows[0].turn_count);
+      
+      if (turnCount > 0) {
+        console.log(`Meeting ${meeting.block_id} stuck in 'joining' but has ${turnCount} turns - forcing transcript send`);
+        
+        // Try to get bot status from Recall.ai
+        try {
+          const botResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${meeting.recall_bot_id}/`, {
+            headers: {
+              'Authorization': `Token ${process.env.RECALL_API_KEY}`
+            }
+          });
+          
+          if (botResponse.ok) {
+            const botData = await botResponse.json();
+            console.log(`Bot ${meeting.recall_bot_id} actual status: ${botData.status}`);
+            
+            // Update status if different
+            if (botData.status !== 'joining') {
+              await pool.query(
+                'UPDATE conversation.block_meetings SET status = $1 WHERE recall_bot_id = $2',
+                [botData.status, meeting.recall_bot_id]
+              );
+            }
+            
+            // If bot is done (completed, failed, etc) or has been stuck for too long, send transcript
+            if (botData.status === 'completed' || botData.status === 'failed' || 
+                (botData.status === 'joining' && new Date(meeting.created_at) < new Date(Date.now() - 30 * 60 * 1000))) {
+              await sendTranscriptEmail(
+                meeting.block_id,
+                meeting.transcript_email,
+                meeting.meeting_url,
+                meeting.meeting_name
+              );
+            }
+          }
+        } catch (error) {
+          console.error(`Error checking bot status for ${meeting.recall_bot_id}:`, error);
+          
+          // If we can't check bot status and meeting is over 30 minutes old with transcript data, send it
+          if (new Date(meeting.created_at) < new Date(Date.now() - 30 * 60 * 1000)) {
+            console.log(`Forcing transcript send for old stuck meeting ${meeting.block_id}`);
+            await sendTranscriptEmail(
+              meeting.block_id,
+              meeting.transcript_email,
+              meeting.meeting_url,
+              meeting.meeting_name
+            );
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking stuck meetings:', error);
+  }
+}
+
+// Check for stuck meetings every 5 minutes
+setInterval(checkStuckMeetings, 5 * 60 * 1000);
+
+// Also check on startup after a delay
+setTimeout(checkStuckMeetings, 30 * 1000);
 
 // Start server
 const PORT = process.env.PORT || 8080;
