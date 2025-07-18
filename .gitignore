@@ -77,3 +77,6 @@ __pycache__/
 conversational-repl/public/js/compiled/
 conversational-repl/public/js/cljs-runtime/
 conversational-repl/.shadow-cljs/
+
+# Deprecated folders with security vulnerabilities
+deprecated/
