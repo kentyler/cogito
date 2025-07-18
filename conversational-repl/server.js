@@ -6,6 +6,8 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
+const { WebSocketServer } = require('ws');
+const http = require('http');
 // Use global fetch available in Node.js 18+
 const { createTurnProcessor } = require('./turn-processor-wrapper.cjs');
 const { createSimilarityOrchestrator } = require('./similarity-orchestrator-wrapper.cjs');
@@ -880,6 +882,99 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'conversational-repl' });
 });
 
+// Track transcript accumulation per bot (for storage)
+const transcriptBuffers = new Map();
+
+// Track full meeting transcripts in memory (for real-time interaction)
+const meetingTranscripts = new Map();
+
+// Voice-cue detection function
+function detectSpeakerCue(text) {
+  // Check for "This is [Name]" patterns
+  const thisIsPattern = /(?:^|\s)this\s+is\s+([a-zA-Z\s]+?)(?:\s*[.,:;!?]|\s+(?:and|but|so|however|speaking|talking|here|now|today))/i;
+  const match = text.match(thisIsPattern);
+  
+  if (match) {
+    const speakerName = match[1].trim();
+    // Filter out common false positives
+    const falsePosatives = ['it', 'what', 'how', 'when', 'where', 'why', 'the', 'a', 'an', 'not', 'very', 'really', 'just', 'only'];
+    if (!falsePosatives.includes(speakerName.toLowerCase())) {
+      return speakerName;
+    }
+  }
+  
+  return null;
+}
+
+// Process all pending buffers when speaker changes
+async function processPendingBuffers(botId, blockId) {
+  console.log(`🔄 Processing pending buffers for bot ${botId} due to speaker change`);
+  
+  for (let [bufferKey, buffer] of transcriptBuffers.entries()) {
+    if (bufferKey.startsWith(`${botId}:`) && buffer.text.trim().length > 0) {
+      const speakerName = bufferKey.split(':')[1];
+      
+      try {
+        // Get attendee info
+        const attendee = await getOrCreateAttendee(blockId, speakerName);
+        
+        // Generate embedding using turn processor
+        const wordCount = buffer.text.trim().split(/\s+/).length;
+        
+        // Create turn with embedding
+        const turn = await turnProcessor.createTurn({
+          participant_id: attendee.id,
+          content: buffer.text.trim(),
+          source_type: 'recall_bot',
+          metadata: {
+            word_count: wordCount,
+            duration_seconds: Math.floor((buffer.lastTimestamp - buffer.startTimestamp) / 1000)
+          }
+        });
+        
+        // Link turn to block
+        const sequenceResult = await pool.query(
+          'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
+          [blockId]
+        );
+        const nextOrder = sequenceResult.rows[0].next_order;
+        
+        await pool.query(
+          'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
+          [blockId, turn.turn_id, nextOrder]
+        );
+        
+        console.log(`✅ Processed buffer for ${speakerName}: ${wordCount} words`);
+        
+        // Clear the buffer
+        transcriptBuffers.delete(bufferKey);
+        
+      } catch (error) {
+        console.error(`❌ Error processing buffer for ${speakerName}:`, error);
+      }
+    }
+  }
+}
+
+// Get or create attendee for a speaker
+async function getOrCreateAttendee(blockId, speakerName) {
+  const existingAttendee = await pool.query(
+    'SELECT * FROM conversation.participants WHERE name = $1',
+    [speakerName]
+  );
+  
+  if (existingAttendee.rows.length > 0) {
+    return existingAttendee.rows[0];
+  }
+  
+  const newAttendeeResult = await pool.query(
+    'INSERT INTO conversation.participants (name, email, created_at) VALUES ($1, $2, NOW()) RETURNING *',
+    [speakerName, `${speakerName.toLowerCase().replace(/\s+/g, '.')}@meeting.local`]
+  );
+  
+  return newAttendeeResult.rows[0];
+}
+
 // Initialize and start server
 async function startServer() {
   try {
@@ -898,12 +993,154 @@ async function startServer() {
     });
     console.log('✅ Similarity orchestrator initialized');
     
+    // Create HTTP server
+    const server = http.createServer(app);
+    
+    // Create WebSocket server
+    const wss = new WebSocketServer({ server, path: '/transcript' });
+    
+    // WebSocket handler for real-time transcription
+    wss.on('connection', (ws, req) => {
+      console.log('🔗 Recall.ai bot connected for real-time transcription');
+      let currentBotId = null;
+      
+      ws.on('message', async (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          console.log('📝 Received transcript:', message);
+          
+          // Extract bot_id from the nested structure
+          const botId = message.data?.bot?.id;
+          if (!botId) {
+            console.error('❌ No bot ID found in transcript message');
+            return;
+          }
+          
+          // Set current bot ID
+          if (!currentBotId) {
+            currentBotId = botId;
+            console.log(`🆔 Bot ID set: ${botId}`);
+          }
+          
+          // Get meeting info
+          const meetingResult = await pool.query(
+            'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
+            [botId]
+          );
+          
+          if (meetingResult.rows.length === 0) {
+            console.error('❌ No meeting found for bot:', botId);
+            return;
+          }
+          
+          const meeting = meetingResult.rows[0];
+          
+          // Extract transcript data from the nested structure
+          const transcriptData = message.data?.data;
+          if (!transcriptData?.words || !transcriptData?.participant) {
+            console.error('❌ Invalid transcript data structure');
+            return;
+          }
+          
+          const speakerName = transcriptData.participant.name || 'Unknown Speaker';
+          const words = transcriptData.words;
+          
+          // Get or create attendee for this speaker
+          const attendee = await getOrCreateAttendee(meeting.block_id, speakerName);
+          
+          // Combine words into text
+          const text = words.map(w => w.text).join(' ');
+          const timestamp = words[0]?.start_time || Date.now();
+          
+          // VOICE CUE DETECTION: Check for "This is [Name]" patterns
+          const speakerCue = detectSpeakerCue(text);
+          if (speakerCue) {
+            console.log(`🎤 Voice cue detected: "${speakerCue}" - processing pending buffers`);
+            
+            // Force buffer processing for previous speaker when new speaker starts
+            await processPendingBuffers(botId, meeting.block_id);
+          }
+          
+          // Initialize buffer for this speaker if needed
+          const bufferKey = `${botId}:${speakerName}`;
+          if (!transcriptBuffers.has(bufferKey)) {
+            transcriptBuffers.set(bufferKey, {
+              text: '',
+              startTimestamp: timestamp,
+              lastTimestamp: timestamp
+            });
+          }
+          
+          const buffer = transcriptBuffers.get(bufferKey);
+          buffer.text += ' ' + text;
+          buffer.lastTimestamp = timestamp;
+          
+          // Voice-cue-only chunking with safety fallbacks
+          const wordCount = buffer.text.trim().split(/\s+/).length;
+          const timeSinceStart = timestamp - buffer.startTimestamp;
+          
+          // Safety fallbacks: process if buffer is extremely large (500+ words) or very old (5+ minutes)
+          const shouldProcess = wordCount >= 500 || timeSinceStart >= 5 * 60 * 1000;
+          
+          if (shouldProcess) {
+            console.log(`⚠️  Safety fallback triggered for ${speakerName}: ${wordCount} words, ${Math.floor(timeSinceStart/1000)}s`);
+            
+            // Create turn with embedding
+            const turn = await turnProcessor.createTurn({
+              participant_id: attendee.id,
+              content: buffer.text.trim(),
+              source_type: 'recall_bot',
+              metadata: {
+                word_count: wordCount,
+                duration_seconds: Math.floor(timeSinceStart / 1000),
+                safety_fallback: true
+              }
+            });
+            
+            // Get next sequence order for this block
+            const sequenceResult = await pool.query(
+              'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
+              [meeting.block_id]
+            );
+            const nextOrder = sequenceResult.rows[0].next_order;
+            
+            // Link turn to block
+            await pool.query(
+              'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
+              [meeting.block_id, turn.turn_id, nextOrder]
+            );
+            
+            // Clear the buffer
+            transcriptBuffers.set(bufferKey, {
+              text: '',
+              startTimestamp: timestamp,
+              lastTimestamp: timestamp
+            });
+            
+            console.log(`✅ Stored ${wordCount} words for ${speakerName} (safety fallback)`);
+          }
+          
+        } catch (error) {
+          console.error('❌ Error processing transcript:', error);
+        }
+      });
+      
+      ws.on('close', () => {
+        console.log('🔌 Recall.ai bot disconnected');
+      });
+      
+      ws.on('error', (error) => {
+        console.error('❌ WebSocket error:', error);
+      });
+    });
+    
     // Start server
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, '0.0.0.0', () => {
+    const PORT = process.env.PORT || 3000;
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`Conversational REPL server running on port ${PORT}`);
       console.log(`Access the REPL at: http://localhost:${PORT}`);
       console.log(`Access from Windows at: http://172.24.145.192:${PORT}`);
+      console.log(`✅ WebSocket server listening on ws://localhost:${PORT}/transcript`);
       console.log(`✅ Embeddings will be generated for new turns`);
     });
   } catch (error) {
