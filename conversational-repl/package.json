@@ -1,0 +1,29 @@
+{
+  "name": "cogito-conversational-repl",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "shadow-cljs watch app",
+    "build": "shadow-cljs release app",
+    "clean": "rm -rf public/js .shadow-cljs",
+    "server": "node server.js",
+    "start": "node server.js",
+    "dev-all": "npm run build && npm start"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.26.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "bcrypt": "^5.1.1",
+    "connect-pg-simple": "^9.0.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "uuid": "^11.1.0"
+  }
+}

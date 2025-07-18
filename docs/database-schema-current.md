@@ -1,5 +1,5 @@
 # Cogito Database Schema Dump
-Generated: 2025-07-03T19:59:04.554Z
+Generated: 2025-07-15T17:19:34.675Z
 
 ## Database Schemas
 
@@ -14,6 +14,7 @@ Generated: 2025-07-03T19:59:04.554Z
 | graphql | supabase_admin | User-created |
 | graphql_public | supabase_admin | User-created |
 | kanban | postgres | User-created |
+| meetings | postgres | User-created |
 | pgbouncer | pgbouncer | User-created |
 | public | pg_database_owner | PostgreSQL Default |
 | realtime | supabase_admin | Supabase Realtime |
@@ -425,10 +426,13 @@ Generated: 2025-07-03T19:59:04.554Z
 | created_at | timestamp with time zone | YES | CURRENT_TIMESTAMP... |  |
 | current_llm_id | bigint | YES |  |  |
 | metadata | jsonb | YES | '{}'::jsonb... |  |
+| story | text | YES | ''::text... | Living narrative of client activities, updated as events occur |
+| story_embedding | USER-DEFINED | YES |  | Embedding of the story text for similarity search and analysis |
 
 **Indexes:**
 - clients_name_key (UNIQUE): name
 - clients_pkey (PRIMARY KEY): id
+- idx_clients_story_embedding (INDEX): story_embedding
 
 
 #### Table: client_mgmt.llm_types
@@ -1205,11 +1209,105 @@ Generated: 2025-07-03T19:59:04.554Z
 - kanban_tasks_board_id_fkey: board_id → kanban.kanban_boards(board_id)
 
 
+### Schema: meetings
+
+#### Table: meetings.block_attendees
+
+| Column | Type | Nullable | Default | Comment |
+|--------|------|----------|---------|---------|
+| id | bigint | NO | nextval('meetings.block_attend... |  |
+| block_id | uuid | YES |  |  |
+| name | text | NO |  |  |
+| user_id | uuid | YES |  |  |
+| story | text | YES |  |  |
+| story_embedding | USER-DEFINED | YES |  |  |
+| speaking_time_seconds | integer | YES | 0... |  |
+| created_at | timestamp with time zone | YES | now()... |  |
+| updated_at | timestamp with time zone | YES | now()... |  |
+
+**Indexes:**
+- block_attendees_pkey (PRIMARY KEY): id
+- idx_block_attendees_block_id (INDEX): block_id
+- idx_block_attendees_name (INDEX): name
+- idx_block_attendees_story_embedding (INDEX): story_embedding
+- idx_block_attendees_unique (UNIQUE): block_id, name
+- idx_block_attendees_user_id (INDEX): user_id
+
+
+#### Table: meetings.block_meetings
+
+| Column | Type | Nullable | Default | Comment |
+|--------|------|----------|---------|---------|
+| block_id | uuid | NO |  |  |
+| recall_bot_id | text | YES |  |  |
+| meeting_url | text | NO |  |  |
+| status | text | YES | 'joining'::text... |  |
+| invited_by_user_id | uuid | YES |  |  |
+| full_transcript | jsonb | YES |  |  |
+| started_at | timestamp with time zone | YES | now()... |  |
+| ended_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now()... |  |
+| updated_at | timestamp with time zone | YES | now()... |  |
+
+**Indexes:**
+- block_meetings_pkey (PRIMARY KEY): block_id
+- block_meetings_recall_bot_id_key (UNIQUE): recall_bot_id
+- idx_block_meetings_invited_by (INDEX): invited_by_user_id
+- idx_block_meetings_recall_bot_id (INDEX): recall_bot_id
+- idx_block_meetings_status (INDEX): status
+
+
 ### Schema: pgbouncer
 
 *No tables in this schema*
 
 ### Schema: public
+
+#### Table: public.block_attendees
+
+| Column | Type | Nullable | Default | Comment |
+|--------|------|----------|---------|---------|
+| id | bigint | NO | nextval('block_attendees_id_se... |  |
+| block_id | uuid | YES |  |  |
+| name | text | NO |  |  |
+| user_id | uuid | YES |  |  |
+| story | text | YES |  |  |
+| story_embedding | USER-DEFINED | YES |  |  |
+| speaking_time_seconds | integer | YES | 0... |  |
+| created_at | timestamp with time zone | YES | now()... |  |
+| updated_at | timestamp with time zone | YES | now()... |  |
+
+**Indexes:**
+- block_attendees_pkey (PRIMARY KEY): id
+- idx_public_block_attendees_block_id (INDEX): block_id
+- idx_public_block_attendees_name (INDEX): name
+- idx_public_block_attendees_story_embedding (INDEX): story_embedding
+- idx_public_block_attendees_unique (UNIQUE): block_id, name
+- idx_public_block_attendees_user_id (INDEX): user_id
+
+
+#### Table: public.block_meetings
+
+| Column | Type | Nullable | Default | Comment |
+|--------|------|----------|---------|---------|
+| block_id | uuid | NO |  |  |
+| recall_bot_id | text | YES |  |  |
+| meeting_url | text | NO |  |  |
+| status | text | YES | 'joining'::text... |  |
+| invited_by_user_id | uuid | YES |  |  |
+| full_transcript | jsonb | YES |  |  |
+| started_at | timestamp with time zone | YES | now()... |  |
+| ended_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now()... |  |
+| updated_at | timestamp with time zone | YES | now()... |  |
+
+**Indexes:**
+- block_meetings_pkey (PRIMARY KEY): block_id
+- block_meetings_recall_bot_id_key (UNIQUE): recall_bot_id
+- idx_public_block_meetings_invited_by (INDEX): invited_by_user_id
+- idx_public_block_meetings_recall_bot_id (INDEX): recall_bot_id
+- idx_public_block_meetings_status (INDEX): status
+
 
 #### Table: public.conversation_tables_final_backup
 > Final backup of conversation tables before removal - Migration 008

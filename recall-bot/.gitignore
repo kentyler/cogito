@@ -6,3 +6,27 @@ yarn-debug.log*
 yarn-error.log*
 .DS_Store
 *.log
+
+# Temporary utility scripts - use scripts/ folder for permanent scripts
+check-*.js
+cleanup-*.js
+debug-*.js
+test-*.js
+force-*.js
+update-*.js
+examine-*.js
+fix-*.js
+add-*.js
+create-*.js
+reconstitute-*.js
+
+# Transcript files - use docs/ folder for permanent transcripts
+transcript-*.md
+transcript-*.txt
+complete-transcript-*.md
+complete-transcript-*.txt
+
+# Temporary development directories
+temp/
+tmp/
+scratch/
