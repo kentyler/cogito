@@ -148,7 +148,7 @@ ${transcriptText}
         if (error.code === 'ECONNREFUSED') {
             console.error('\n💡 Email server connection refused. Make sure:');
             console.error('   1. The email server is running on localhost:2525');
-            console.error('   2. Check recall-bot/server.js for email server setup');
+            console.error('   2. Check conversational-repl/server.js for email server setup');
             console.error('   3. Or configure a proper SMTP server in the transporter');
         }
     } finally {

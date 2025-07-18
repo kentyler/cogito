@@ -9,8 +9,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load .env from recall-bot directory
-dotenv.config({ path: path.join(__dirname, '../recall-bot/.env') });
+// Load .env from project root
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const { Pool } = pg;
 const pool = new Pool({
