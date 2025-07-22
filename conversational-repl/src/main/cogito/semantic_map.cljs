@@ -11,11 +11,16 @@
 (rf/reg-event-fx
  ::load-embeddings
  (fn [{:keys [db]} [_ block-id]]
-   (-> (js/fetch (str "/api/meetings/" block-id "/embeddings"))
+   (-> (js/fetch (str "/api/meetings/" block-id "/embeddings")
+                  #js {:credentials "same-origin"})
        (.then #(.json %))
        (.then (fn [data]
-                (rf/dispatch [::embeddings-loaded (js->clj data :keywordize-keys true)])))
+                (js/console.log "Raw API response:" data)
+                (let [clj-data (js->clj data :keywordize-keys true)]
+                  (js/console.log "Converted data:" (clj->js clj-data))
+                  (rf/dispatch [::embeddings-loaded clj-data]))))
        (.catch (fn [error]
+                 (js/console.error "API error:" error)
                  (rf/dispatch [::embeddings-load-failed (str error)]))))
    {:db (assoc db :map/loading? true)}))
 

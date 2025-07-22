@@ -4,9 +4,28 @@
 
 ;; Events
 (rf/reg-event-fx
+ ::delete-meeting
+ (fn [_ [_ block-id meeting-name]]
+   (when (js/confirm (str "Are you sure you want to delete the meeting '" meeting-name "'? This action cannot be undone."))
+     (-> (js/fetch (str "/api/meetings/" block-id)
+                   #js {:method "DELETE"
+                        :credentials "same-origin"})
+         (.then (fn [response]
+                  (if (.-ok response)
+                    (.then (.json response)
+                           #(do
+                              (js/alert (get (js->clj % :keywordize-keys true) :message "Meeting deleted"))
+                              (rf/dispatch [::load-meetings])))
+                    (.then (.json response)
+                           #(js/alert (str "Error: " (get (js->clj % :keywordize-keys true) :error "Unknown error")))))))
+         (.catch #(js/alert "Network error occurred"))))
+   {}))
+
+(rf/reg-event-fx
  ::load-meetings
  (fn [_ _]
-   (-> (js/fetch "/api/meetings")
+   (-> (js/fetch "/api/meetings"
+                 #js {:credentials "same-origin"})
        (.then #(.json %))
        (.then (fn [data]
                 (rf/dispatch [::meetings-loaded (js->clj data :keywordize-keys true)])))
@@ -77,9 +96,13 @@
      (when (and (:embedded_count meeting) (> (:embedded_count meeting) 0))
        [:button {:class "px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors duration-200"
                  :on-click #(do
-                             (rf/dispatch [:cogito.semantic-map/set-current-meeting (:block_id meeting)])
+                             (rf/dispatch [:cogito.semantic-map-simple/set-current-meeting (:block_id meeting)])
                              (rf/dispatch [:workbench/set-active-tab :map]))}
-        "See Map"])]]])
+        "See Map"])
+     
+     [:button {:class "px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors duration-200"
+               :on-click #(rf/dispatch [::delete-meeting (:block_id meeting) (or (:block_name meeting) "Unnamed Meeting")])}
+      "Delete"]]]])
 
 (defn meetings-list []
   (let [meetings (rf/subscribe [::meetings])
@@ -165,7 +188,7 @@
          (when (> (:embedded_count meeting) 0)
            [:button {:class "mt-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200"
                      :on-click #(do
-                                  (rf/dispatch [:cogito.semantic-map/set-current-meeting (:block_id meeting)])
+                                  (rf/dispatch [:cogito.semantic-map-simple/set-current-meeting (:block_id meeting)])
                                   (rf/dispatch [:workbench/set-active-tab :map]))}
             "View Semantic Map"])]
         
