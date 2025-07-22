@@ -1045,12 +1045,30 @@ app.post('/webhook/chat', async (req, res) => {
       
       console.log(`🤖 Generated response: "${response}"`);
       
-      // For now, just log the response. In a full implementation, 
-      // we would send this back to the meeting chat via Recall.ai API
-      console.log('📤 Would send response to meeting chat:', response);
-      
-      // TODO: Implement actual chat response sending via Recall.ai API
-      // This would require making an API call to send the response back to the meeting
+      // Send response back to meeting chat via Recall.ai API
+      try {
+        console.log('📤 Sending response to meeting chat:', response);
+        
+        const chatResponse = await fetch(`https://us-west-2.recall.ai/api/v1/bot/${botId}/send_chat_message/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${process.env.RECALL_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: response
+          })
+        });
+        
+        if (chatResponse.ok) {
+          console.log('✅ Chat response sent successfully');
+        } else {
+          const errorText = await chatResponse.text();
+          console.error('❌ Failed to send chat response:', chatResponse.status, errorText);
+        }
+      } catch (chatError) {
+        console.error('❌ Error sending chat response:', chatError);
+      }
       
       return res.json({ 
         success: true, 
@@ -1086,16 +1104,22 @@ const meetingLastActivity = new Map();
 
 // Voice-cue detection function
 function detectSpeakerCue(text) {
-  // Check for "This is [Name]" patterns
-  const thisIsPattern = /(?:^|\s)this\s+is\s+([a-zA-Z\s]+?)(?:\s*[.,:;!?]|\s+(?:and|but|so|however|speaking|talking|here|now|today))/i;
+  // Check for "This is [Name]" patterns - restrict to 1-3 words that look like names
+  const thisIsPattern = /(?:^|\s)this\s+is\s+([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*){0,2})(?:\s*[.,:;!?]|\s+(?:and|but|so|however|speaking|talking|here|now|today)|$)/i;
   const match = text.match(thisIsPattern);
   
   if (match) {
     const speakerName = match[1].trim();
-    // Filter out common false positives
-    const falsePosatives = ['it', 'what', 'how', 'when', 'where', 'why', 'the', 'a', 'an', 'not', 'very', 'really', 'just', 'only'];
-    if (!falsePosatives.includes(speakerName.toLowerCase())) {
-      return speakerName;
+    
+    // Additional validation: should be 1-3 words, each starting with capital letter
+    const words = speakerName.split(/\s+/);
+    if (words.length <= 3 && words.length >= 1) {
+      // Filter out common false positives
+      const falsePosatives = ['it', 'what', 'how', 'when', 'where', 'why', 'the', 'a', 'an', 'not', 'very', 'really', 'just', 'only', 'our', 'my', 'his', 'her', 'their', 'that', 'this'];
+      
+      if (!falsePosatives.includes(speakerName.toLowerCase()) && words.every(word => word.length >= 2)) {
+        return speakerName;
+      }
     }
   }
   
