@@ -988,19 +988,19 @@ app.post('/webhook/chat', async (req, res) => {
       return res.status(400).json({ error: 'No data provided' });
     }
     
-    // Extract message and bot info
-    const { message, bot } = data;
-    const botId = bot?.id;
+    // Extract message and bot info from nested structure
+    const botId = data.bot?.id;
+    const messageText = data.data?.data?.text;
     
-    if (!message || !botId) {
+    if (!messageText || !botId) {
       console.log('❌ Missing message or bot ID in chat webhook');
       return res.status(400).json({ error: 'Missing message or bot ID' });
     }
     
-    console.log(`💬 Chat message from bot ${botId}: "${message.content}"`);
+    console.log(`💬 Chat message from bot ${botId}: "${messageText}"`);
     
     // Check if this is a question command
-    if (message.content.trim() === '?') {
+    if (messageText.trim() === '?') {
       console.log('❓ Question command detected - generating response');
       
       // Find the meeting for this bot
@@ -1192,11 +1192,11 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     // Process any remaining transcript buffers
     await processPendingBuffers(botId, meeting.block_id);
     
-    // Update meeting status
+    // Update meeting status (using ended_at instead of end_time, and full_transcript instead of metadata)
     await pool.query(
       `UPDATE conversation.block_meetings 
-       SET status = $1, end_time = NOW(), 
-           metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+       SET status = $1, ended_at = NOW(), 
+           full_transcript = COALESCE(full_transcript, '{}'::jsonb) || $2::jsonb
        WHERE recall_bot_id = $3`,
       ['completed', JSON.stringify({ completion_reason: reason }), botId]
     );
