@@ -7,7 +7,8 @@
             [cogito.story-arc :as story-arc]
             [cogito.meetings :as meetings]
             [cogito.events]
-            [cogito.subs]))
+            [cogito.subs]
+            [day8.re-frame.http-fx]))
 
 (defn app []
   (let [authenticated? (rf/subscribe [:authenticated?])]

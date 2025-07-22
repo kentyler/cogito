@@ -17,6 +17,11 @@ let similarityOrchestrator;
 
 const app = express();
 
+// Trust proxy for production deployment
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Initialize turn processor (will be set after async initialization)
 let turnProcessor;
 
@@ -46,6 +51,23 @@ if (process.env.ANTHROPIC_API_KEY) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// CORS configuration for production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && origin.includes('cogito-meetings.onrender.com')) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+}
+
 // Custom middleware to handle empty JSON bodies
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -65,11 +87,13 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'cogito-repl-secret-key',
   resave: false,
   saveUninitialized: false,
+  name: 'cogito.sid', // Custom session name
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    domain: process.env.COOKIE_DOMAIN || undefined // Allow setting custom domain if needed
   }
 }));
 
@@ -81,6 +105,14 @@ app.use('/bot-manager', express.static('public/bot-manager'));
 
 // Authentication middleware
 function requireAuth(req, res, next) {
+  // Debug logging
+  console.log('Auth check - Session:', req.session ? 'exists' : 'missing');
+  console.log('Auth check - Session user:', req.session?.user);
+  console.log('Auth check - Headers:', {
+    'x-user-id': req.headers['x-user-id'],
+    'x-user-email': req.headers['x-user-email']
+  });
+  
   // Check session first (preserves existing functionality)
   if (req.session && req.session.user) {
     // Set up req.user for compatibility
@@ -100,6 +132,7 @@ function requireAuth(req, res, next) {
     return next();
   }
   
+  console.log('Auth failed - returning 401');
   return res.status(401).json({ error: 'Authentication required' });
 }
 
@@ -166,6 +199,9 @@ app.post('/api/logout', (req, res) => {
 
 // Auth status endpoint
 app.get('/api/auth-status', (req, res) => {
+  console.log('Auth status check - Session:', req.session ? 'exists' : 'missing');
+  console.log('Auth status check - Session user:', req.session?.user);
+  
   if (req.session && req.session.user) {
     res.json({ 
       authenticated: true, 
@@ -588,6 +624,69 @@ app.get('/api/meetings/:blockId/embeddings', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching embeddings:', error);
     res.status(500).json({ error: 'Failed to fetch embeddings' });
+  }
+});
+
+// Delete a meeting and all associated data
+app.delete('/api/meetings/:blockId', requireAuth, async (req, res) => {
+  try {
+    const { blockId } = req.params;
+    
+    // Start a transaction to ensure all deletions succeed or fail together
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Get all turn IDs associated with this block for deletion
+      const turnsResult = await client.query(`
+        SELECT t.turn_id 
+        FROM conversation.block_turns bt
+        JOIN conversation.turns t ON bt.turn_id = t.turn_id
+        WHERE bt.block_id = $1
+      `, [blockId]);
+      
+      const turnIds = turnsResult.rows.map(row => row.turn_id);
+      
+      // Delete in the correct order to avoid foreign key constraint violations
+      
+      // 1. Delete block_turns (junction table)
+      await client.query('DELETE FROM conversation.block_turns WHERE block_id = $1', [blockId]);
+      
+      // 2. Delete turns (if they exist and are not referenced elsewhere)
+      if (turnIds.length > 0) {
+        const turnIdsList = turnIds.map((_, i) => `$${i + 1}`).join(',');
+        await client.query(`DELETE FROM conversation.turns WHERE turn_id IN (${turnIdsList})`, turnIds);
+      }
+      
+      // 3. Delete block_meetings
+      await client.query('DELETE FROM conversation.block_meetings WHERE block_id = $1', [blockId]);
+      
+      // 4. Delete the block itself
+      const blockResult = await client.query('DELETE FROM conversation.blocks WHERE block_id = $1 RETURNING name', [blockId]);
+      
+      await client.query('COMMIT');
+      
+      if (blockResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Meeting "${blockResult.rows[0].name}" deleted successfully`,
+        deletedTurns: turnIds.length
+      });
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+  } catch (error) {
+    console.error('Error deleting meeting:', error);
+    res.status(500).json({ error: 'Failed to delete meeting' });
   }
 });
 
