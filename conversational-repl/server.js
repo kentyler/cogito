@@ -776,8 +776,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
               url: websocketUrl,
               events: [
                 "transcript.data", 
-                "transcript.partial_data",
-                "status_changes.update"
+                "transcript.partial_data"
               ]
             },
             {
@@ -1306,45 +1305,8 @@ async function startServer() {
           const message = JSON.parse(data.toString());
           console.log('📝 Received message:', { event: message.event, type: message.data?.type || 'transcript' });
           
-          // Handle bot status changes
-          if (message.event === 'status_changes.update' && message.data) {
-            const statusData = message.data;
-            const botId = statusData.bot?.id;
-            const status = statusData.status;
-            
-            console.log(`🤖 Bot status change: ${botId} -> ${status}`);
-            
-            // When bot leaves or meeting ends, complete the meeting
-            if (status === 'done' || status === 'left') {
-              console.log(`🏁 Meeting ending - bot ${botId} status: ${status}`);
-              
-              // Process any remaining buffers before completing
-              const meeting = await pool.query(
-                'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
-                [botId]
-              );
-              
-              if (meeting.rows.length > 0) {
-                const meetingRecord = meeting.rows[0];
-                
-                // Process remaining buffers
-                await processPendingBuffers(botId, meetingRecord.block_id);
-                
-                // Update meeting status to completed
-                await pool.query(
-                  'UPDATE conversation.block_meetings SET status = $1, end_time = NOW() WHERE recall_bot_id = $2',
-                  ['completed', botId]
-                );
-                
-                console.log(`✅ Meeting ${botId} marked as completed`);
-                
-                // TODO: Send email transcript here
-                console.log(`📧 Would send transcript email to: ${meetingRecord.transcript_email}`);
-              }
-            }
-            
-            return; // Don't process as transcript data
-          }
+          // Note: Bot status changes are handled through inactivity detection
+          // since status_changes.update is not a valid Recall.ai event
           
           // Handle transcript data
           if (message.event !== 'transcript.data') {
