@@ -793,7 +793,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
             message: "🤖 Cogito has joined the meeting! Type ? for my thoughts on the conversation, or @cc for specific questions."
           }
         },
-        webhook_url: `https://${process.env.RENDER_EXTERNAL_URL ? process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '') : 'localhost:3000'}/webhook`
+        webhook_url: webhookUrl
       })
     });
     
@@ -1425,6 +1425,51 @@ async function startServer() {
           const buffer = transcriptBuffers.get(bufferKey);
           buffer.text += ' ' + text;
           buffer.lastTimestamp = timestamp;
+          
+          // IMMEDIATE PROCESSING: If a voice cue was detected, process this buffer immediately
+          // This ensures voice-cue-detected turns are attributed to the correct speaker
+          if (speakerCue) {
+            console.log(`🔄 Immediately processing buffer for voice-cue-detected speaker: ${actualSpeakerName}`);
+            
+            const wordCount = buffer.text.trim().split(/\s+/).length;
+            const timeSinceStart = timestamp - buffer.startTimestamp;
+            
+            // Get attendee for the detected speaker
+            const actualAttendee = await getOrCreateAttendee(meeting.block_id, actualSpeakerName);
+            
+            // Create turn with embedding
+            const turn = await turnProcessor.createTurn({
+              participant_id: actualAttendee.id,
+              content: buffer.text.trim(),
+              source_type: 'recall_bot',
+              metadata: {
+                word_count: wordCount,
+                duration_seconds: Math.floor(timeSinceStart / 1000),
+                voice_cue_detected: speakerCue,
+                original_api_speaker: speakerName
+              }
+            });
+            
+            // Get next sequence order for this block
+            const sequenceResult = await pool.query(
+              'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
+              [meeting.block_id]
+            );
+            const nextOrder = sequenceResult.rows[0].next_order;
+            
+            // Link turn to block
+            await pool.query(
+              'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
+              [meeting.block_id, turn.turn_id, nextOrder]
+            );
+            
+            console.log(`✅ Voice-cue turn created for ${actualSpeakerName} (${wordCount} words)`);
+            
+            // Clear the buffer since it's been processed
+            transcriptBuffers.delete(bufferKey);
+            
+            return; // Don't continue to safety fallback processing
+          }
           
           // Voice-cue-only chunking with safety fallbacks
           const wordCount = buffer.text.trim().split(/\s+/).length;
