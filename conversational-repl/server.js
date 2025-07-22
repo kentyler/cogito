@@ -776,7 +776,8 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
               url: websocketUrl,
               events: [
                 "transcript.data", 
-                "transcript.partial_data"
+                "transcript.partial_data",
+                "status_changes.update"
               ]
             },
             {
@@ -976,6 +977,100 @@ app.post('/api/bots/:botId/leave', requireAuth, async (req, res) => {
   }
 });
 
+// Chat webhook endpoint for Recall.ai bot
+app.post('/webhook/chat', async (req, res) => {
+  try {
+    console.log('💬 Received chat webhook:', JSON.stringify(req.body, null, 2));
+    
+    const { data } = req.body;
+    
+    if (!data) {
+      console.log('❌ No data in chat webhook');
+      return res.status(400).json({ error: 'No data provided' });
+    }
+    
+    // Extract message and bot info
+    const { message, bot } = data;
+    const botId = bot?.id;
+    
+    if (!message || !botId) {
+      console.log('❌ Missing message or bot ID in chat webhook');
+      return res.status(400).json({ error: 'Missing message or bot ID' });
+    }
+    
+    console.log(`💬 Chat message from bot ${botId}: "${message.content}"`);
+    
+    // Check if this is a question command
+    if (message.content.trim() === '?') {
+      console.log('❓ Question command detected - generating response');
+      
+      // Find the meeting for this bot
+      const meetingResult = await pool.query(
+        'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
+        [botId]
+      );
+      
+      if (meetingResult.rows.length === 0) {
+        console.log(`❌ No meeting found for bot ${botId}`);
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+      
+      const meeting = meetingResult.rows[0];
+      const blockId = meeting.block_id;
+      
+      // Get recent conversation context (last 5 turns)
+      const contextResult = await pool.query(`
+        SELECT t.content, p.name as speaker_name, t.timestamp
+        FROM conversation.turns t
+        JOIN conversation.block_turns bt ON t.turn_id = bt.turn_id
+        LEFT JOIN conversation.participants p ON t.participant_id = p.id
+        WHERE bt.block_id = $1
+        ORDER BY t.timestamp DESC
+        LIMIT 5
+      `, [blockId]);
+      
+      const context = contextResult.rows.reverse(); // Put in chronological order
+      
+      // Generate a simple response based on context
+      let response = "I'm listening to your conversation. ";
+      
+      if (context.length === 0) {
+        response += "I haven't captured any content yet - are you speaking into the microphone?";
+      } else {
+        const speakers = [...new Set(context.map(t => t.speaker_name))].filter(s => s);
+        if (speakers.length > 1) {
+          response += `I can see ${speakers.length} speakers: ${speakers.join(', ')}. `;
+        }
+        response += `The latest topic seems to be about ${context[context.length - 1].content.substring(0, 50)}...`;
+      }
+      
+      console.log(`🤖 Generated response: "${response}"`);
+      
+      // For now, just log the response. In a full implementation, 
+      // we would send this back to the meeting chat via Recall.ai API
+      console.log('📤 Would send response to meeting chat:', response);
+      
+      // TODO: Implement actual chat response sending via Recall.ai API
+      // This would require making an API call to send the response back to the meeting
+      
+      return res.json({ 
+        success: true, 
+        message: 'Question processed',
+        response: response,
+        context_turns: context.length
+      });
+    }
+    
+    // For other chat messages, just log them
+    console.log(`💬 Chat message (not a command): "${message.content}"`);
+    res.json({ success: true, message: 'Chat message received' });
+    
+  } catch (error) {
+    console.error('❌ Error processing chat webhook:', error);
+    res.status(500).json({ error: 'Failed to process chat webhook' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'conversational-repl' });
@@ -986,6 +1081,9 @@ const transcriptBuffers = new Map();
 
 // Track full meeting transcripts in memory (for real-time interaction)
 const meetingTranscripts = new Map();
+
+// Track last activity per meeting for inactivity detection
+const meetingLastActivity = new Map();
 
 // Voice-cue detection function
 function detectSpeakerCue(text) {
@@ -1074,6 +1172,106 @@ async function getOrCreateAttendee(blockId, speakerName) {
   return newAttendeeResult.rows[0];
 }
 
+// Complete meeting due to inactivity or abandonment
+async function completeMeetingByInactivity(botId, reason = 'inactivity') {
+  try {
+    console.log(`⏰ Completing meeting ${botId} due to ${reason}`);
+    
+    // Get meeting info
+    const meetingResult = await pool.query(
+      'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
+      [botId, 'completed', 'failed']
+    );
+    
+    if (meetingResult.rows.length === 0) {
+      console.log(`No active meeting found for bot ${botId}`);
+      return;
+    }
+    
+    const meeting = meetingResult.rows[0];
+    
+    // Process any remaining transcript buffers
+    await processPendingBuffers(botId, meeting.block_id);
+    
+    // Update meeting status
+    await pool.query(
+      `UPDATE conversation.block_meetings 
+       SET status = $1, end_time = NOW(), 
+           metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+       WHERE recall_bot_id = $3`,
+      ['completed', JSON.stringify({ completion_reason: reason }), botId]
+    );
+    
+    console.log(`✅ Meeting ${botId} completed due to ${reason}`);
+    
+    // Clean up tracking data
+    meetingLastActivity.delete(botId);
+    
+    // TODO: Send email transcript
+    console.log(`📧 Would send transcript email to: ${meeting.transcript_email}`);
+    
+    return meeting;
+    
+  } catch (error) {
+    console.error(`❌ Error completing meeting ${botId}:`, error);
+  }
+}
+
+// Periodic cleanup of inactive meetings
+async function cleanupInactiveMeetings() {
+  try {
+    const now = Date.now();
+    const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+    const MAXIMUM_MEETING_DURATION = 4 * 60 * 60 * 1000; // 4 hours max
+    
+    console.log('🧹 Running meeting cleanup...');
+    
+    // Check for inactive meetings based on last activity
+    for (const [botId, lastActivity] of meetingLastActivity.entries()) {
+      const timeSinceActivity = now - lastActivity;
+      
+      if (timeSinceActivity > INACTIVITY_TIMEOUT) {
+        console.log(`⏰ Meeting ${botId} inactive for ${Math.floor(timeSinceActivity/1000/60)} minutes`);
+        await completeMeetingByInactivity(botId, 'inactivity_timeout');
+      }
+    }
+    
+    // Check database for meetings that are stuck in joining/active status for too long
+    const stuckMeetingsResult = await pool.query(`
+      SELECT recall_bot_id, meeting_name, created_at, status
+      FROM conversation.block_meetings
+      WHERE status IN ('joining', 'active') 
+        AND created_at < NOW() - INTERVAL '4 hours'
+    `);
+    
+    for (const meeting of stuckMeetingsResult.rows) {
+      console.log(`🕘 Found stuck meeting: ${meeting.recall_bot_id} (${meeting.status}) from ${meeting.created_at}`);
+      await completeMeetingByInactivity(meeting.recall_bot_id, 'maximum_duration_exceeded');
+    }
+    
+    // Clean up memory for completed meetings
+    const activeMeetings = await pool.query(`
+      SELECT recall_bot_id FROM conversation.block_meetings
+      WHERE status IN ('joining', 'active')
+    `);
+    
+    const activeBotIds = new Set(activeMeetings.rows.map(m => m.recall_bot_id));
+    
+    // Remove tracking data for completed meetings
+    for (const botId of meetingLastActivity.keys()) {
+      if (!activeBotIds.has(botId)) {
+        meetingLastActivity.delete(botId);
+        transcriptBuffers.delete(botId);
+      }
+    }
+    
+    console.log(`✅ Cleanup complete. Tracking ${meetingLastActivity.size} active meetings`);
+    
+  } catch (error) {
+    console.error('❌ Error during meeting cleanup:', error);
+  }
+}
+
 // Initialize and start server
 async function startServer() {
   try {
@@ -1106,7 +1304,53 @@ async function startServer() {
       ws.on('message', async (data) => {
         try {
           const message = JSON.parse(data.toString());
-          console.log('📝 Received transcript:', message);
+          console.log('📝 Received message:', { event: message.event, type: message.data?.type || 'transcript' });
+          
+          // Handle bot status changes
+          if (message.event === 'status_changes.update' && message.data) {
+            const statusData = message.data;
+            const botId = statusData.bot?.id;
+            const status = statusData.status;
+            
+            console.log(`🤖 Bot status change: ${botId} -> ${status}`);
+            
+            // When bot leaves or meeting ends, complete the meeting
+            if (status === 'done' || status === 'left') {
+              console.log(`🏁 Meeting ending - bot ${botId} status: ${status}`);
+              
+              // Process any remaining buffers before completing
+              const meeting = await pool.query(
+                'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
+                [botId]
+              );
+              
+              if (meeting.rows.length > 0) {
+                const meetingRecord = meeting.rows[0];
+                
+                // Process remaining buffers
+                await processPendingBuffers(botId, meetingRecord.block_id);
+                
+                // Update meeting status to completed
+                await pool.query(
+                  'UPDATE conversation.block_meetings SET status = $1, end_time = NOW() WHERE recall_bot_id = $2',
+                  ['completed', botId]
+                );
+                
+                console.log(`✅ Meeting ${botId} marked as completed`);
+                
+                // TODO: Send email transcript here
+                console.log(`📧 Would send transcript email to: ${meetingRecord.transcript_email}`);
+              }
+            }
+            
+            return; // Don't process as transcript data
+          }
+          
+          // Handle transcript data
+          if (message.event !== 'transcript.data') {
+            console.log('ℹ️  Non-transcript event, skipping');
+            return;
+          }
           
           // Extract bot_id from the nested structure
           const botId = message.data?.bot?.id;
@@ -1120,6 +1364,9 @@ async function startServer() {
             currentBotId = botId;
             console.log(`🆔 Bot ID set: ${botId}`);
           }
+          
+          // Update last activity timestamp for inactivity detection
+          meetingLastActivity.set(botId, Date.now());
           
           // Get meeting info
           const meetingResult = await pool.query(
@@ -1152,16 +1399,21 @@ async function startServer() {
           const timestamp = words[0]?.start_time || Date.now();
           
           // VOICE CUE DETECTION: Check for "This is [Name]" patterns
+          let actualSpeakerName = speakerName; // Default to API speaker name
           const speakerCue = detectSpeakerCue(text);
           if (speakerCue) {
             console.log(`🎤 Voice cue detected: "${speakerCue}" - processing pending buffers`);
             
             // Force buffer processing for previous speaker when new speaker starts
             await processPendingBuffers(botId, meeting.block_id);
+            
+            // Update speaker name for subsequent processing
+            actualSpeakerName = speakerCue;
+            console.log(`📝 Speaker reassigned from "${speakerName}" to "${actualSpeakerName}"`);
           }
           
           // Initialize buffer for this speaker if needed
-          const bufferKey = `${botId}:${speakerName}`;
+          const bufferKey = `${botId}:${actualSpeakerName}`;
           if (!transcriptBuffers.has(bufferKey)) {
             transcriptBuffers.set(bufferKey, {
               text: '',
@@ -1182,11 +1434,14 @@ async function startServer() {
           const shouldProcess = wordCount >= 500 || timeSinceStart >= 5 * 60 * 1000;
           
           if (shouldProcess) {
-            console.log(`⚠️  Safety fallback triggered for ${speakerName}: ${wordCount} words, ${Math.floor(timeSinceStart/1000)}s`);
+            console.log(`⚠️  Safety fallback triggered for ${actualSpeakerName}: ${wordCount} words, ${Math.floor(timeSinceStart/1000)}s`);
+            
+            // Get attendee for the actual speaker (may be different from API speaker due to voice cue)
+            const actualAttendee = await getOrCreateAttendee(meeting.block_id, actualSpeakerName);
             
             // Create turn with embedding
             const turn = await turnProcessor.createTurn({
-              participant_id: attendee.id,
+              participant_id: actualAttendee.id,
               content: buffer.text.trim(),
               source_type: 'recall_bot',
               metadata: {
@@ -1224,8 +1479,22 @@ async function startServer() {
         }
       });
       
-      ws.on('close', () => {
+      ws.on('close', async () => {
         console.log('🔌 Recall.ai bot disconnected');
+        
+        // If we have a current bot ID, try to complete the meeting
+        if (currentBotId) {
+          console.log(`🏁 WebSocket closed for bot ${currentBotId}, completing meeting`);
+          
+          // Give a short delay in case it's just a temporary disconnect
+          setTimeout(async () => {
+            try {
+              await completeMeetingByInactivity(currentBotId, 'websocket_disconnect');
+            } catch (error) {
+              console.error(`❌ Error completing meeting on disconnect:`, error);
+            }
+          }, 30000); // 30 second delay
+        }
       });
       
       ws.on('error', (error) => {
@@ -1241,6 +1510,13 @@ async function startServer() {
       console.log(`Access from Windows at: http://172.24.145.192:${PORT}`);
       console.log(`✅ WebSocket server listening on ws://localhost:${PORT}/transcript`);
       console.log(`✅ Embeddings will be generated for new turns`);
+      
+      // Start periodic cleanup of inactive meetings (every 5 minutes)
+      setInterval(cleanupInactiveMeetings, 5 * 60 * 1000);
+      console.log(`🧹 Meeting cleanup scheduled every 5 minutes`);
+      
+      // Run initial cleanup after 1 minute
+      setTimeout(cleanupInactiveMeetings, 60 * 1000);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
