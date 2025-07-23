@@ -272,7 +272,7 @@ app.post('/api/login', async (req, res) => {
     }
     
     const userResult = await pool.query(
-      'SELECT id, email, password_hash, client_id FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
+      'SELECT id, email, password_hash FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
       [email]
     );
     
@@ -856,23 +856,12 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Meeting URL is required' });
     }
     
-    // If client_id is missing from session, fetch it from database
+    // If client_id is missing from session, use default client (temporary fix)
     if (!client_id) {
-      console.log(`Client ID missing from session for user ${user_id}, fetching from database...`);
-      const userResult = await pool.query(
-        'SELECT client_id FROM client_mgmt.users WHERE id = $1',
-        [user_id]
-      );
+      console.log(`Client ID missing from session for user ${user_id}, using default client_id = 1`);
+      client_id = 1; // Default to client 1 for now
       
-      if (userResult.rows.length === 0) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      client_id = userResult.rows[0].client_id;
-      
-      if (!client_id) {
-        return res.status(400).json({ error: 'User does not have an associated client' });
-      }
+      // TODO: Add client_id column to client_mgmt.users table and proper lookup
     }
     
     console.log(`Creating bot for user ${user_id}, client ${client_id}, meeting: ${meeting_url}`);
@@ -1205,53 +1194,85 @@ app.post('/webhook/chat', async (req, res) => {
         const questionMatch = messageText.match(/cogito[,:]?\s*(.+)/i);
         const question = questionMatch ? questionMatch[1].trim() : messageText;
         
-        // Generate contextual response based on the question
-        if (question.toLowerCase().includes('respond') || question.toLowerCase().includes('question')) {
-          response = "Yes, I can respond to questions! You can ask me questions by starting your message with 'Cogito' or just typing '?'. I'm here to help with the conversation.";
-        } else if (question.toLowerCase().includes('help')) {
-          response = "I'm Cogito, your meeting assistant. I can: 1) Respond to questions when you type '?' 2) Answer direct questions when you start with 'Cogito' 3) Track the conversation and provide summaries.";
-        } else if (question.toLowerCase().includes('who') || question.toLowerCase().includes('what')) {
-          response = "I'm Cogito, an AI meeting assistant. I'm listening to your conversation and can help answer questions or provide context about what's been discussed.";
-        } else {
-          // Generic response for other questions
-          response = `I heard your question: "${question}". `;
-          
+        // Generate intelligent response using Claude
+        try {
           if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
-            response += "I haven't captured much conversation yet to provide context.";
+            response = "I haven't captured much conversation content yet. Please continue the meeting and I'll be able to provide better responses.";
           } else {
-            response += "Based on the conversation so far, I'm tracking the discussion. Feel free to ask me specific questions!";
+            // Convert transcript to text for Claude
+            const conversationText = transcriptArray
+              .map(entry => entry.content || '')
+              .join('\n');
+            
+            if (anthropic && process.env.ANTHROPIC_API_KEY) {
+              const prompt = `You are Cogito, an AI meeting assistant listening to a live meeting. You have access to the conversation transcript below.
+
+CONVERSATION TRANSCRIPT:
+${conversationText}
+
+PARTICIPANT'S QUESTION: "${question}"
+
+Please provide a helpful, contextual response based on the meeting content. Be concise (2-3 sentences max) and specific to what's been discussed. If the question asks about people, refer to the transcript for context about who they are and what they've said.`;
+
+              const message = await anthropic.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 300,
+                messages: [{ role: "user", content: prompt }]
+              });
+              
+              response = message.content[0].text;
+            } else {
+              response = `I heard your question: "${question}". I have conversation data but Claude AI is not available to analyze it. Please check the ANTHROPIC_API_KEY configuration.`;
+            }
           }
+        } catch (error) {
+          console.error('❌ Error generating intelligent chat response:', error);
+          response = `I heard your question: "${question}". I'm having trouble analyzing the conversation right now, but I'm still listening.`;
         }
       } else {
-        // Original '?' command logic
-        response = "I'm listening to your conversation. ";
-        
-        if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
-          response += "I haven't captured any content yet - are you speaking into the microphone?";
-        } else {
-        // Convert transcript array to text for analysis
-        const conversationText = transcriptArray
-          .map(entry => entry.content || '')
-          .join('\n');
-        
-        // Extract speaker names from the conversation
-        const speakerMatches = conversationText.match(/\[([^\]]+?)\]/g) || [];
-        const speakers = [...new Set(speakerMatches.map(match => 
-          match.replace(/[\[\]]/g, '').replace(' via chat', '')
-        ))].filter(s => s && s !== 'Cogito');
-        
-        if (speakers.length > 1) {
-          response += `I can see ${speakers.length} speakers: ${speakers.join(', ')}. `;
-        }
-        
-        // Get the last few entries
-        const recentEntries = transcriptArray.slice(-3);
-        const lastEntry = recentEntries[recentEntries.length - 1];
-        const lastContent = lastEntry?.content || '';
-        const contentMatch = lastContent.match(/\] (.+)$/);
-        const lastTopic = contentMatch ? contentMatch[1] : lastContent;
-        
-        response += `The latest topic seems to be about ${lastTopic.substring(0, 50)}${lastTopic.length > 50 ? '...' : ''}`;
+        // '?' command - provide meeting summary
+        try {
+          if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
+            response = "I haven't captured any content yet - are you speaking into the microphone?";
+          } else {
+            // Convert transcript to text for Claude
+            const conversationText = transcriptArray
+              .map(entry => entry.content || '')
+              .join('\n');
+            
+            if (anthropic && process.env.ANTHROPIC_API_KEY) {
+              const prompt = `You are Cogito, an AI meeting assistant. Provide a brief status update about this live meeting.
+
+CONVERSATION TRANSCRIPT:
+${conversationText}
+
+Please provide a concise 2-3 sentence summary that includes:
+- How many speakers are active
+- What the current discussion topic seems to be about
+- Any key points or themes emerging
+
+Keep it brief and focused on what's happening right now in the meeting.`;
+
+              const message = await anthropic.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 200,
+                messages: [{ role: "user", content: prompt }]
+              });
+              
+              response = message.content[0].text;
+            } else {
+              // Fallback to basic speaker counting if Claude unavailable
+              const speakerMatches = conversationText.match(/\[([^\]]+?)\]/g) || [];
+              const speakers = [...new Set(speakerMatches.map(match => 
+                match.replace(/[\[\]]/g, '').replace(' via chat', '')
+              ))].filter(s => s && s !== 'Cogito');
+              
+              response = `I'm listening to your conversation. I can see ${speakers.length} speakers: ${speakers.join(', ')}. Claude AI is not available for detailed analysis.`;
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error generating meeting summary:', error);
+          response = "I'm listening to your conversation but having trouble analyzing it right now. Please continue and try again.";
         }
       }
       
