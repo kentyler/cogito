@@ -1116,14 +1116,19 @@ app.post('/webhook/chat', async (req, res) => {
         [blockId]
       );
       
-      const conversationText = conversationResult.rows[0]?.full_transcript || '';
+      const transcriptArray = conversationResult.rows[0]?.full_transcript || [];
       
       // Generate a simple response based on context
       let response = "I'm listening to your conversation. ";
       
-      if (conversationText.length === 0) {
+      if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
         response += "I haven't captured any content yet - are you speaking into the microphone?";
       } else {
+        // Convert transcript array to text for analysis
+        const conversationText = transcriptArray
+          .map(entry => entry.content || '')
+          .join('\n');
+        
         // Extract speaker names from the conversation
         const speakerMatches = conversationText.match(/\[([^\]]+?)\]/g) || [];
         const speakers = [...new Set(speakerMatches.map(match => 
@@ -1134,13 +1139,14 @@ app.post('/webhook/chat', async (req, res) => {
           response += `I can see ${speakers.length} speakers: ${speakers.join(', ')}. `;
         }
         
-        // Get the last few lines of conversation
-        const recentLines = conversationText.trim().split('\n').slice(-3);
-        const lastLine = recentLines[recentLines.length - 1] || '';
-        const contentMatch = lastLine.match(/\] (.+)$/);
-        const lastContent = contentMatch ? contentMatch[1] : lastLine;
+        // Get the last few entries
+        const recentEntries = transcriptArray.slice(-3);
+        const lastEntry = recentEntries[recentEntries.length - 1];
+        const lastContent = lastEntry?.content || '';
+        const contentMatch = lastContent.match(/\] (.+)$/);
+        const lastTopic = contentMatch ? contentMatch[1] : lastContent;
         
-        response += `The latest topic seems to be about ${lastContent.substring(0, 50)}${lastContent.length > 50 ? '...' : ''}`;
+        response += `The latest topic seems to be about ${lastTopic.substring(0, 50)}${lastTopic.length > 50 ? '...' : ''}`;
       }
       
       console.log(`🤖 Generated response: "${response}"`);
@@ -1262,7 +1268,12 @@ async function sendTranscriptEmail(blockId, meeting) {
     }
     
     // Get the transcript text
-    let transcriptText = meeting.full_transcript || 'No transcript content available.';
+    let transcriptText = 'No transcript content available.';
+    if (Array.isArray(meeting.full_transcript) && meeting.full_transcript.length > 0) {
+      transcriptText = meeting.full_transcript
+        .map(entry => entry.content || '')
+        .join('\n');
+    }
     
     // Format transcript for email
     const htmlContent = `
@@ -1357,14 +1368,16 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     
     // No buffer processing needed with direct append approach
     
-    // Update meeting status (using ended_at instead of end_time, and full_transcript instead of metadata)
+    // Update meeting status 
     await pool.query(
       `UPDATE conversation.block_meetings 
-       SET status = $1, ended_at = NOW(), 
-           full_transcript = COALESCE(full_transcript, '{}'::jsonb) || $2::jsonb
-       WHERE recall_bot_id = $3`,
-      ['completed', JSON.stringify({ completion_reason: reason }), botId]
+       SET status = $1, ended_at = NOW()
+       WHERE recall_bot_id = $2`,
+      ['completed', botId]
     );
+    
+    // Append completion info to transcript
+    await appendToConversation(meeting.block_id, `[System] Meeting ended: ${reason}`);
     
     console.log(`✅ Meeting ${botId} completed due to ${reason}`);
     
