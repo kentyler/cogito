@@ -1112,9 +1112,16 @@ app.post('/webhook/chat', async (req, res) => {
     await appendToConversation(blockId, chatEntry);
     console.log(`📝 Appended chat message from ${senderName}`);
     
-    // Check if this is a question command
-    if (messageText.trim() === '?') {
-      console.log('❓ Question command detected - generating response');
+    // Check if this is a question command or directed at Cogito
+    const lowerMessage = messageText.toLowerCase().trim();
+    const isQuestion = messageText.trim() === '?';
+    const isDirectedAtCogito = lowerMessage.startsWith('cogito') || 
+                               lowerMessage.startsWith('hi cogito') || 
+                               lowerMessage.startsWith('hey cogito') ||
+                               lowerMessage.startsWith('hello cogito');
+    
+    if (isQuestion || isDirectedAtCogito) {
+      console.log('❓ Question/Direct message detected - generating response');
       
       // Get conversation context from the timeline
       const conversationResult = await pool.query(
@@ -1124,12 +1131,38 @@ app.post('/webhook/chat', async (req, res) => {
       
       const transcriptArray = conversationResult.rows[0]?.full_transcript || [];
       
-      // Generate a simple response based on context
-      let response = "I'm listening to your conversation. ";
+      // Generate response based on the type of query
+      let response = "";
       
-      if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
-        response += "I haven't captured any content yet - are you speaking into the microphone?";
+      if (isDirectedAtCogito) {
+        // Extract the actual question after "cogito"
+        const questionMatch = messageText.match(/cogito[,:]?\s*(.+)/i);
+        const question = questionMatch ? questionMatch[1].trim() : messageText;
+        
+        // Generate contextual response based on the question
+        if (question.toLowerCase().includes('respond') || question.toLowerCase().includes('question')) {
+          response = "Yes, I can respond to questions! You can ask me questions by starting your message with 'Cogito' or just typing '?'. I'm here to help with the conversation.";
+        } else if (question.toLowerCase().includes('help')) {
+          response = "I'm Cogito, your meeting assistant. I can: 1) Respond to questions when you type '?' 2) Answer direct questions when you start with 'Cogito' 3) Track the conversation and provide summaries.";
+        } else if (question.toLowerCase().includes('who') || question.toLowerCase().includes('what')) {
+          response = "I'm Cogito, an AI meeting assistant. I'm listening to your conversation and can help answer questions or provide context about what's been discussed.";
+        } else {
+          // Generic response for other questions
+          response = `I heard your question: "${question}". `;
+          
+          if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
+            response += "I haven't captured much conversation yet to provide context.";
+          } else {
+            response += "Based on the conversation so far, I'm tracking the discussion. Feel free to ask me specific questions!";
+          }
+        }
       } else {
+        // Original '?' command logic
+        response = "I'm listening to your conversation. ";
+        
+        if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
+          response += "I haven't captured any content yet - are you speaking into the microphone?";
+        } else {
         // Convert transcript array to text for analysis
         const conversationText = transcriptArray
           .map(entry => entry.content || '')
@@ -1153,6 +1186,7 @@ app.post('/webhook/chat', async (req, res) => {
         const lastTopic = contentMatch ? contentMatch[1] : lastContent;
         
         response += `The latest topic seems to be about ${lastTopic.substring(0, 50)}${lastTopic.length > 50 ? '...' : ''}`;
+        }
       }
       
       console.log(`🤖 Generated response: "${response}"`);
