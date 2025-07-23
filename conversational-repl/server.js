@@ -272,7 +272,7 @@ app.post('/api/login', async (req, res) => {
     }
     
     const userResult = await pool.query(
-      'SELECT id, email, password_hash FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
+      'SELECT id, email, password_hash, client_id FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
       [email]
     );
     
@@ -294,7 +294,8 @@ app.post('/api/login', async (req, res) => {
     
     req.session.user = {
       user_id: user.id,
-      email: user.email
+      email: user.email,
+      client_id: user.client_id
     };
     
     req.session.save((err) => {
@@ -848,13 +849,18 @@ app.post('/api/compare-blocks', requireAuth, async (req, res) => {
 app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
-    const client_id = req.session.user.user_id || req.session.user.id;
+    const user_id = req.session.user.user_id || req.session.user.id;
+    const client_id = req.session.user.client_id;
     
     if (!meeting_url) {
       return res.status(400).json({ error: 'Meeting URL is required' });
     }
     
-    console.log('Creating bot for meeting:', meeting_url);
+    if (!client_id) {
+      return res.status(400).json({ error: 'Client ID not found in session' });
+    }
+    
+    console.log(`Creating bot for user ${user_id}, client ${client_id}, meeting: ${meeting_url}`);
     
     // Get the external URL for WebSocket connection
     let websocketUrl;
@@ -936,15 +942,16 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     
     console.log('Creating block and meeting record for bot:', botData.id);
     
-    // Create a block for this meeting with user who created it
+    // Create a block for this meeting with proper user and client IDs
     const blockResult = await pool.query(
-      `INSERT INTO blocks (name, description, block_type, created_by_user_id, metadata) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      `INSERT INTO conversation.blocks (name, description, block_type, created_by_user_id, client_id, metadata) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [
         meeting_name || `Meeting ${new Date().toISOString()}`,
         `Meeting from ${meeting_url}`,
         'meeting',
-        client_id,
+        user_id,     // The actual user who created it
+        client_id,   // The client that user belongs to
         { created_by: 'recall_bot', recall_bot_id: botData.id }
       ]
     );
@@ -957,7 +964,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     const meetingResult = await pool.query(
       `INSERT INTO conversation.block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, transcript_email, status, meeting_name) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [block.block_id, botData.id, meeting_url, client_id, userEmail, 'joining', meeting_name || 'Unnamed Meeting']
+      [block.block_id, botData.id, meeting_url, user_id, userEmail, 'joining', meeting_name || 'Unnamed Meeting']
     );
     const meeting = meetingResult.rows[0];
     console.log('Meeting record created:', meeting.block_id);
@@ -976,7 +983,7 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
 // Get running bots endpoint - moved from recall-bot server
 app.get('/api/bots', requireAuth, async (req, res) => {
   try {
-    const client_id = req.session.user.user_id || req.session.user.id;
+    const user_id = req.session.user.user_id || req.session.user.id;
     
     const result = await pool.query(`
       SELECT 
@@ -1061,9 +1068,9 @@ app.post('/api/stuck-meetings/:meetingId/complete', requireAuth, async (req, res
 app.post('/api/bots/:botId/leave', requireAuth, async (req, res) => {
   try {
     const { botId } = req.params;
-    const client_id = req.session.user.user_id || req.session.user.id;
+    const user_id = req.session.user.user_id || req.session.user.id;
     
-    console.log(`Shutting down bot ${botId} for user ${client_id}`);
+    console.log(`Shutting down bot ${botId} for user ${user_id}`);
     
     // Update the bot status to leaving in block_meetings table
     const updateResult = await pool.query(`
