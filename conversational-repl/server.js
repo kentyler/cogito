@@ -46,7 +46,27 @@ async function getEmailTransporter() {
     return emailTransporter;
   }
   
-  // Try direct SMTP first
+  // Try Gmail SMTP first if configured
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    try {
+      const gmailTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_APP_PASSWORD
+        }
+      });
+      
+      await gmailTransporter.verify();
+      console.log('✅ Gmail SMTP configured successfully');
+      emailTransporter = gmailTransporter;
+      return emailTransporter;
+    } catch (error) {
+      console.error('❌ Gmail SMTP configuration failed:', error);
+    }
+  }
+  
+  // Try direct SMTP second
   try {
     const directTransporter = nodemailer.createTransport({
       name: process.env.RENDER_EXTERNAL_URL || 'cogito-meetings.onrender.com',
@@ -1350,7 +1370,9 @@ ${transcriptText}
 `;
 
     const mailOptions = {
-      from: '"Cogito Meeting Bot" <meetings@cogito-meetings.onrender.com>',
+      from: process.env.GMAIL_USER ? 
+        `"Cogito Meeting Bot" <${process.env.GMAIL_USER}>` : 
+        '"Cogito Meeting Bot" <meetings@cogito-meetings.onrender.com>',
       to: meeting.transcript_email,
       subject: `Meeting Transcript: ${meeting.meeting_name || 'Your Meeting'}`,
       html: htmlContent,
