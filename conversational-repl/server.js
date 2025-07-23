@@ -1333,6 +1333,49 @@ async function appendToConversation(blockId, content) {
   }
 }
 
+// Format transcript for email with smart speaker grouping
+function formatTranscriptForEmail(transcriptArray) {
+  if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
+    return 'No transcript content available.';
+  }
+  
+  let formattedText = '';
+  let lastSpeaker = '';
+  
+  for (const entry of transcriptArray) {
+    if (!entry.content) continue;
+    
+    // Extract speaker from content like "[Kenneth Tyler] message"
+    const speakerMatch = entry.content.match(/^\[([^\]]+)\]\s*(.*)$/);
+    if (speakerMatch) {
+      const speaker = speakerMatch[1];
+      const message = speakerMatch[2];
+      
+      // Only add speaker tag if speaker changed
+      if (speaker !== lastSpeaker) {
+        if (formattedText) formattedText += '\n\n'; // Add space between speakers
+        formattedText += `[${speaker}]\n`;
+        lastSpeaker = speaker;
+      }
+      
+      // Add the message (with line break if not first message from this speaker)
+      if (message.trim()) {
+        if (speaker === lastSpeaker && formattedText && !formattedText.endsWith('\n')) {
+          formattedText += ' ';
+        }
+        formattedText += message.trim();
+        if (!formattedText.endsWith('\n')) formattedText += '\n';
+      }
+    } else {
+      // Content without speaker format, just add it
+      formattedText += entry.content;
+      if (!formattedText.endsWith('\n')) formattedText += '\n';
+    }
+  }
+  
+  return formattedText.trim();
+}
+
 // Send transcript email function
 async function sendTranscriptEmail(blockId, meeting) {
   try {
@@ -1348,12 +1391,10 @@ async function sendTranscriptEmail(blockId, meeting) {
       return;
     }
     
-    // Get the transcript text
+    // Get the transcript text with smart speaker formatting
     let transcriptText = 'No transcript content available.';
     if (Array.isArray(meeting.full_transcript) && meeting.full_transcript.length > 0) {
-      transcriptText = meeting.full_transcript
-        .map(entry => entry.content || '')
-        .join('\n');
+      transcriptText = formatTranscriptForEmail(meeting.full_transcript);
     }
     
     // Format transcript for email
