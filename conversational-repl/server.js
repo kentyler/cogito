@@ -1209,16 +1209,35 @@ const meetingLastActivity = new Map();
 // Simple conversation timeline helper
 async function appendToConversation(blockId, content) {
   try {
-    // Update the block_meetings.full_transcript field (the proper place for meeting transcripts)
-    const result = await pool.query(
-      'UPDATE conversation.block_meetings SET full_transcript = COALESCE(full_transcript, \'\') || $1 WHERE block_id = $2 RETURNING *',
-      [content, blockId]
+    // Get current transcript
+    const currentResult = await pool.query(
+      'SELECT full_transcript FROM conversation.block_meetings WHERE block_id = $1',
+      [blockId]
     );
     
-    if (result.rows.length === 0) {
+    if (currentResult.rows.length === 0) {
       console.error(`❌ Block meeting not found: ${blockId}`);
       return false;
     }
+    
+    // Build transcript array
+    let transcript = currentResult.rows[0].full_transcript || [];
+    if (!Array.isArray(transcript)) {
+      // If it's not an array, convert it to one
+      transcript = [];
+    }
+    
+    // Add new entry with timestamp
+    transcript.push({
+      timestamp: new Date().toISOString(),
+      content: content
+    });
+    
+    // Update with the new transcript array
+    const result = await pool.query(
+      'UPDATE conversation.block_meetings SET full_transcript = $1 WHERE block_id = $2 RETURNING *',
+      [JSON.stringify(transcript), blockId]
+    );
     
     return true;
   } catch (error) {
