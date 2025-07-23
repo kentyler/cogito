@@ -46,7 +46,29 @@ async function getEmailTransporter() {
     return emailTransporter;
   }
   
-  // Try Gmail SMTP first if configured
+  // Try Resend first if configured (recommended)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const resendTransporter = nodemailer.createTransport({
+        host: 'smtp.resend.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: 'resend',
+          pass: process.env.RESEND_API_KEY
+        }
+      });
+      
+      await resendTransporter.verify();
+      console.log('✅ Resend email service configured successfully');
+      emailTransporter = resendTransporter;
+      return emailTransporter;
+    } catch (error) {
+      console.error('❌ Resend configuration failed:', error);
+    }
+  }
+  
+  // Try Gmail SMTP if configured (requires app password)
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
     try {
       const gmailTransporter = nodemailer.createTransport({
@@ -1370,7 +1392,9 @@ ${transcriptText}
 `;
 
     const mailOptions = {
-      from: process.env.GMAIL_USER ? 
+      from: process.env.RESEND_FROM_EMAIL ? 
+        `"Cogito Meeting Bot" <${process.env.RESEND_FROM_EMAIL}>` :
+        process.env.GMAIL_USER ? 
         `"Cogito Meeting Bot" <${process.env.GMAIL_USER}>` : 
         '"Cogito Meeting Bot" <meetings@cogito-meetings.onrender.com>',
       to: meeting.transcript_email,
