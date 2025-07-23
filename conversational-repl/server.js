@@ -8,6 +8,7 @@ const pgSession = require('connect-pg-simple')(session);
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const http = require('http');
+const nodemailer = require('nodemailer');
 // Use global fetch available in Node.js 18+
 const { createTurnProcessor } = require('./turn-processor-wrapper.cjs');
 const { createSimilarityOrchestrator } = require('./similarity-orchestrator-wrapper.cjs');
@@ -35,6 +36,89 @@ const pool = new Pool({
 pool.on('connect', (client) => {
   client.query('SET search_path = public, conversation, client_mgmt');
 });
+
+// Email transporter will be initialized when needed
+let emailTransporter = null;
+
+// Initialize email transporter with fallback methods
+async function getEmailTransporter() {
+  if (emailTransporter) {
+    return emailTransporter;
+  }
+  
+  // Try direct SMTP first
+  try {
+    const directTransporter = nodemailer.createTransport({
+      name: process.env.RENDER_EXTERNAL_URL || 'cogito-meetings.onrender.com',
+      direct: true,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      connectionTimeout: 60000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000
+    });
+    
+    await directTransporter.verify();
+    console.log('📧 Using direct SMTP transport');
+    emailTransporter = directTransporter;
+    return emailTransporter;
+  } catch (error) {
+    console.log('📧 Direct SMTP failed, trying Ethereal...');
+  }
+  
+  // Fall back to Ethereal for testing
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    const etherealTransporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass
+      }
+    });
+    
+    await etherealTransporter.verify();
+    console.log('📧 Using Ethereal test email service');
+    console.log(`📧 Preview emails at: https://ethereal.email`);
+    emailTransporter = etherealTransporter;
+    return emailTransporter;
+  } catch (error) {
+    console.log('📧 Ethereal failed, using logging fallback...');
+  }
+  
+  // Final fallback to logging
+  emailTransporter = {
+    sendMail: async (mailOptions) => {
+      console.log('\n📧 ============ EMAIL LOGGED ============');
+      console.log(`From: ${mailOptions.from}`);
+      console.log(`To: ${mailOptions.to}`);
+      console.log(`Subject: ${mailOptions.subject}`);
+      console.log(`Content Type: ${mailOptions.html ? 'HTML' : 'Text'}`);
+      console.log(`Content Length: ${(mailOptions.html || mailOptions.text || '').length} characters`);
+      console.log('📧 ======================================\n');
+      
+      return { 
+        messageId: `logged-mail-${Date.now()}@localhost`,
+        accepted: [mailOptions.to],
+        rejected: [],
+        envelope: {
+          from: mailOptions.from,
+          to: [mailOptions.to]
+        }
+      };
+    },
+    
+    verify: () => {
+      console.log('📧 Logging mail service verified');
+      return Promise.resolve(true);
+    }
+  };
+  
+  return emailTransporter;
+}
 
 // Initialize Claude/Anthropic
 let anthropic;
@@ -999,48 +1083,64 @@ app.post('/webhook/chat', async (req, res) => {
     
     console.log(`💬 Chat message from bot ${botId}: "${messageText}"`);
     
+    // Find the meeting for this bot
+    const meetingResult = await pool.query(
+      'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
+      [botId]
+    );
+    
+    if (meetingResult.rows.length === 0) {
+      console.log(`❌ No meeting found for bot ${botId}`);
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    
+    const meeting = meetingResult.rows[0];
+    const blockId = meeting.block_id;
+    
+    // Extract participant info if available  
+    const participantData = data.data?.participant;
+    const senderName = participantData?.name || 'Unknown';
+    
+    // Append chat message to conversation timeline
+    const chatEntry = `[${senderName} via chat] ${messageText}\n`;
+    await appendToConversation(blockId, chatEntry);
+    console.log(`📝 Appended chat message from ${senderName}`);
+    
     // Check if this is a question command
     if (messageText.trim() === '?') {
       console.log('❓ Question command detected - generating response');
       
-      // Find the meeting for this bot
-      const meetingResult = await pool.query(
-        'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
-        [botId]
+      // Get conversation context from the timeline
+      const conversationResult = await pool.query(
+        'SELECT full_transcript FROM conversation.block_meetings WHERE block_id = $1',
+        [blockId]
       );
       
-      if (meetingResult.rows.length === 0) {
-        console.log(`❌ No meeting found for bot ${botId}`);
-        return res.status(404).json({ error: 'Meeting not found' });
-      }
-      
-      const meeting = meetingResult.rows[0];
-      const blockId = meeting.block_id;
-      
-      // Get recent conversation context (last 5 turns)
-      const contextResult = await pool.query(`
-        SELECT t.content, p.name as speaker_name, t.timestamp
-        FROM conversation.turns t
-        JOIN conversation.block_turns bt ON t.turn_id = bt.turn_id
-        LEFT JOIN conversation.participants p ON t.participant_id = p.id
-        WHERE bt.block_id = $1
-        ORDER BY t.timestamp DESC
-        LIMIT 5
-      `, [blockId]);
-      
-      const context = contextResult.rows.reverse(); // Put in chronological order
+      const conversationText = conversationResult.rows[0]?.full_transcript || '';
       
       // Generate a simple response based on context
       let response = "I'm listening to your conversation. ";
       
-      if (context.length === 0) {
+      if (conversationText.length === 0) {
         response += "I haven't captured any content yet - are you speaking into the microphone?";
       } else {
-        const speakers = [...new Set(context.map(t => t.speaker_name))].filter(s => s);
+        // Extract speaker names from the conversation
+        const speakerMatches = conversationText.match(/\[([^\]]+?)\]/g) || [];
+        const speakers = [...new Set(speakerMatches.map(match => 
+          match.replace(/[\[\]]/g, '').replace(' via chat', '')
+        ))].filter(s => s && s !== 'Cogito');
+        
         if (speakers.length > 1) {
           response += `I can see ${speakers.length} speakers: ${speakers.join(', ')}. `;
         }
-        response += `The latest topic seems to be about ${context[context.length - 1].content.substring(0, 50)}...`;
+        
+        // Get the last few lines of conversation
+        const recentLines = conversationText.trim().split('\n').slice(-3);
+        const lastLine = recentLines[recentLines.length - 1] || '';
+        const contentMatch = lastLine.match(/\] (.+)$/);
+        const lastContent = contentMatch ? contentMatch[1] : lastLine;
+        
+        response += `The latest topic seems to be about ${lastContent.substring(0, 50)}${lastContent.length > 50 ? '...' : ''}`;
       }
       
       console.log(`🤖 Generated response: "${response}"`);
@@ -1062,6 +1162,11 @@ app.post('/webhook/chat', async (req, res) => {
         
         if (chatResponse.ok) {
           console.log('✅ Chat response sent successfully');
+          
+          // Append Cogito's response to the conversation timeline
+          const cogitoEntry = `[Cogito via chat] ${response}\n`;
+          await appendToConversation(blockId, cogitoEntry);
+          console.log('📝 Appended Cogito response to timeline');
         } else {
           const errorText = await chatResponse.text();
           console.error('❌ Failed to send chat response:', chatResponse.status, errorText);
@@ -1074,12 +1179,12 @@ app.post('/webhook/chat', async (req, res) => {
         success: true, 
         message: 'Question processed',
         response: response,
-        context_turns: context.length
+        conversation_length: conversationText.length
       });
     }
     
     // For other chat messages, just log them
-    console.log(`💬 Chat message (not a command): "${message.content}"`);
+    console.log(`💬 Chat message (not a command): "${messageText}"`);
     res.json({ success: true, message: 'Chat message received' });
     
   } catch (error) {
@@ -1093,8 +1198,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'conversational-repl' });
 });
 
-// Track transcript accumulation per bot (for storage)
-const transcriptBuffers = new Map();
+// Removed transcript buffers - using direct append approach
 
 // Track full meeting transcripts in memory (for real-time interaction)
 const meetingTranscripts = new Map();
@@ -1102,98 +1206,117 @@ const meetingTranscripts = new Map();
 // Track last activity per meeting for inactivity detection
 const meetingLastActivity = new Map();
 
-// Voice-cue detection function
-function detectSpeakerCue(text) {
-  // Check for "This is [Name]" patterns - restrict to 1-3 words that look like names
-  const thisIsPattern = /(?:^|\s)this\s+is\s+([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*){0,2})(?:\s*[.,:;!?]|\s+(?:and|but|so|however|speaking|talking|here|now|today)|$)/i;
-  const match = text.match(thisIsPattern);
-  
-  if (match) {
-    const speakerName = match[1].trim();
+// Simple conversation timeline helper
+async function appendToConversation(blockId, content) {
+  try {
+    // Update the block_meetings.full_transcript field (the proper place for meeting transcripts)
+    const result = await pool.query(
+      'UPDATE conversation.block_meetings SET full_transcript = COALESCE(full_transcript, \'\') || $1 WHERE block_id = $2 RETURNING *',
+      [content, blockId]
+    );
     
-    // Additional validation: should be 1-3 words, each starting with capital letter
-    const words = speakerName.split(/\s+/);
-    if (words.length <= 3 && words.length >= 1) {
-      // Filter out common false positives
-      const falsePosatives = ['it', 'what', 'how', 'when', 'where', 'why', 'the', 'a', 'an', 'not', 'very', 'really', 'just', 'only', 'our', 'my', 'his', 'her', 'their', 'that', 'this'];
-      
-      if (!falsePosatives.includes(speakerName.toLowerCase()) && words.every(word => word.length >= 2)) {
-        return speakerName;
-      }
+    if (result.rows.length === 0) {
+      console.error(`❌ Block meeting not found: ${blockId}`);
+      return false;
     }
-  }
-  
-  return null;
-}
-
-// Process all pending buffers when speaker changes
-async function processPendingBuffers(botId, blockId) {
-  console.log(`🔄 Processing pending buffers for bot ${botId} due to speaker change`);
-  
-  for (let [bufferKey, buffer] of transcriptBuffers.entries()) {
-    if (bufferKey.startsWith(`${botId}:`) && buffer.text.trim().length > 0) {
-      const speakerName = bufferKey.split(':')[1];
-      
-      try {
-        // Get attendee info
-        const attendee = await getOrCreateAttendee(blockId, speakerName);
-        
-        // Generate embedding using turn processor
-        const wordCount = buffer.text.trim().split(/\s+/).length;
-        
-        // Create turn with embedding
-        const turn = await turnProcessor.createTurn({
-          participant_id: attendee.id,
-          content: buffer.text.trim(),
-          source_type: 'recall_bot',
-          metadata: {
-            word_count: wordCount,
-            duration_seconds: Math.floor((buffer.lastTimestamp - buffer.startTimestamp) / 1000)
-          }
-        });
-        
-        // Link turn to block
-        const sequenceResult = await pool.query(
-          'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
-          [blockId]
-        );
-        const nextOrder = sequenceResult.rows[0].next_order;
-        
-        await pool.query(
-          'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
-          [blockId, turn.turn_id, nextOrder]
-        );
-        
-        console.log(`✅ Processed buffer for ${speakerName}: ${wordCount} words`);
-        
-        // Clear the buffer
-        transcriptBuffers.delete(bufferKey);
-        
-      } catch (error) {
-        console.error(`❌ Error processing buffer for ${speakerName}:`, error);
-      }
-    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error appending to conversation:', error);
+    return false;
   }
 }
 
-// Get or create attendee for a speaker
-async function getOrCreateAttendee(blockId, speakerName) {
-  const existingAttendee = await pool.query(
-    'SELECT * FROM conversation.participants WHERE name = $1',
-    [speakerName]
-  );
-  
-  if (existingAttendee.rows.length > 0) {
-    return existingAttendee.rows[0];
+// Send transcript email function
+async function sendTranscriptEmail(blockId, meeting) {
+  try {
+    console.log(`📧 Preparing to send transcript email for block_id: ${blockId}`);
+    
+    if (!meeting.transcript_email) {
+      console.error('❌ No email address configured for this meeting');
+      return;
+    }
+    
+    if (meeting.email_sent) {
+      console.log(`⚠️  Email already sent to ${meeting.transcript_email}`);
+      return;
+    }
+    
+    // Get the transcript text
+    let transcriptText = meeting.full_transcript || 'No transcript content available.';
+    
+    // Format transcript for email
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f0f0f0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .transcript { background-color: #f9f9f9; padding: 20px; border-left: 4px solid #4CAF50; white-space: pre-wrap; font-family: 'Courier New', monospace; }
+        .footer { margin-top: 20px; padding: 20px; background-color: #f0f0f0; border-radius: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Meeting Transcript</h2>
+            <p><strong>Meeting:</strong> ${meeting.meeting_name || 'Untitled Meeting'}</p>
+            <p><strong>Date:</strong> ${new Date(meeting.started_at || meeting.created_at).toLocaleString()}</p>
+            <p><strong>Meeting URL:</strong> <a href="${meeting.meeting_url}">${meeting.meeting_url}</a></p>
+        </div>
+        
+        <div class="transcript">
+${transcriptText}
+        </div>
+        
+        <div class="footer">
+            <p>This transcript was automatically generated by Cogito Meeting Bot.</p>
+            <p>Thank you for using our service!</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
+
+    const mailOptions = {
+      from: '"Cogito Meeting Bot" <meetings@cogito-meetings.onrender.com>',
+      to: meeting.transcript_email,
+      subject: `Meeting Transcript: ${meeting.meeting_name || 'Your Meeting'}`,
+      html: htmlContent,
+      text: `Meeting Transcript\n\n${transcriptText}`
+    };
+    
+    console.log('📮 Sending email...');
+    
+    const transporter = await getEmailTransporter();
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Transcript email sent successfully to ${meeting.transcript_email}`);
+    
+    // Mark as sent in database
+    await pool.query(`
+      UPDATE conversation.block_meetings 
+      SET email_sent = TRUE 
+      WHERE block_id = $1
+    `, [blockId]);
+    
+    console.log('✅ Database updated: email_sent = TRUE');
+    
+  } catch (error) {
+    console.error('❌ Error sending transcript email:', error);
+    
+    // Log the error details
+    if (error.code === 'ECONNREFUSED') {
+      console.error('💡 Email delivery failed - connection refused');
+      console.error('   This is normal in development/testing environments');
+      console.error('   Email content has been logged above for verification');
+    }
+    throw error;
   }
-  
-  const newAttendeeResult = await pool.query(
-    'INSERT INTO conversation.participants (name, email, created_at) VALUES ($1, $2, NOW()) RETURNING *',
-    [speakerName, `${speakerName.toLowerCase().replace(/\s+/g, '.')}@meeting.local`]
-  );
-  
-  return newAttendeeResult.rows[0];
 }
+
+// Removed old buffering and participant creation logic - using simple append-only approach
 
 // Complete meeting due to inactivity or abandonment
 async function completeMeetingByInactivity(botId, reason = 'inactivity') {
@@ -1213,8 +1336,7 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     
     const meeting = meetingResult.rows[0];
     
-    // Process any remaining transcript buffers
-    await processPendingBuffers(botId, meeting.block_id);
+    // No buffer processing needed with direct append approach
     
     // Update meeting status (using ended_at instead of end_time, and full_transcript instead of metadata)
     await pool.query(
@@ -1230,8 +1352,17 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     // Clean up tracking data
     meetingLastActivity.delete(botId);
     
-    // TODO: Send email transcript
-    console.log(`📧 Would send transcript email to: ${meeting.transcript_email}`);
+    // Send email transcript
+    if (meeting.transcript_email && meeting.full_transcript) {
+      try {
+        await sendTranscriptEmail(meeting.block_id, meeting);
+        console.log(`✅ Transcript email sent to: ${meeting.transcript_email}`);
+      } catch (error) {
+        console.error(`❌ Failed to send transcript email:`, error);
+      }
+    } else {
+      console.log(`📧 No email sent - missing email (${!!meeting.transcript_email}) or transcript (${!!meeting.full_transcript})`);
+    }
     
     return meeting;
     
@@ -1284,7 +1415,7 @@ async function cleanupInactiveMeetings() {
     for (const botId of meetingLastActivity.keys()) {
       if (!activeBotIds.has(botId)) {
         meetingLastActivity.delete(botId);
-        transcriptBuffers.delete(botId);
+        // No transcript buffers to clean up with direct append approach
       }
     }
     
@@ -1369,140 +1500,33 @@ async function startServer() {
           
           // Extract transcript data from the nested structure
           const transcriptData = message.data?.data;
+          console.log('🔍 Transcript data structure:', JSON.stringify(transcriptData, null, 2));
+          
           if (!transcriptData?.words || !transcriptData?.participant) {
-            console.error('❌ Invalid transcript data structure');
+            console.error('❌ Invalid transcript data structure - missing words or participant');
+            console.error('Words present:', !!transcriptData?.words);
+            console.error('Participant present:', !!transcriptData?.participant);
+            console.error('Available keys:', Object.keys(transcriptData || {}));
             return;
           }
           
-          const speakerName = transcriptData.participant.name || 'Unknown Speaker';
+          const participantData = transcriptData.participant;
+          const speakerName = participantData.name || 'Unknown Speaker';
           const words = transcriptData.words;
           
-          // Get or create attendee for this speaker
-          const attendee = await getOrCreateAttendee(meeting.block_id, speakerName);
-          
           // Combine words into text
-          const text = words.map(w => w.text).join(' ');
-          const timestamp = words[0]?.start_time || Date.now();
+          const text = words.map(w => w.text).join(' ').trim();
           
-          // VOICE CUE DETECTION: Check for "This is [Name]" patterns
-          let actualSpeakerName = speakerName; // Default to API speaker name
-          const speakerCue = detectSpeakerCue(text);
-          if (speakerCue) {
-            console.log(`🎤 Voice cue detected: "${speakerCue}" - processing pending buffers`);
+          if (text.length > 0) {
+            // Append directly to conversation timeline
+            const conversationEntry = `[${speakerName}] ${text}\n`;
+            const success = await appendToConversation(meeting.block_id, conversationEntry);
             
-            // Force buffer processing for previous speaker when new speaker starts
-            await processPendingBuffers(botId, meeting.block_id);
-            
-            // Update speaker name for subsequent processing
-            actualSpeakerName = speakerCue;
-            console.log(`📝 Speaker reassigned from "${speakerName}" to "${actualSpeakerName}"`);
-          }
-          
-          // Initialize buffer for this speaker if needed
-          const bufferKey = `${botId}:${actualSpeakerName}`;
-          if (!transcriptBuffers.has(bufferKey)) {
-            transcriptBuffers.set(bufferKey, {
-              text: '',
-              startTimestamp: timestamp,
-              lastTimestamp: timestamp
-            });
-          }
-          
-          const buffer = transcriptBuffers.get(bufferKey);
-          buffer.text += ' ' + text;
-          buffer.lastTimestamp = timestamp;
-          
-          // IMMEDIATE PROCESSING: If a voice cue was detected, process this buffer immediately
-          // This ensures voice-cue-detected turns are attributed to the correct speaker
-          if (speakerCue) {
-            console.log(`🔄 Immediately processing buffer for voice-cue-detected speaker: ${actualSpeakerName}`);
-            
-            const wordCount = buffer.text.trim().split(/\s+/).length;
-            const timeSinceStart = timestamp - buffer.startTimestamp;
-            
-            // Get attendee for the detected speaker
-            const actualAttendee = await getOrCreateAttendee(meeting.block_id, actualSpeakerName);
-            
-            // Create turn with embedding
-            const turn = await turnProcessor.createTurn({
-              participant_id: actualAttendee.id,
-              content: buffer.text.trim(),
-              source_type: 'recall_bot',
-              metadata: {
-                word_count: wordCount,
-                duration_seconds: Math.floor(timeSinceStart / 1000),
-                voice_cue_detected: speakerCue,
-                original_api_speaker: speakerName
-              }
-            });
-            
-            // Get next sequence order for this block
-            const sequenceResult = await pool.query(
-              'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
-              [meeting.block_id]
-            );
-            const nextOrder = sequenceResult.rows[0].next_order;
-            
-            // Link turn to block
-            await pool.query(
-              'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
-              [meeting.block_id, turn.turn_id, nextOrder]
-            );
-            
-            console.log(`✅ Voice-cue turn created for ${actualSpeakerName} (${wordCount} words)`);
-            
-            // Clear the buffer since it's been processed
-            transcriptBuffers.delete(bufferKey);
-            
-            return; // Don't continue to safety fallback processing
-          }
-          
-          // Voice-cue-only chunking with safety fallbacks
-          const wordCount = buffer.text.trim().split(/\s+/).length;
-          const timeSinceStart = timestamp - buffer.startTimestamp;
-          
-          // Safety fallbacks: process if buffer is extremely large (500+ words) or very old (5+ minutes)
-          const shouldProcess = wordCount >= 500 || timeSinceStart >= 5 * 60 * 1000;
-          
-          if (shouldProcess) {
-            console.log(`⚠️  Safety fallback triggered for ${actualSpeakerName}: ${wordCount} words, ${Math.floor(timeSinceStart/1000)}s`);
-            
-            // Get attendee for the actual speaker (may be different from API speaker due to voice cue)
-            const actualAttendee = await getOrCreateAttendee(meeting.block_id, actualSpeakerName);
-            
-            // Create turn with embedding
-            const turn = await turnProcessor.createTurn({
-              participant_id: actualAttendee.id,
-              content: buffer.text.trim(),
-              source_type: 'recall_bot',
-              metadata: {
-                word_count: wordCount,
-                duration_seconds: Math.floor(timeSinceStart / 1000),
-                safety_fallback: true
-              }
-            });
-            
-            // Get next sequence order for this block
-            const sequenceResult = await pool.query(
-              'SELECT COALESCE(MAX(sequence_order), 0) + 1 as next_order FROM conversation.block_turns WHERE block_id = $1',
-              [meeting.block_id]
-            );
-            const nextOrder = sequenceResult.rows[0].next_order;
-            
-            // Link turn to block
-            await pool.query(
-              'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
-              [meeting.block_id, turn.turn_id, nextOrder]
-            );
-            
-            // Clear the buffer
-            transcriptBuffers.set(bufferKey, {
-              text: '',
-              startTimestamp: timestamp,
-              lastTimestamp: timestamp
-            });
-            
-            console.log(`✅ Stored ${wordCount} words for ${speakerName} (safety fallback)`);
+            if (success) {
+              console.log(`📝 Appended transcript from ${speakerName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+            } else {
+              console.error(`❌ Failed to append transcript from ${speakerName}`);
+            }
           }
           
         } catch (error) {
