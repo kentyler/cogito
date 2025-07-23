@@ -850,14 +850,29 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
     const user_id = req.session.user.user_id || req.session.user.id;
-    const client_id = req.session.user.client_id;
+    let client_id = req.session.user.client_id;
     
     if (!meeting_url) {
       return res.status(400).json({ error: 'Meeting URL is required' });
     }
     
+    // If client_id is missing from session, fetch it from database
     if (!client_id) {
-      return res.status(400).json({ error: 'Client ID not found in session' });
+      console.log(`Client ID missing from session for user ${user_id}, fetching from database...`);
+      const userResult = await pool.query(
+        'SELECT client_id FROM client_mgmt.users WHERE id = $1',
+        [user_id]
+      );
+      
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      client_id = userResult.rows[0].client_id;
+      
+      if (!client_id) {
+        return res.status(400).json({ error: 'User does not have an associated client' });
+      }
     }
     
     console.log(`Creating bot for user ${user_id}, client ${client_id}, meeting: ${meeting_url}`);
@@ -976,7 +991,9 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('Bot creation error:', error);
-    res.status(500).json({ error: 'Failed to create bot' });
+    console.error('Request body:', req.body);
+    console.error('User session:', req.session?.user);
+    res.status(500).json({ error: 'Failed to create bot', details: error.message });
   }
 });
 
