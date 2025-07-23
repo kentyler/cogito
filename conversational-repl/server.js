@@ -1101,6 +1101,12 @@ app.post('/webhook/chat', async (req, res) => {
     const participantData = data.data?.participant;
     const senderName = participantData?.name || 'Unknown';
     
+    // Ignore messages from Cogito itself to prevent loops
+    if (senderName === 'Cogito' || senderName.toLowerCase().includes('cogito')) {
+      console.log('🔄 Ignoring message from Cogito to prevent loop');
+      return res.json({ success: true, message: 'Ignoring bot message' });
+    }
+    
     // Append chat message to conversation timeline
     const chatEntry = `[${senderName} via chat] ${messageText}\n`;
     await appendToConversation(blockId, chatEntry);
@@ -1184,8 +1190,7 @@ app.post('/webhook/chat', async (req, res) => {
       return res.json({ 
         success: true, 
         message: 'Question processed',
-        response: response,
-        conversation_length: conversationText.length
+        response: response
       });
     }
     
