@@ -22,11 +22,10 @@ async function extractTranscript() {
         t.created_at,
         t.metadata,
         p.name as participant_name
-      FROM conversation.block_turns bt
-      JOIN conversation.turns t ON bt.turn_id = t.turn_id
+      FROM conversation.turns t
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
-      WHERE bt.block_id = $1
-      ORDER BY bt.sequence_order, t.created_at`,
+      WHERE t.block_id = $1
+      ORDER BY t.timestamp`,
       [blockId]
     );
     

@@ -64,7 +64,8 @@ async function getEmailTransporter() {
       emailTransporter = resendTransporter;
       return emailTransporter;
     } catch (error) {
-      console.error('❌ Resend configuration failed:', error);
+      console.error('❌ Resend configuration failed:', error.message);
+      console.error('❌ Check: 1) API key is correct 2) Domain is verified in Resend dashboard 3) FROM address uses verified domain');
     }
   }
   
@@ -106,30 +107,11 @@ async function getEmailTransporter() {
     emailTransporter = directTransporter;
     return emailTransporter;
   } catch (error) {
-    console.log('📧 Direct SMTP failed, trying Ethereal...');
+    console.log('📧 Direct SMTP failed:', error.message);
   }
   
-  // Fall back to Ethereal for testing
-  try {
-    const testAccount = await nodemailer.createTestAccount();
-    const etherealTransporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass
-      }
-    });
-    
-    await etherealTransporter.verify();
-    console.log('📧 Using Ethereal test email service');
-    console.log(`📧 Preview emails at: https://ethereal.email`);
-    emailTransporter = etherealTransporter;
-    return emailTransporter;
-  } catch (error) {
-    console.log('📧 Ethereal failed, using logging fallback...');
-  }
+  console.log('📧 All configured email services failed - falling back to logging only');
+  // Ethereal removed - skip to logging fallback
   
   // Final fallback to logging
   emailTransporter = {
@@ -176,6 +158,18 @@ if (process.env.ANTHROPIC_API_KEY) {
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Add CORS for browser extension
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // CORS configuration for production
 if (process.env.NODE_ENV === 'production') {
@@ -271,6 +265,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
+    // Find all users with this email (could be multiple due to duplicate emails)
     const userResult = await pool.query(
       'SELECT id, email, password_hash FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
       [email]
@@ -280,23 +275,133 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    const user = userResult.rows[0];
-    
-    if (!user.password_hash) {
-      return res.status(401).json({ error: 'User account not activated' });
+    // Check password against all matching users
+    let authenticatedUser = null;
+    for (const user of userResult.rows) {
+      if (!user.password_hash) continue;
+      
+      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+      if (passwordMatch) {
+        authenticatedUser = user;
+        break;
+      }
     }
     
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-    
-    if (!passwordMatch) {
+    if (!authenticatedUser) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
+    // Get client associations for the authenticated user
+    const clientsResult = await pool.query(
+      `SELECT 
+        uc.client_id,
+        uc.role,
+        c.name as client_name
+      FROM client_mgmt.user_clients uc
+      JOIN client_mgmt.clients c ON uc.client_id = c.id
+      WHERE uc.user_id = $1 AND uc.is_active = true
+      ORDER BY c.name`,
+      [authenticatedUser.id]
+    );
+    
+    const clients = clientsResult.rows;
+    
+    if (clients.length === 0) {
+      return res.status(403).json({ error: 'No active client access' });
+    }
+    
+    if (clients.length === 1) {
+      // Auto-select the only client
+      req.session.user = {
+        user_id: authenticatedUser.id,
+        email: authenticatedUser.email,
+        client_id: clients[0].client_id,
+        client_name: clients[0].client_name,
+        role: clients[0].role
+      };
+      
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+        res.json({ 
+          success: true, 
+          user: { 
+            email: authenticatedUser.email,
+            client: clients[0].client_name
+          }
+        });
+      });
+    } else {
+      // Multiple clients - need selection
+      req.session.pendingUser = {
+        user_id: authenticatedUser.id,
+        email: authenticatedUser.email
+      };
+      
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Session creation failed' });
+        }
+        res.json({ 
+          success: true,
+          requiresClientSelection: true,
+          clients: clients
+        });
+      });
+    }
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Client selection endpoint
+app.post('/api/select-client', async (req, res) => {
+  try {
+    const { client_id } = req.body;
+    
+    if (!client_id) {
+      return res.status(400).json({ error: 'Client ID required' });
+    }
+    
+    // Check if user has pending authentication
+    if (!req.session.pendingUser) {
+      return res.status(401).json({ error: 'No pending authentication' });
+    }
+    
+    const { user_id, email } = req.session.pendingUser;
+    
+    // Verify user has access to this client
+    const clientResult = await pool.query(
+      `SELECT 
+        uc.client_id,
+        uc.role,
+        c.name as client_name
+      FROM client_mgmt.user_clients uc
+      JOIN client_mgmt.clients c ON uc.client_id = c.id
+      WHERE uc.user_id = $1 AND uc.client_id = $2 AND uc.is_active = true`,
+      [user_id, client_id]
+    );
+    
+    if (clientResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied to selected client' });
+    }
+    
+    const client = clientResult.rows[0];
+    
+    // Set up full session
     req.session.user = {
-      user_id: user.id,
-      email: user.email,
-      client_id: user.client_id
+      user_id: user_id,
+      email: email,
+      client_id: client.client_id,
+      client_name: client.client_name,
+      role: client.role
     };
+    
+    // Clear pending user
+    delete req.session.pendingUser;
     
     req.session.save((err) => {
       if (err) {
@@ -304,13 +409,16 @@ app.post('/api/login', async (req, res) => {
       }
       res.json({ 
         success: true, 
-        user: { email: user.email }
+        user: { 
+          email: email,
+          client: client.client_name
+        }
       });
     });
     
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Client selection error:', error);
+    res.status(500).json({ error: 'Client selection failed' });
   }
 });
 
@@ -325,14 +433,33 @@ app.post('/api/logout', (req, res) => {
 });
 
 // Auth status endpoint
+// Health check endpoint for browser extension
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    server: 'cogito-mcp',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/auth-status', (req, res) => {
   console.log('Auth status check - Session:', req.session ? 'exists' : 'missing');
   console.log('Auth status check - Session user:', req.session?.user);
+  console.log('Auth status check - Pending user:', req.session?.pendingUser);
   
   if (req.session && req.session.user) {
     res.json({ 
       authenticated: true, 
-      user: { email: req.session.user.email }
+      user: { 
+        email: req.session.user.email,
+        client: req.session.user.client_name,
+        role: req.session.user.role
+      }
+    });
+  } else if (req.session && req.session.pendingUser) {
+    res.json({ 
+      authenticated: false,
+      pendingClientSelection: true
     });
   } else {
     res.json({ authenticated: false });
@@ -598,7 +725,7 @@ app.get('/api/meetings', requireAuth, async (req, res) => {
         bm.started_at as meeting_start_time,
         bm.ended_at as meeting_end_time,
         bm.status,
-        COUNT(bt.turn_id)::integer as turn_count,
+        COUNT(t.turn_id)::integer as turn_count,
         COUNT(CASE WHEN t.content_embedding IS NOT NULL THEN 1 END)::integer as embedded_count,
         COUNT(DISTINCT t.participant_id)::integer as participant_count,
         array_agg(DISTINCT p.name) FILTER (WHERE p.name IS NOT NULL) as participant_names,
@@ -606,8 +733,7 @@ app.get('/api/meetings', requireAuth, async (req, res) => {
         MAX(t.created_at) as last_turn_time
       FROM conversation.blocks b
       LEFT JOIN conversation.block_meetings bm ON b.block_id = bm.block_id
-      LEFT JOIN conversation.block_turns bt ON b.block_id = bt.block_id
-      LEFT JOIN conversation.turns t ON bt.turn_id = t.turn_id
+      LEFT JOIN conversation.turns t ON b.block_id = t.block_id
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
       WHERE b.block_type = 'meeting' OR bm.block_id IS NOT NULL
       GROUP BY b.block_id, b.name, b.created_at, b.metadata, bm.meeting_url, bm.started_at, bm.ended_at, bm.status
@@ -639,12 +765,11 @@ app.get('/api/meetings/:blockId/embeddings', requireAuth, async (req, res) => {
         t.source_type,
         p.name as participant_name,
         t.content_embedding
-      FROM conversation.block_turns bt
-      JOIN conversation.turns t ON bt.turn_id = t.turn_id
+      FROM conversation.turns t
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
-      WHERE bt.block_id = $1
+      WHERE t.block_id = $1
         AND t.content_embedding IS NOT NULL
-      ORDER BY t.created_at
+      ORDER BY t.timestamp
     `;
     
     const result = await pool.query(query, [blockId]);
@@ -767,29 +892,25 @@ app.delete('/api/meetings/:blockId', requireAuth, async (req, res) => {
       
       // Get all turn IDs associated with this block for deletion
       const turnsResult = await client.query(`
-        SELECT t.turn_id 
-        FROM conversation.block_turns bt
-        JOIN conversation.turns t ON bt.turn_id = t.turn_id
-        WHERE bt.block_id = $1
+        SELECT turn_id 
+        FROM conversation.turns
+        WHERE block_id = $1
       `, [blockId]);
       
       const turnIds = turnsResult.rows.map(row => row.turn_id);
       
       // Delete in the correct order to avoid foreign key constraint violations
       
-      // 1. Delete block_turns (junction table)
-      await client.query('DELETE FROM conversation.block_turns WHERE block_id = $1', [blockId]);
-      
-      // 2. Delete turns (if they exist and are not referenced elsewhere)
+      // 1. Delete turns (now they belong directly to the block)
       if (turnIds.length > 0) {
         const turnIdsList = turnIds.map((_, i) => `$${i + 1}`).join(',');
         await client.query(`DELETE FROM conversation.turns WHERE turn_id IN (${turnIdsList})`, turnIds);
       }
       
-      // 3. Delete block_meetings
+      // 2. Delete block_meetings
       await client.query('DELETE FROM conversation.block_meetings WHERE block_id = $1', [blockId]);
       
-      // 4. Delete the block itself
+      // 3. Delete the block itself
       const blockResult = await client.query('DELETE FROM conversation.blocks WHERE block_id = $1 RETURNING name', [blockId]);
       
       await client.query('COMMIT');
@@ -846,6 +967,110 @@ app.post('/api/compare-blocks', requireAuth, async (req, res) => {
 });
 
 // Bot creation endpoint - moved from recall-bot server
+// Browser conversation capture endpoint
+app.post('/api/capture-browser-conversation', async (req, res) => {
+  try {
+    const { 
+      platform, 
+      sessionId, 
+      userPrompt, 
+      aiResponse, 
+      claudeResponse, // For backwards compatibility
+      timestamp,
+      url,
+      metadata 
+    } = req.body;
+
+    // Normalize response field names
+    const responseContent = aiResponse || claudeResponse;
+
+    if (!sessionId || !userPrompt || !responseContent) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: sessionId, userPrompt, and aiResponse/claudeResponse' 
+      });
+    }
+
+    const { v4: uuidv4 } = require('uuid');
+
+    // Check if we already have a block for this session
+    let blockResult = await pool.query(
+      'SELECT block_id FROM conversation.blocks WHERE name = $1 AND block_type = $2',
+      [`${platform} Session ${sessionId}`, 'browser_conversation']
+    );
+
+    let blockId;
+    if (blockResult.rows.length === 0) {
+      // Create new block for this browser session
+      const newBlockId = uuidv4();
+      await pool.query(`
+        INSERT INTO conversation.blocks (block_id, name, description, block_type, metadata, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      `, [
+        newBlockId,
+        `${platform} Session ${sessionId}`,
+        `Browser conversation session on ${platform} started at ${new Date().toISOString()}`,
+        'browser_conversation',
+        JSON.stringify({ 
+          sessionId, 
+          platform, 
+          url, 
+          ...metadata 
+        })
+      ]);
+      blockId = newBlockId;
+      console.log(`✅ Created new browser session block: ${blockId}`);
+    } else {
+      blockId = blockResult.rows[0].block_id;
+    }
+
+    // Create turns for user prompt and AI response
+    const userTurnId = uuidv4();
+    const aiTurnId = uuidv4();
+    
+    // Insert user turn
+    await pool.query(`
+      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, block_id, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `, [
+      userTurnId, 
+      userPrompt, 
+      'user_input', 
+      JSON.stringify({ sessionId, platform, url }),
+      timestamp || new Date().toISOString(),
+      blockId
+    ]);
+
+    // Insert AI turn with slightly later timestamp to ensure ordering
+    const aiTimestamp = timestamp ? new Date(timestamp).getTime() + 1 : Date.now() + 1;
+    await pool.query(`
+      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, block_id, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    `, [
+      aiTurnId, 
+      responseContent, 
+      `${platform}_response`, 
+      JSON.stringify({ sessionId, platform, url, ...metadata }),
+      new Date(aiTimestamp).toISOString(),
+      blockId
+    ]);
+
+    console.log(`✅ Captured browser conversation: ${platform} session ${sessionId}`);
+    
+    res.json({ 
+      success: true, 
+      blockId,
+      message: 'Conversation captured successfully' 
+    });
+
+  } catch (error) {
+    console.error('❌ Error capturing browser conversation:', error);
+    res.status(500).json({ 
+      error: 'Failed to capture conversation',
+      details: error.message 
+    });
+  }
+});
+
 app.post('/api/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
@@ -1378,47 +1603,104 @@ async function appendToConversation(blockId, content) {
   }
 }
 
-// Format transcript for email with smart speaker grouping
+// Advanced transcript cleaning function (moved from clean-meeting-47-transcript-v2.js)
+function cleanTranscript(messages) {
+    let cleanedSections = [];
+    let currentSpeaker = null;
+    let currentText = '';
+    
+    messages.forEach((message, index) => {
+        let speaker = message.speaker || 'Unknown';
+        let text = message.content || message.text || '';
+        
+        // Skip empty messages
+        if (!text.trim()) return;
+        
+        // Clean up speaker names
+        speaker = speaker.trim();
+        
+        // Check if the text contains bracketed speaker names like [Ian Palonis]
+        const bracketMatch = text.match(/^\[([^\]]+)\]\s*/);
+        if (bracketMatch) {
+            // Extract the speaker from brackets
+            speaker = bracketMatch[1].trim();
+            // Remove the bracketed name from the text
+            text = text.substring(bracketMatch[0].length).trim();
+        }
+        
+        // Look for speaker identification patterns in the remaining text
+        const speakerPatterns = [
+            /^(?:This is|this is)\s+([A-Z][a-z]+)\b/,
+            /^(?:It's|it's)\s+([A-Z][a-z]+)\b/
+        ];
+        
+        let textWithoutSpeaker = text;
+        let identifiedSpeaker = null;
+        
+        // Try to find speaker announcement in the text
+        for (let pattern of speakerPatterns) {
+            const match = text.match(pattern);
+            if (match) {
+                let name = match[1];
+                
+                // Fix common transcription errors
+                if (name.toLowerCase() === 'skin') name = 'Ken';
+                
+                identifiedSpeaker = name;
+                
+                // Remove the speaker identification from the beginning
+                textWithoutSpeaker = text.replace(pattern, '').trim();
+                break;
+            }
+        }
+        
+        // Use identified speaker if found, otherwise use the speaker from brackets or message
+        const finalSpeaker = identifiedSpeaker || speaker;
+        
+        // Clean up the text
+        textWithoutSpeaker = textWithoutSpeaker.trim();
+        
+        // Capitalize first letter if needed
+        if (textWithoutSpeaker.length > 0 && /^[a-z]/.test(textWithoutSpeaker)) {
+            textWithoutSpeaker = textWithoutSpeaker.charAt(0).toUpperCase() + textWithoutSpeaker.slice(1);
+        }
+        
+        // Check if speaker changed
+        if (currentSpeaker !== finalSpeaker) {
+            // Save the previous speaker's text if any
+            if (currentSpeaker && currentText) {
+                cleanedSections.push(`${currentSpeaker}: ${currentText}`);
+            }
+            // Start new speaker
+            currentSpeaker = finalSpeaker;
+            currentText = textWithoutSpeaker;
+        } else {
+            // Same speaker, append text
+            if (currentText && textWithoutSpeaker) {
+                currentText += ' ' + textWithoutSpeaker;
+            } else if (textWithoutSpeaker) {
+                currentText = textWithoutSpeaker;
+            }
+        }
+        
+        // Handle last message
+        if (index === messages.length - 1 && currentText) {
+            cleanedSections.push(`${currentSpeaker}: ${currentText}`);
+        }
+    });
+    
+    // Join with double newlines for paragraph breaks
+    return cleanedSections.join('\n\n');
+}
+
+// Format transcript for email with smart speaker grouping (legacy function)
 function formatTranscriptForEmail(transcriptArray) {
   if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
     return 'No transcript content available.';
   }
   
-  let formattedText = '';
-  let lastSpeaker = '';
-  
-  for (const entry of transcriptArray) {
-    if (!entry.content) continue;
-    
-    // Extract speaker from content like "[Kenneth Tyler] message"
-    const speakerMatch = entry.content.match(/^\[([^\]]+)\]\s*(.*)$/);
-    if (speakerMatch) {
-      const speaker = speakerMatch[1];
-      const message = speakerMatch[2];
-      
-      // Only add speaker tag if speaker changed
-      if (speaker !== lastSpeaker) {
-        if (formattedText) formattedText += '\n\n'; // Add space between speakers
-        formattedText += `[${speaker}]\n`;
-        lastSpeaker = speaker;
-      }
-      
-      // Add the message (with line break if not first message from this speaker)
-      if (message.trim()) {
-        if (speaker === lastSpeaker && formattedText && !formattedText.endsWith('\n')) {
-          formattedText += ' ';
-        }
-        formattedText += message.trim();
-        if (!formattedText.endsWith('\n')) formattedText += '\n';
-      }
-    } else {
-      // Content without speaker format, just add it
-      formattedText += entry.content;
-      if (!formattedText.endsWith('\n')) formattedText += '\n';
-    }
-  }
-  
-  return formattedText.trim();
+  // Use the advanced cleaning function
+  return cleanTranscript(transcriptArray);
 }
 
 // Send transcript email function
