@@ -1,0 +1,124 @@
+{:cogito-intentions
+ {:meta {:created "2025-01-25"
+         :last-updated "2025-01-25"
+         :purpose "Bridge between high-level design intentions and implementation"}
+  
+  :core-purpose
+  "Capture and analyze conversational patterns to understand how thinking happens in dialogue"
+  
+  :key-insights
+  ["Conversations have inflection points where meaning shifts"
+   "Patterns emerge from participant interactions over time" 
+   "Context and relationships shape meaning more than individual words"
+   "Transcripts are data that can reveal thinking processes"]
+  
+  :architectural-principles
+  {:data-first "Events, turns, and participant interactions are primary - UI derives from data"
+   :participant-centric "Every action, turn, and pattern is tied to a participant"
+   :pattern-recognition "Surface emergent themes, conflicts, and cognitive patterns"
+   :multi-tenant "Support multiple clients while maintaining data isolation"
+   :write-once "Turns and interactions are immutable - no editing history"}
+  
+  :current-architecture
+  {:database {:type "PostgreSQL with vector embeddings"
+              :primary-schemas ["conversation" "client_mgmt" "events" "files"]
+              :key-entities {"participants" "People and AI entities in conversations"
+                            "turns" "Individual messages/contributions with embeddings"
+                            "blocks" "Containers for conversation sessions and meetings"
+                            "clients" "Tenant organizations"
+                            "user_clients" "Many-to-many user-client relationships"}}
+   
+   :authentication {:pattern "Email/password with client selection"
+                   :flow ["Login validates user" "Query user_clients" "Auto-select single client OR show selection"]
+                   :session "Stores user_id, email, client_id, client_name, role"}
+   
+   :transcript-processing {:pattern "meeting → published_transcript + individual turns → embeddings"
+                          :rationale "Large transcripts too big for single embedding - break into speaker turns"
+                          :storage "Published transcript for humans, turns for search/analysis"}}
+  
+  :feature-map
+  {:user-authentication
+   {:intent "Multi-client user access with smooth UX"
+    :problem-solved "Duplicate emails, client selection only when needed"
+    :locations {:api "conversational-repl/server.js:260-423"
+                :migrations ["migrations/029_remove_users_email_unique_constraint.sql"
+                            "migrations/030_create_user_clients_table_preserve_duplicates.sql" 
+                            "migrations/031_remove_client_id_from_users.sql"]}
+    :key-endpoints {"/api/login" "Handles email/password, returns clients or auto-selects"
+                    "/api/select-client" "For users with multiple client access"
+                    "/api/auth-status" "Returns current auth state"}}
+   
+   :database-operations
+   {:intent "Consistent DB access without schema/connection guessing"
+    :problem-solved "Claude constantly searching migrations for schema, connection string issues"
+    :locations {:agent "lib/database-agent.js"
+                :cli "scripts/db-agent-cli.js"
+                :examples "examples/database-agent-usage.js"}
+    :key-patterns {:connection "Always uses DATABASE_URL from .env"
+                   :schema "Live introspection via getSchema()"
+                   :transactions "Built-in transaction support"}}
+   
+   :conversational-repl
+   {:intent "Real-time conversation analysis and response generation"
+    :metaphor "REPL for human dialogue - interactive conversation processing"
+    :locations {:server "conversational-repl/server.js"
+                :frontend "conversational-repl/public/"
+                :processors ["conversational-repl/turn-processor-wrapper.cjs"
+                           "conversational-repl/similarity-orchestrator-wrapper.cjs"]}
+    :key-features ["Multi-response generation with alternatives"
+                   "Semantic similarity detection"
+                   "Turn embedding and storage"]}
+   
+   :meeting-transcripts
+   {:intent "Transform meeting recordings into searchable, analyzable data"
+    :current-challenge "Large transcripts can't be embedded as single units"
+    :proposed-solution "Break transcripts into speaker turns, embed individually"
+    :locations {:storage "conversation.block_meetings (published_transcript)"
+                :processing "lib/database-agent.js (importTranscript method)"
+    :data-flow "Raw transcript → Parse by speaker → Store as turns → Generate embeddings → Enable semantic search"}}
+   
+   :browser-extension
+   {:intent "Capture conversations from web interfaces (Claude, ChatGPT)"
+    :locations {:manifest "browser-extension/manifest.json"
+                :captures ["browser-extension/claude-capture.js"
+                          "browser-extension/openai-capture.js"]
+                :popup "browser-extension/popup.js"}
+    :integration "Sends captured conversations to conversational-repl API"}}
+  
+  :deprecated-patterns
+  {:conversation-tables {:status "removed in migration 008"
+                        :replaced-by "blocks and turns architecture"
+                        :warning "Some old code might still reference these"}
+   
+   :backstage-integration {:status "abandoned"
+                          :reason "Decided against wrapper approach for complexity reasons"
+                          :artifacts-remaining ["migrations/014_backstage_foundation_migration.sql"]}
+   
+   :client_id-on-users {:status "refactored 2025-01-25"
+                       :replaced-by "user_clients junction table"
+                       :migration "031_remove_client_id_from_users.sql"
+                       :note "Enables multi-tenant user access"}}
+  
+  :active-explorations
+  {:meetings-as-first-class-entities
+   {:question "Should meetings be separate from blocks?"
+    :current "Meetings stored in block_meetings, linked to blocks"
+    :proposed "Direct meetings table with turns referencing meeting_id"
+    :rationale "Meetings aren't really 'blocks' - they're distinct entities"}
+   
+   :embedding-strategy
+   {:question "Turn-level vs semantic chunks for embeddings?"
+    :decision "Speaker turns (decided 2025-01-25)"
+    :rationale "Natural boundaries, focused retrieval, simpler parsing"}}
+  
+  :known-pain-points
+  ["Claude searching migration files instead of querying live schema"
+   "Connection string confusion between .env files"
+   "Large transcripts breaking embedding generation"
+   "Difficulty understanding which code is current vs deprecated"]
+  
+  :success-patterns
+  ["Database agent eliminates schema guessing"
+   "Junction tables for many-to-many relationships"
+   "Write-once immutable turns for audit trail"
+   "Live schema introspection over static documentation"]}}
