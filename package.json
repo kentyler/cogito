@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.56.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.3.0",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
