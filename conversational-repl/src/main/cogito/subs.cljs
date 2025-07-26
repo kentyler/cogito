@@ -27,6 +27,26 @@
    (:user db)))
 
 (rf/reg-sub
+ :pending-client-selection?
+ (fn [db]
+   (:pending-client-selection? db)))
+
+(rf/reg-sub
+ :available-clients
+ (fn [db]
+   (:available-clients db)))
+
+(rf/reg-sub
+ :selecting-client?
+ (fn [db]
+   (:selecting-client? db)))
+
+(rf/reg-sub
+ :client-selection-error
+ (fn [db]
+   (:client-selection-error db)))
+
+(rf/reg-sub
  :current-alternative-index
  (fn [db [_ turn-id]]
    (get-in db [:alternative-indices turn-id] 0)))
