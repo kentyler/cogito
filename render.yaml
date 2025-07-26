@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: cogito-conversational-repl
+    name: cogito
     env: node
     region: oregon
     plan: starter
-    buildCommand: cd .. && npm install && cd conversational-repl && npm install && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
-    rootDir: ./conversational-repl
     envVars:
       - key: NODE_ENV
         value: production

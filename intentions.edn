@@ -40,13 +40,21 @@
   {:user-authentication
    {:intent "Multi-client user access with smooth UX"
     :problem-solved "Duplicate emails, client selection only when needed"
+    :status "✅ COMPLETED - Multi-client selection working, logout button added"
     :locations {:api "conversational-repl/server.js:260-423"
-                :migrations ["migrations/029_remove_users_email_unique_constraint.sql"
-                            "migrations/030_create_user_clients_table_preserve_duplicates.sql" 
-                            "migrations/031_remove_client_id_from_users.sql"]}
+                :frontend {:login "conversational-repl/src/main/cogito/login.cljs"
+                          :client-selection "conversational-repl/src/main/cogito/client_selection.cljs"  
+                          :core-app "conversational-repl/src/main/cogito/core.cljs (3-state flow)"
+                          :events "conversational-repl/src/main/cogito/events.cljs (:login-success, :select-client, :logout)"
+                          :subscriptions "conversational-repl/src/main/cogito/subs.cljs"
+                          :workbench-logout "conversational-repl/src/main/cogito/workbench.cljs (logout button in tab nav)"}
+                :migrations "migrations/ folder now in .gitignore"}
     :key-endpoints {"/api/login" "Handles email/password, returns clients or auto-selects"
                     "/api/select-client" "For users with multiple client access"
-                    "/api/auth-status" "Returns current auth state"}}
+                    "/api/auth-status" "Returns current auth state"
+                    "/api/logout" "Clears session and returns to login"}
+    :ui-flow ["Login form → Client selection (if multiple clients) → Main workbench with logout button"]
+    :compilation "Requires shadow-cljs compile app after ClojureScript changes"}
    
    :database-operations
    {:intent "Consistent DB access without schema/connection guessing"
@@ -114,9 +122,9 @@
   :meeting-bot-resources
    {:question "How to make files/web resources available as queryable context during meetings?"
     :intent "Meeting bot can reference uploaded documents, links, PDFs, etc. during conversation"
-    :ui-location {:current-page "conversational-repl/public/bot-manager/index.html"
-                  :current-form "Lines 213-248: meetingUrl + meetingName fields"
-                  :proposed-addition "New form section between meetingName and submit button"}
+    :status "✅ FILE UPLOADS COMPLETED - Web links remain as future enhancement"
+    :ui-location {:integrated-app "ClojureScript bot creation tab in main workbench"
+                  :removed "conversational-repl/public/bot-manager/ (standalone interface removed to reduce confusion)"}
     :database-design {:files {:existing-table "files.file_uploads (stores embeddings)"
                              :existing-vectors "files.file_upload_vectors (chunked content with embeddings)"
                              :junction-table "block_meeting_files (block_meeting_id, file_upload_id)"}
@@ -157,7 +165,8 @@
   ["Claude searching migration files instead of querying live schema"
    "Connection string confusion between .env files"
    "Large transcripts breaking embedding generation"
-   "Difficulty understanding which code is current vs deprecated"]
+   "Difficulty understanding which code is current vs deprecated"
+   "participant_events tables exist but are not being used"]
   
   :success-patterns
   ["Database agent eliminates schema guessing"
