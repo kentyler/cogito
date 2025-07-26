@@ -18,6 +18,8 @@ const { createSimilarityOrchestrator } = require('./similarity-orchestrator-wrap
 // Import file upload service
 const { fileUploadService } = require('../lib/file-upload.js');
 
+// Note: Transcript processing agents will be imported dynamically since they're ES modules
+
 // Configure multer for file uploads
 const upload = multer({
   dest: 'uploads/temp/', // Temporary storage
@@ -44,6 +46,14 @@ const upload = multer({
 
 // Initialize similarity orchestrator (will be set after async initialization)
 let similarityOrchestrator;
+
+// Initialize transcript processing agents (ES modules)
+let TranscriptBufferAgent;
+let TurnEmbeddingAgent;
+let SpeakerProfileAgent;
+let embeddingAgent;
+const meetingBuffers = new Map(); // blockMeetingId -> TranscriptBufferAgent
+const meetingSpeakerAgents = new Map(); // blockMeetingId -> SpeakerProfileAgent
 
 const app = express();
 
@@ -1683,6 +1693,80 @@ const meetingTranscripts = new Map();
 // Track last activity per meeting for inactivity detection
 const meetingLastActivity = new Map();
 
+// Transcript processing helper functions
+async function processTranscriptChunk(meeting, speakerName, text) {
+  const blockMeetingId = meeting.block_meeting_id;
+  
+  // Get or create speaker profile agent for this meeting
+  let speakerAgent = meetingSpeakerAgents.get(blockMeetingId);
+  if (!speakerAgent) {
+    speakerAgent = new SpeakerProfileAgent({
+      meetingUrl: meeting.meeting_url,
+      profileTurnLimit: 50
+    });
+    meetingSpeakerAgents.set(blockMeetingId, speakerAgent);
+    console.log(`👥 Created speaker profile agent for meeting ${blockMeetingId} with context: ${speakerAgent.context}`);
+  }
+  
+  // Get or create transcript buffer for this meeting
+  let buffer = meetingBuffers.get(blockMeetingId);
+  if (!buffer) {
+    buffer = new TranscriptBufferAgent({
+      maxLength: 1000,
+      onTurnReady: async (turn) => {
+        // Process speaker profile first to get user_id
+        const userId = await speakerAgent.processSpeaker(turn.speaker, turn.blockId);
+        
+        // Add user_id to turn if speaker was identified
+        if (userId) {
+          turn.user_id = userId;
+          console.log(`[Transcript] Identified speaker ${turn.speaker} as user_id: ${userId}`);
+        }
+        
+        // Send to embedding agent for async processing
+        await embeddingAgent.processTurn(turn);
+      }
+    });
+    
+    // Initialize buffer for this meeting
+    buffer.startNewBlock({
+      blockId: meeting.block_id,
+      blockMeetingId: blockMeetingId,
+      clientId: meeting.client_id || 6 // Default to cogito client
+    });
+    
+    meetingBuffers.set(blockMeetingId, buffer);
+    console.log(`🔧 Created transcript buffer for meeting ${blockMeetingId}`);
+  }
+  
+  // Add chunk to buffer (will trigger flush when appropriate)
+  await buffer.addChunk({
+    speaker: speakerName,
+    text: text,
+    timestamp: new Date()
+  });
+}
+
+async function endMeetingTranscriptProcessing(blockMeetingId) {
+  const buffer = meetingBuffers.get(blockMeetingId);
+  const speakerAgent = meetingSpeakerAgents.get(blockMeetingId);
+  
+  let summary = null;
+  if (buffer) {
+    summary = await buffer.endBlock();
+    meetingBuffers.delete(blockMeetingId);
+    console.log(`🏁 Ended transcript processing for meeting ${blockMeetingId}: ${summary.totalTurns} turns processed`);
+  }
+  
+  if (speakerAgent) {
+    const stats = speakerAgent.getStats();
+    meetingSpeakerAgents.delete(blockMeetingId);
+    console.log(`👥 Cleaned up speaker agent for meeting ${blockMeetingId}: ${stats.cachedSpeakers} speakers, ${stats.processedSpeakers} profiles generated`);
+  }
+  
+  return summary;
+}
+
 // Simple conversation timeline helper
 async function appendToConversation(blockId, content) {
   try {
@@ -1939,7 +2023,8 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     
     const meeting = meetingResult.rows[0];
     
-    // No buffer processing needed with direct append approach
+    // End transcript processing for this meeting
+    await endMeetingTranscriptProcessing(meeting.block_meeting_id);
     
     // Update meeting status 
     await pool.query(
@@ -2020,7 +2105,26 @@ async function cleanupInactiveMeetings() {
     for (const botId of meetingLastActivity.keys()) {
       if (!activeBotIds.has(botId)) {
         meetingLastActivity.delete(botId);
-        // No transcript buffers to clean up with direct append approach
+      }
+    }
+    
+    // Clean up transcript buffers for completed meetings
+    const activeMeetingIds = new Set();
+    for (const meeting of activeMeetings.rows) {
+      // Get block_meeting_id for active meetings
+      const meetingDetails = await pool.query(
+        'SELECT block_meeting_id FROM conversation.block_meetings WHERE recall_bot_id = $1',
+        [meeting.recall_bot_id]
+      );
+      if (meetingDetails.rows.length > 0) {
+        activeMeetingIds.add(meetingDetails.rows[0].block_meeting_id);
+      }
+    }
+    
+    // Remove buffers for completed meetings
+    for (const blockMeetingId of meetingBuffers.keys()) {
+      if (!activeMeetingIds.has(blockMeetingId)) {
+        await endMeetingTranscriptProcessing(blockMeetingId);
       }
     }
     
@@ -2048,6 +2152,17 @@ async function startServer() {
       }
     });
     console.log('✅ Similarity orchestrator initialized');
+    
+    // Import and initialize transcript processing agents (ES modules)
+    const { TranscriptBufferAgent: TBA } = await import('../lib/transcript-buffer-agent.js');
+    const { TurnEmbeddingAgent: TEA } = await import('../lib/turn-embedding-agent.js');
+    const { SpeakerProfileAgent: SPA } = await import('../lib/speaker-profile-agent.js');
+    
+    TranscriptBufferAgent = TBA;
+    TurnEmbeddingAgent = TEA;
+    SpeakerProfileAgent = SPA;
+    embeddingAgent = new TurnEmbeddingAgent();
+    console.log('✅ Transcript processing agents initialized');
     
     // Create HTTP server
     const server = http.createServer(app);
@@ -2123,7 +2238,7 @@ async function startServer() {
           const text = words.map(w => w.text).join(' ').trim();
           
           if (text.length > 0) {
-            // Append directly to conversation timeline
+            // Append directly to conversation timeline (legacy approach)
             const conversationEntry = `[${speakerName}] ${text}\n`;
             const success = await appendToConversation(meeting.block_id, conversationEntry);
             
@@ -2131,6 +2246,13 @@ async function startServer() {
               console.log(`📝 Appended transcript from ${speakerName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
             } else {
               console.error(`❌ Failed to append transcript from ${speakerName}`);
+            }
+            
+            // NEW: Process through transcript buffer agent
+            try {
+              await processTranscriptChunk(meeting, speakerName, text);
+            } catch (error) {
+              console.error('❌ Error processing transcript chunk through agents:', error);
             }
           }
           
