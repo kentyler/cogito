@@ -15,6 +15,16 @@ The schema dump provides Claude with current database structure including:
 - Indexes and unique constraints
 - Schema ownership and sources (Supabase vs User-created)
 
+## Auto-Loading Architecture Documentation
+**AUTOMATIC**: The `intentions.edn` file is automatically loaded on startup to provide:
+- Core purpose and design principles
+- Feature implementation details with code locations
+- Active explorations and technical decisions
+- Deprecated patterns to avoid
+- Known pain points and success patterns
+
+This ensures Claude always has access to current architectural context and implementation details.
+
 ## Session History Available
 **IMPORTANT**: Session context files may contain crucial information:
 - `session-context.md` in current directory (auto-loaded if present)
@@ -35,6 +45,7 @@ Previous sessions may contain:
 - Always check if session context was auto-loaded on startup
 - If auto-load is disabled, manually read `session-context.md` when present
 - Check for `exploration-*.md` files for emerging ideas
+- `intentions.edn` is now auto-loaded on startup for architectural context
 
 ## Working Patterns
 - **Genealogical development**: Projects grow from each other organically
@@ -43,6 +54,14 @@ Previous sessions may contain:
 - **Functional evolution**: Incrementally evolve code toward functional patterns
 - **Learning over apps**: Build systems that understand how thinking happens rather than just doing tasks
 - **Conversational participants**: Transform tools into thinking partners that participate rather than serve
+
+## Architecture and Design Reference
+**IMPORTANT**: See `intentions.edn` for comprehensive architectural documentation including:
+- Core purpose and design principles
+- Feature implementation details with code locations
+- Active explorations and technical decisions
+- Deprecated patterns to avoid
+- Known pain points and success patterns
 
 ## Conversational Choreography
 **IMPORTANT**: Before responding to any prompt, assess whether asking clarifying questions would significantly improve your response. If so, ask those questions first and wait for the user's answers before providing your main response. If the prompt seems complete or additional context wouldn't meaningfully change your answer, respond directly.
