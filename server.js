@@ -2216,10 +2216,12 @@ async function startServer() {
           meetingLastActivity.set(botId, Date.now());
           
           // Get meeting info
-          const meetingResult = await pool.query(
-            'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
-            [botId]
-          );
+          const meetingResult = await pool.query(`
+            SELECT bm.*, b.client_id 
+            FROM conversation.block_meetings bm
+            JOIN conversation.blocks b ON b.block_id = bm.block_id
+            WHERE bm.recall_bot_id = $1
+          `, [botId]);
           
           if (meetingResult.rows.length === 0) {
             console.error('❌ No meeting found for bot:', botId);
