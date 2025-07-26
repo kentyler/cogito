@@ -90,13 +90,50 @@
  :auth-status-received
  (fn [db [_ response]]
    (assoc db :authenticated? (:authenticated response)
+             :pending-client-selection? (:pendingClientSelection response)
+             :available-clients (:clients response)
              :user (:user response))))
 
 (rf/reg-event-db
  :login-success
  (fn [db [_ response]]
+   (if (:clients response)
+     ;; Multiple clients - show selection
+     (assoc db :authenticated? false
+               :pending-client-selection? true
+               :available-clients (:clients response))
+     ;; Single client - auto login  
+     (assoc db :authenticated? true
+               :user (:user response)))))
+
+;; Client selection events
+(rf/reg-event-fx
+ :select-client
+ (fn [{:keys [db]} [_ client-id]]
+   {:db (assoc db :selecting-client? true)
+    :http-xhrio {:method :post
+                 :uri "/api/select-client"
+                 :headers {"Content-Type" "application/json"}
+                 :params {:client_id client-id}
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:client-selected]
+                 :on-failure [:client-selection-failed]}}))
+
+(rf/reg-event-db
+ :client-selected
+ (fn [db [_ response]]
    (assoc db :authenticated? true
+             :pending-client-selection? false
+             :selecting-client? false
+             :available-clients nil
              :user (:user response))))
+
+(rf/reg-event-db
+ :client-selection-failed
+ (fn [db [_ error]]
+   (assoc db :selecting-client? false
+             :client-selection-error "Failed to select client")))
 
 ;; Alternative index tracking for response sets
 (rf/reg-event-db

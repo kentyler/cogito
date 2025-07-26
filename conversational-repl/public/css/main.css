@@ -5,6 +5,56 @@ body {
     background: #f5f5f5;
 }
 
+/* Authentication Forms */
+.login-form, .client-selection-form {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-form h2, .client-selection-form h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.error-message {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 6px;
+    border: 1px solid #fca5a5;
+}
+
 .conversational-repl {
     height: 100vh;
     display: flex;

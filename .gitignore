@@ -80,3 +80,6 @@ conversational-repl/.shadow-cljs/
 
 # Deprecated folders with security vulnerabilities
 deprecated/
+
+# Database migrations - keep local only
+migrations/

@@ -9,9 +9,38 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const fs = require('fs');
 // Use global fetch available in Node.js 18+
 const { createTurnProcessor } = require('./turn-processor-wrapper.cjs');
 const { createSimilarityOrchestrator } = require('./similarity-orchestrator-wrapper.cjs');
+
+// Import file upload service
+const { fileUploadService } = require('../lib/file-upload.js');
+
+// Configure multer for file uploads
+const upload = multer({
+  dest: 'uploads/temp/', // Temporary storage
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 10 // Max 10 files per request
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept text files, PDFs, and common document formats
+    const allowedTypes = [
+      'text/plain',
+      'text/markdown',
+      'application/pdf',
+      'application/json',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not supported'));
+    }
+  }
+});
 
 // Initialize similarity orchestrator (will be set after async initialization)
 let similarityOrchestrator;
@@ -1071,7 +1100,7 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
   }
 });
 
-app.post('/api/create-bot', requireAuth, async (req, res) => {
+app.post('/api/create-bot', requireAuth, upload.array('files', 10), async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
     const user_id = req.session.user.user_id || req.session.user.id;
@@ -1198,10 +1227,52 @@ app.post('/api/create-bot', requireAuth, async (req, res) => {
     const meeting = meetingResult.rows[0];
     console.log('Meeting record created:', meeting.block_id);
     
+    // Process uploaded files if any
+    let uploadedFiles = [];
+    if (req.files && req.files.length > 0) {
+      console.log(`Processing ${req.files.length} uploaded files for meeting ${meeting.id}`);
+      
+      for (const file of req.files) {
+        try {
+          // Process file using FileUploadService
+          const fileUpload = await fileUploadService.processFile(file, {
+            clientId: client_id,
+            description: `Meeting resource for: ${meeting_name || meeting_url}`,
+            tags: ['meeting', 'resource']
+          });
+          
+          // Link file to meeting via junction table
+          await pool.query(
+            `INSERT INTO conversation.block_meeting_files (block_meeting_id, file_upload_id, created_by_user_id) 
+             VALUES ($1, $2, $3)`,
+            [meeting.id, fileUpload.id, user_id]
+          );
+          
+          uploadedFiles.push({
+            id: fileUpload.id,
+            filename: fileUpload.filename,
+            size: fileUpload.file_size
+          });
+          
+          console.log(`✅ Processed file: ${fileUpload.filename} (ID: ${fileUpload.id})`);
+          
+          // Clean up temp file
+          fs.unlink(file.path, (err) => {
+            if (err) console.error('Error deleting temp file:', err);
+          });
+          
+        } catch (fileError) {
+          console.error(`❌ Error processing file ${file.originalname}:`, fileError);
+          // Continue processing other files
+        }
+      }
+    }
+    
     res.json({
       bot: botData,
       meeting: meeting,
-      block: block
+      block: block,
+      uploadedFiles: uploadedFiles
     });
   } catch (error) {
     console.error('Bot creation error:', error);
@@ -1363,11 +1434,13 @@ app.post('/webhook/chat', async (req, res) => {
     
     console.log(`💬 Chat message from bot ${botId}: "${messageText}"`);
     
-    // Find the meeting for this bot
-    const meetingResult = await pool.query(
-      'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1',
-      [botId]
-    );
+    // Find the meeting for this bot with client info
+    const meetingResult = await pool.query(`
+      SELECT bm.*, b.client_id 
+      FROM conversation.block_meetings bm
+      JOIN conversation.blocks b ON b.block_id = bm.block_id
+      WHERE bm.recall_bot_id = $1
+    `, [botId]);
     
     if (meetingResult.rows.length === 0) {
       console.log(`❌ No meeting found for bot ${botId}`);
@@ -1429,15 +1502,44 @@ app.post('/webhook/chat', async (req, res) => {
               .map(entry => entry.content || '')
               .join('\n');
             
+            // Query relevant files based on the question using semantic search
+            let relevantFileContent = '';
+            try {
+              // Use FileUploadService for semantic search
+              const clientId = meeting.client_id || 6; // Default to cogito client
+              const fileSearchResults = await fileUploadService.searchFileContent(question, clientId, 3);
+              
+              // Filter results to only files associated with this meeting
+              const meetingFileIds = await pool.query(`
+                SELECT file_upload_id FROM conversation.block_meeting_files 
+                WHERE block_meeting_id = $1
+              `, [meeting.id]);
+              
+              const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_upload_id));
+              const relevantResults = fileSearchResults.filter(result => 
+                meetingFileIdSet.has(result.file_upload_id)
+              );
+              
+              if (relevantResults.length > 0) {
+                relevantFileContent = '\n\nRELEVANT UPLOADED DOCUMENTS:\n' + 
+                  relevantResults.map(result => 
+                    `From ${result.filename}: ${result.content_text.substring(0, 500)}...`
+                  ).join('\n\n');
+              }
+            } catch (fileError) {
+              console.error('Error querying files:', fileError);
+              // Continue without file context
+            }
+            
             if (anthropic && process.env.ANTHROPIC_API_KEY) {
-              const prompt = `You are Cogito, an AI meeting assistant listening to a live meeting. You have access to the conversation transcript below.
+              const prompt = `You are Cogito, an AI meeting assistant listening to a live meeting. You have access to the conversation transcript and any relevant uploaded documents.
 
 CONVERSATION TRANSCRIPT:
-${conversationText}
+${conversationText}${relevantFileContent}
 
 PARTICIPANT'S QUESTION: "${question}"
 
-Please provide a helpful, contextual response based on the meeting content. Be concise (2-3 sentences max) and specific to what's been discussed. If the question asks about people, refer to the transcript for context about who they are and what they've said.`;
+Please provide a helpful, contextual response based on the meeting content and any relevant documents. Be concise (2-3 sentences max) and specific to what's been discussed. If the question asks about people, refer to the transcript for context about who they are and what they've said.`;
 
               const message = await anthropic.messages.create({
                 model: "claude-3-haiku-20240307",
@@ -1465,11 +1567,29 @@ Please provide a helpful, contextual response based on the meeting content. Be c
               .map(entry => entry.content || '')
               .join('\n');
             
+            // Get list of uploaded files for context
+            let uploadedFilesContext = '';
+            try {
+              const uploadedFiles = await pool.query(`
+                SELECT f.filename, f.description
+                FROM files.file_uploads f
+                JOIN conversation.block_meeting_files bmf ON bmf.file_upload_id = f.id
+                WHERE bmf.block_meeting_id = $1
+              `, [meeting.id]);
+              
+              if (uploadedFiles.rows.length > 0) {
+                uploadedFilesContext = '\n\nUPLOADED MEETING RESOURCES:\n' + 
+                  uploadedFiles.rows.map(file => `- ${file.filename}`).join('\n');
+              }
+            } catch (fileError) {
+              console.error('Error getting uploaded files:', fileError);
+            }
+            
             if (anthropic && process.env.ANTHROPIC_API_KEY) {
               const prompt = `You are Cogito, an AI meeting assistant. Provide a brief status update about this live meeting.
 
 CONVERSATION TRANSCRIPT:
-${conversationText}
+${conversationText}${uploadedFilesContext}
 
 Please provide a concise 2-3 sentence summary that includes:
 - How many speakers are active

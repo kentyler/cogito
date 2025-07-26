@@ -4,7 +4,7 @@
          :purpose "Bridge between high-level design intentions and implementation"}
   
   :core-purpose
-  "Capture and analyze conversational patterns to understand how thinking happens in dialogue"
+  "Capture conversations so that they can be data for both humans and LLMs thinking about them."
   
   :key-insights
   ["Conversations have inflection points where meaning shifts"
@@ -109,7 +109,49 @@
    :embedding-strategy
    {:question "Turn-level vs semantic chunks for embeddings?"
     :decision "Speaker turns (decided 2025-01-25)"
-    :rationale "Natural boundaries, focused retrieval, simpler parsing"}}
+    :rationale "Natural boundaries, focused retrieval, simpler parsing"}
+  
+  :meeting-bot-resources
+   {:question "How to make files/web resources available as queryable context during meetings?"
+    :intent "Meeting bot can reference uploaded documents, links, PDFs, etc. during conversation"
+    :ui-location {:current-page "conversational-repl/public/bot-manager/index.html"
+                  :current-form "Lines 213-248: meetingUrl + meetingName fields"
+                  :proposed-addition "New form section between meetingName and submit button"}
+    :database-design {:files {:existing-table "files.file_uploads (stores embeddings)"
+                             :existing-vectors "files.file_upload_vectors (chunked content with embeddings)"
+                             :junction-table "block_meeting_files (block_meeting_id, file_upload_id)"}
+                      :links {:new-table "block_meeting_links (block_meeting_id, url, title, content_text, embeddings)"}}
+    :existing-infrastructure {:service "lib/file-upload.js (FileUploadService class)"
+                             :features ["File type detection" "Text extraction" "Content chunking (1000 chars, 200 overlap)"
+                                       "OpenAI embedding generation" "Vector similarity search" "Background processing"]
+                             :storage-schema {:file_uploads "Main file metadata (filename, mime_type, file_path, client_id)"
+                                            :file_upload_vectors "Chunked content with embeddings (chunk_index, content_text, content_vector)"}
+                             :search-capability "searchFileContent(query) - pgvector similarity search"
+                             :missing-components ["Upload API endpoints" "UI file selection" "Integration with bot creation"]}
+    :rationale "Leverage existing files infrastructure, separate files from web links for different processing needs"
+    :backend-integration {:create-bot-endpoint "conversational-repl/server.js:1074 (/api/create-bot)"
+                         :current-flow "Creates block + block_meetings records"
+                         :resource-processing "After bot creation, process uploaded resources"}
+    :workflow ["User uploads files/adds links during bot creation (new UI section)"
+               "On bot creation success, process resources in background"
+               "Extract text content from files/URLs"
+               "Generate embeddings for semantic search"
+               "Store in block_meeting_resources linked to block_meeting_id"
+               "Meeting bot queries relevant resources during conversation"]
+    :integration-point "Meeting bot queries resources via embedding similarity before responding in Google Meet chat"
+    :current-chat-processing {:webhook-endpoint "conversational-repl/server.js:1344 (/webhook/chat)"
+                             :trigger-detection "Lines 1396-1401: isQuestion = '?' OR isDirectedAtCogito (cogito/hi cogito/hey cogito/hello cogito)"
+                             :prompt-extraction {:explicit-prompt "Lines 1418-1420: For 'cogito' style, extract question after 'cogito'"
+                                               :implicit-prompt "For '?' style, the prompt is the recent meeting conversation context"}
+                             :context-retrieval "Lines 1407-1430: Gets full_transcript from block_meetings"
+                             :claude-integration "Lines 1432-1442: Anthropic API call with conversation context"
+                             :response-mechanism "Lines 1510-1519: Recall.ai send_chat_message API"}
+    :resource-integration-architecture {:step-1 "Extract prompt (explicit from chat OR implicit from recent conversation)"
+                                       :step-2 "Query both tables using prompt embedding similarity:"
+                                       :step-2a "files.file_uploads JOIN block_meeting_files for uploaded documents"
+                                       :step-2b "block_meeting_links for web resources"
+                                       :step-3 "Augment Claude prompt with: conversation context + relevant files/links + extracted prompt"
+                                       :integration-point "After line 1430 (context retrieval), before Claude API call"}}}
   
   :known-pain-points
   ["Claude searching migration files instead of querying live schema"
