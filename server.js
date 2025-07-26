@@ -1525,26 +1525,29 @@ app.post('/webhook/chat', async (req, res) => {
             // Query relevant files based on the question using semantic search
             let relevantFileContent = '';
             try {
-              // Use FileUploadService for semantic search
-              const clientId = meeting.client_id || 6; // Default to cogito client
-              const fileSearchResults = await fileUploadService.searchFileContent(question, clientId, 3);
-              
-              // Filter results to only files associated with this meeting
+              // First check if there are any files associated with this meeting
               const meetingFileIds = await pool.query(`
                 SELECT file_upload_id FROM conversation.block_meeting_files 
                 WHERE block_meeting_id = $1
               `, [meeting.id]);
               
-              const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_upload_id));
-              const relevantResults = fileSearchResults.filter(result => 
-                meetingFileIdSet.has(result.file_upload_id)
-              );
-              
-              if (relevantResults.length > 0) {
-                relevantFileContent = '\n\nRELEVANT UPLOADED DOCUMENTS:\n' + 
-                  relevantResults.map(result => 
-                    `From ${result.filename}: ${result.content_text.substring(0, 500)}...`
-                  ).join('\n\n');
+              // Only search files if there are files associated with this meeting
+              if (meetingFileIds.rows.length > 0) {
+                // Use FileUploadService for semantic search
+                const clientId = meeting.client_id || 6; // Default to cogito client
+                const fileSearchResults = await fileUploadService.searchFileContent(question, clientId, 3);
+                
+                const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_upload_id));
+                const relevantResults = fileSearchResults.filter(result => 
+                  meetingFileIdSet.has(result.file_upload_id)
+                );
+                
+                if (relevantResults.length > 0) {
+                  relevantFileContent = '\n\nRELEVANT UPLOADED DOCUMENTS:\n' + 
+                    relevantResults.map(result => 
+                      `From ${result.filename}: ${result.content_text.substring(0, 500)}...`
+                    ).join('\n\n');
+                }
               }
             } catch (fileError) {
               console.error('Error querying files:', fileError);
