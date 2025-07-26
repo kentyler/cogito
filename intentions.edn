@@ -69,13 +69,16 @@
    :conversational-repl
    {:intent "Real-time conversation analysis and response generation"
     :metaphor "REPL for human dialogue - interactive conversation processing"
-    :locations {:server "conversational-repl/server.js"
-                :frontend "conversational-repl/public/"
-                :processors ["conversational-repl/turn-processor-wrapper.cjs"
-                           "conversational-repl/similarity-orchestrator-wrapper.cjs"]}
+    :locations {:server "server.js"
+                :frontend "public/"
+                :processors ["turn-processor-wrapper.cjs"
+                           "similarity-orchestrator-wrapper.cjs"]
+                :claude-integration ["claude-stop-hook.cjs"
+                                   "claude-stop-hook-prompts.cjs"]}
     :key-features ["Multi-response generation with alternatives"
                    "Semantic similarity detection"
-                   "Turn embedding and storage"]}
+                   "Turn embedding and storage"
+                   "Claude Code conversation capture"]}
    
    :meeting-transcripts
    {:intent "Transform meeting recordings into searchable, analyzable data"
@@ -91,7 +94,26 @@
                 :captures ["browser-extension/claude-capture.js"
                           "browser-extension/openai-capture.js"]
                 :popup "browser-extension/popup.js"}
-    :integration "Sends captured conversations to conversational-repl API"}}
+    :integration "Sends captured conversations to conversational-repl API"}
+   
+   :claude-code-integration
+   {:intent "Automatically capture Claude Code conversations for analysis"
+    :problem-solved "Making Claude-human interactions part of Cogito's conversation intelligence"
+    :status "✅ ACTIVE - Hooks capture sessions in real-time"
+    :locations {:hooks ["claude-stop-hook.cjs" "claude-stop-hook-prompts.cjs"]
+                :database "conversation.blocks (type: claude_conversation)"
+                :turns "conversation.turns (source_type: user_input|claude_response)"}
+    :functionality {:claude-stop-hook.cjs "General session capture with transcript parsing"
+                   :claude-stop-hook-prompts.cjs "JSON transcript parsing for prompt/response pairs"
+                   :block-creation "Creates Claude Session blocks per session_id"
+                   :turn-storage "Stores user prompts and Claude responses as turns"}
+    :data-flow ["Claude Code triggers hook on conversation end"
+               "Hook reads transcript file (text or JSON format)"
+               "Parses latest user/assistant exchange"
+               "Creates/updates conversation block for session"
+               "Stores prompt and response as separate turns"]
+    :configuration "Hooks configured in Claude Code settings to run on stop events"
+    :warning "⚠️  CRITICAL: Do not delete these files during cleanup - they are essential for Claude conversation capture"}}
   
   :deprecated-patterns
   {:conversation-tables {:status "removed in migration 008"

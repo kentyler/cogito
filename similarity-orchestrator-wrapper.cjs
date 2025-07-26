@@ -6,7 +6,7 @@
 module.exports = {
   async createSimilarityOrchestrator(pool, options = {}) {
     // Dynamic import of the ES module
-    const { SimilarityOrchestrator } = await import('../lib/similarity-orchestrator.js');
+    const { SimilarityOrchestrator } = await import('./lib/similarity-orchestrator.js');
     return new SimilarityOrchestrator(pool, options);
   }
 };

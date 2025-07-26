@@ -1,22 +1,33 @@
-require('dotenv').config();
-const express = require('express');
-const { Pool } = require('pg');
-const Anthropic = require('@anthropic-ai/sdk');
-const bcrypt = require('bcrypt');
-const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session);
-const path = require('path');
-const { WebSocketServer } = require('ws');
-const http = require('http');
-const nodemailer = require('nodemailer');
-const multer = require('multer');
-const fs = require('fs');
+import 'dotenv/config';
+import express from 'express';
+import { Pool } from 'pg';
+import Anthropic from '@anthropic-ai/sdk';
+import bcrypt from 'bcrypt';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import path from 'path';
+import { WebSocketServer } from 'ws';
+import http from 'http';
+import nodemailer from 'nodemailer';
+import multer from 'multer';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 // Use global fetch available in Node.js 18+
-const { createTurnProcessor } = require('./turn-processor-wrapper.cjs');
-const { createSimilarityOrchestrator } = require('./similarity-orchestrator-wrapper.cjs');
+import turnProcessorPkg from './turn-processor-wrapper.cjs';
+import similarityOrchestratorPkg from './similarity-orchestrator-wrapper.cjs';
+const { createTurnProcessor } = turnProcessorPkg;
+const { createSimilarityOrchestrator } = similarityOrchestratorPkg;
 
 // Import file upload service
-const { fileUploadService } = require('./lib/file-upload.js');
+import { fileUploadService } from './lib/file-upload.js';
+import { v4 as uuidv4 } from 'uuid';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const pgSession = connectPgSimple(session);
 
 // Note: Transcript processing agents will be imported dynamically since they're ES modules
 
@@ -1029,7 +1040,6 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
       });
     }
 
-    const { v4: uuidv4 } = require('uuid');
 
     // Check if we already have a block for this session
     let blockResult = await pool.query(

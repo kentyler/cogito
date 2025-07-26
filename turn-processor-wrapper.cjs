@@ -6,7 +6,7 @@
 module.exports = {
   async createTurnProcessor(pool, options = {}) {
     // Dynamic import of the ES module
-    const { createTurnProcessor } = await import('../lib/turn-processor.js');
+    const { createTurnProcessor } = await import('./lib/turn-processor.js');
     return await createTurnProcessor(pool, options);
   }
 };
