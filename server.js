@@ -821,8 +821,8 @@ app.get('/api/meetings/:meetingId/embeddings', requireAuth, async (req, res) => 
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
       WHERE t.meeting_id = $1
         AND t.content_embedding IS NOT NULL
-      ORDER BY t.timestamp
-    `);
+      ORDER BY t.created_at
+    `;
     
     const result = await pool.query(query, [meetingId]);
     
