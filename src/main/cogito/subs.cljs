@@ -97,6 +97,22 @@
  (fn [db]
    (get db :bot-creation/shutting-down {})))
 
+;; Active meeting subscriptions
+(rf/reg-sub
+ :active-meeting
+ (fn [db]
+   (:active-meeting db)))
+
+(rf/reg-sub
+ :creating-meeting?
+ (fn [db]
+   (:creating-meeting? db)))
+
+(rf/reg-sub
+ :meeting-creation-error
+ (fn [db]
+   (:meeting-creation-error db)))
+
 ;; Stuck meetings subscriptions
 (rf/reg-sub
  :stuck-meetings/meetings
