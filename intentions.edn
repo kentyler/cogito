@@ -181,7 +181,67 @@
                                        :step-2a "files.file_uploads JOIN block_meeting_files for uploaded documents"
                                        :step-2b "block_meeting_links for web resources"
                                        :step-3 "Augment Claude prompt with: conversation context + relevant files/links + extracted prompt"
-                                       :integration-point "After line 1430 (context retrieval), before Claude API call"}}}
+                                       :integration-point "After line 1430 (context retrieval), before Claude API call"}}
+   
+   :executable-wizard-files
+   {:question "How can meeting files contain executable wizard instructions for screen-shared facilitation?"
+    :intent "Transform static wizard prompts (GPT/Claude custom instructions) into interactive meeting facilitators"
+    :vision "Upload wizard instruction files that screen-shared Cogito UI can read and execute as live facilitation"
+    :architecture {:file-as-instructions "Wizard markdown/text files uploaded as meeting resources"
+                   :screen-share-execution "Shared UI reads wizard files and becomes interactive facilitator"
+                   :turn-integration "All wizard interactions saved as turns in meeting conversation"
+                   :meeting-coordination "Bot instance (transcript/chat) + Screen instance (wizard) write to same block_id"}
+    :workflow ["User uploads wizard instruction file (e.g., evaporating-cloud-wizard.md) during bot creation"
+               "Screen-shared Cogito UI detects meeting and retrieves wizard files"
+               "UI reads wizard instructions and presents facilitator interface"
+               "Wizard prompts and participant responses saved as turns"
+               "Complete facilitated session becomes part of meeting record"]
+    :examples {:evaporating-cloud "Conflict resolution wizard with step-by-step process"
+               :retrospective "Team retrospective facilitation"
+               :decision-making "Structured decision process with criteria and scoring"}
+    :technical-integration {:existing-files-infrastructure "Leverages file_uploads and block_meeting_files tables"
+                           :file-retrieval "GET /api/meetings/{meetingId}/files"
+                           :content-access "GET /api/files/{fileId}/content"
+                           :turn-creation "POST /api/turns with source_type: 'wizard_facilitation'"
+                           :meeting-detection "Screen-shared UI joins by meeting URL/ID"}
+    :benefits ["Reuse existing GPT/Claude custom instructions"
+               "Live interactive facilitation visible to all participants"
+               "Complete audit trail of facilitated sessions"
+               "Version control for wizard improvements"
+               "Seamless integration with meeting conversation flow"]
+    :status "FUTURE EXPLORATION - Requires screen-share UI mode and wizard execution engine"}
+   
+   :executable-diagram-wizards
+   {:question "How can wizards include live, editable diagrams where user interactions become meeting turns?"
+    :intent "Extend wizard files to contain executable ClojureScript components for real-time visual collaboration"
+    :vision "Wizard files as .edn containing both facilitation prompts AND executable diagram code"
+    :architecture {:code-as-data "ClojureScript components stored as data structures in wizard files"
+                   :two-pane-interface "Split screen: facilitation chat + live collaborative diagram"
+                   :edit-to-turn-flow "Every diagram edit automatically saved as conversation turn"
+                   :multi-modal-participation "Voice, chat, and visual contributions seamlessly integrated"}
+    :wizard-file-structure {:facilitation-prompts "Text prompts for conversation flow"
+                           :diagram-component "Executable Reagent component code as data"
+                           :state-updates "Functions for handling user interactions"
+                           :visual-bindings "Mapping between conversation state and diagram elements"}
+    :interaction-examples ["[Sarah - Diagram Edit]: Added '2-week sprints' to Want A"
+                          "[Ben - Diagram Edit]: Connected assumption to underlying need"
+                          "[Ken - Voice]: 'Can we challenge that assumption?'"
+                          "[Wizard]: Updates diagram highlighting contested assumption"]
+    :use-cases {:evaporating-cloud "Live conflict mapping with editable wants/needs/assumptions"
+               :retrospective "Interactive timeline with draggable action items"
+               :decision-matrix "Collaborative scoring grid with real-time updates"
+               :mind-mapping "Branching thought diagrams that grow during brainstorming"}
+    :technical-implementation {:diagram-edits-handler "(defn on-diagram-edit [edit-type data] ...)"
+                              :turn-generation "Convert UI interactions to turn records automatically"
+                              :state-synchronization "Diagram state updates reflected in meeting conversation"
+                              :code-evaluation "Safe eval of wizard component code from .edn files"}
+    :benefits ["Complete audit trail of visual collaboration"
+               "Replay-able diagram evolution through meeting turns"
+               "Seamless voice/chat/visual integration"
+               "Version-controlled diagram improvements"
+               "Async collaboration during live meetings"
+               "Living documents that grow through conversation"]
+    :status "FUTURE EXPLORATION - Requires wizard execution engine + collaborative diagram framework"}}
   
   :known-pain-points
   ["Claude searching migration files instead of querying live schema"
