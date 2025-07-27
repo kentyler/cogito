@@ -1,19 +1,19 @@
 goog.provide('cogito.semantic_map_simple');
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","set-current-meeting","cogito.semantic-map-simple/set-current-meeting",49777924),(function (db,p__6718){
-var vec__6721 = p__6718;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6721,(0),null);
-var meeting_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6721,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","set-current-meeting","cogito.semantic-map-simple/set-current-meeting",49777924),(function (db,p__11310){
+var vec__11311 = p__11310;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11311,(0),null);
+var meeting_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11311,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword("map","current-meeting","map/current-meeting",-2054074801),meeting_id);
 }));
-re_frame.core.reg_event_fx.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","load-embeddings","cogito.semantic-map-simple/load-embeddings",1806309465),(function (p__6727,p__6728){
-var map__6729 = p__6727;
-var map__6729__$1 = cljs.core.__destructure_map(map__6729);
-var db = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__6729__$1,new cljs.core.Keyword(null,"db","db",993250759));
-var vec__6730 = p__6728;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6730,(0),null);
-var block_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6730,(1),null);
-fetch(["/api/meetings/",cljs.core.str.cljs$core$IFn$_invoke$arity$1(block_id),"/embeddings"].join(''),({"credentials": "same-origin"})).then((function (p1__6726_SHARP_){
-return p1__6726_SHARP_.json();
+re_frame.core.reg_event_fx.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","load-embeddings","cogito.semantic-map-simple/load-embeddings",1806309465),(function (p__11316,p__11317){
+var map__11318 = p__11316;
+var map__11318__$1 = cljs.core.__destructure_map(map__11318);
+var db = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__11318__$1,new cljs.core.Keyword(null,"db","db",993250759));
+var vec__11319 = p__11317;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11319,(0),null);
+var block_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11319,(1),null);
+fetch(["/api/meetings/",cljs.core.str.cljs$core$IFn$_invoke$arity$1(block_id),"/embeddings"].join(''),({"credentials": "same-origin"})).then((function (p1__11314_SHARP_){
+return p1__11314_SHARP_.json();
 })).then((function (data){
 console.log("Raw API response:",data);
 
@@ -29,22 +29,22 @@ return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.co
 
 return new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"db","db",993250759),cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword("map","loading?","map/loading?",1905534285),true)], null);
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","embeddings-loaded","cogito.semantic-map-simple/embeddings-loaded",1400440837),(function (db,p__6738){
-var vec__6739 = p__6738;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6739,(0),null);
-var data = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6739,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","embeddings-loaded","cogito.semantic-map-simple/embeddings-loaded",1400440837),(function (db,p__11332){
+var vec__11333 = p__11332;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11333,(0),null);
+var data = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11333,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword("map","embeddings","map/embeddings",-375973157),new cljs.core.Keyword(null,"embeddings","embeddings",-375880577).cljs$core$IFn$_invoke$arity$1(data)),new cljs.core.Keyword("map","stats","map/stats",-85620903),new cljs.core.Keyword(null,"stats","stats",-85643011).cljs$core$IFn$_invoke$arity$1(data)),new cljs.core.Keyword("map","loading?","map/loading?",1905534285),false);
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","embeddings-load-failed","cogito.semantic-map-simple/embeddings-load-failed",-1671208516),(function (db,p__6743){
-var vec__6747 = p__6743;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6747,(0),null);
-var error = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6747,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","embeddings-load-failed","cogito.semantic-map-simple/embeddings-load-failed",-1671208516),(function (db,p__11341){
+var vec__11342 = p__11341;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11342,(0),null);
+var error = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11342,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword("map","error","map/error",-979141484),error),new cljs.core.Keyword("map","loading?","map/loading?",1905534285),false);
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","set-selected-turn","cogito.semantic-map-simple/set-selected-turn",1855670088),(function (db,p__6750){
-var vec__6751 = p__6750;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6751,(0),null);
-var turn = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6751,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.semantic-map-simple","set-selected-turn","cogito.semantic-map-simple/set-selected-turn",1855670088),(function (db,p__11345){
+var vec__11346 = p__11345;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11346,(0),null);
+var turn = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11346,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword("map","selected-turn","map/selected-turn",-1865000599),turn);
 }));
 re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword("cogito.semantic-map-simple","current-meeting","cogito.semantic-map-simple/current-meeting",-1240772984),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db,_){
@@ -76,29 +76,29 @@ return cljs.core.nth.cljs$core$IFn$_invoke$arity$2(colors,cljs.core.mod(hash,clj
 cogito.semantic_map_simple.simple_map_view = (function cogito$semantic_map_simple$simple_map_view(){
 var embeddings = re_frame.core.subscribe.cljs$core$IFn$_invoke$arity$1(new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.semantic-map-simple","embeddings","cogito.semantic-map-simple/embeddings",1512119094)], null));
 var selected_turn = re_frame.core.subscribe.cljs$core$IFn$_invoke$arity$1(new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.semantic-map-simple","selected-turn","cogito.semantic-map-simple/selected-turn",-333690360)], null));
-return new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 4, [new cljs.core.Keyword(null,"display","display",242065432),"flex",new cljs.core.Keyword(null,"height","height",1025178622),"600px",new cljs.core.Keyword(null,"background","background",-863952629),"#f9fafb",new cljs.core.Keyword(null,"border-radius","border-radius",419594011),"8px"], null)], null),new cljs.core.PersistentVector(null, 5, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"width","width",-384071477),"60%",new cljs.core.Keyword(null,"padding","padding",1660304693),"16px"], null)], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h3","h3",2067611163),"Conversation Map"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),["Showing ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.count(cljs.core.deref(embeddings)))," turns"].join('')], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"svg","svg",856789142),new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword(null,"width","width",-384071477),"100%",new cljs.core.Keyword(null,"height","height",1025178622),"400",new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"border","border",1444987323),"1px solid #ccc",new cljs.core.Keyword(null,"background","background",-863952629),"white"], null)], null),(function (){var iter__5480__auto__ = (function cogito$semantic_map_simple$simple_map_view_$_iter__6781(s__6782){
+return new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 4, [new cljs.core.Keyword(null,"display","display",242065432),"flex",new cljs.core.Keyword(null,"height","height",1025178622),"600px",new cljs.core.Keyword(null,"background","background",-863952629),"#f9fafb",new cljs.core.Keyword(null,"border-radius","border-radius",419594011),"8px"], null)], null),new cljs.core.PersistentVector(null, 5, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"width","width",-384071477),"60%",new cljs.core.Keyword(null,"padding","padding",1660304693),"16px"], null)], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h3","h3",2067611163),"Conversation Map"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),["Showing ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.count(cljs.core.deref(embeddings)))," turns"].join('')], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"svg","svg",856789142),new cljs.core.PersistentArrayMap(null, 3, [new cljs.core.Keyword(null,"width","width",-384071477),"100%",new cljs.core.Keyword(null,"height","height",1025178622),"400",new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"border","border",1444987323),"1px solid #ccc",new cljs.core.Keyword(null,"background","background",-863952629),"white"], null)], null),(function (){var iter__5480__auto__ = (function cogito$semantic_map_simple$simple_map_view_$_iter__11355(s__11356){
 return (new cljs.core.LazySeq(null,(function (){
-var s__6782__$1 = s__6782;
+var s__11356__$1 = s__11356;
 while(true){
-var temp__5804__auto__ = cljs.core.seq(s__6782__$1);
+var temp__5804__auto__ = cljs.core.seq(s__11356__$1);
 if(temp__5804__auto__){
-var s__6782__$2 = temp__5804__auto__;
-if(cljs.core.chunked_seq_QMARK_(s__6782__$2)){
-var c__5478__auto__ = cljs.core.chunk_first(s__6782__$2);
+var s__11356__$2 = temp__5804__auto__;
+if(cljs.core.chunked_seq_QMARK_(s__11356__$2)){
+var c__5478__auto__ = cljs.core.chunk_first(s__11356__$2);
 var size__5479__auto__ = cljs.core.count(c__5478__auto__);
-var b__6784 = cljs.core.chunk_buffer(size__5479__auto__);
-if((function (){var i__6783 = (0);
+var b__11358 = cljs.core.chunk_buffer(size__5479__auto__);
+if((function (){var i__11357 = (0);
 while(true){
-if((i__6783 < size__5479__auto__)){
-var turn = cljs.core._nth(c__5478__auto__,i__6783);
-cljs.core.chunk_append(b__6784,cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"circle","circle",1903212362),new cljs.core.PersistentArrayMap(null, 6, [new cljs.core.Keyword(null,"cx","cx",1272694324),new cljs.core.Keyword(null,"x","x",2099068185).cljs$core$IFn$_invoke$arity$1(turn),new cljs.core.Keyword(null,"cy","cy",755331060),(new cljs.core.Keyword(null,"y","y",-1757859776).cljs$core$IFn$_invoke$arity$1(turn) * 0.8),new cljs.core.Keyword(null,"r","r",-471384190),(5),new cljs.core.Keyword(null,"fill","fill",883462889),cogito.semantic_map_simple.get_participant_color(new cljs.core.Keyword(null,"participant_name","participant_name",1835821395).cljs$core$IFn$_invoke$arity$1(turn)),new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"cursor","cursor",1011937484),"pointer"], null),new cljs.core.Keyword(null,"on-click","on-click",1632826543),((function (i__6783,turn,c__5478__auto__,size__5479__auto__,b__6784,s__6782__$2,temp__5804__auto__,embeddings,selected_turn){
+if((i__11357 < size__5479__auto__)){
+var turn = cljs.core._nth(c__5478__auto__,i__11357);
+cljs.core.chunk_append(b__11358,cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"circle","circle",1903212362),new cljs.core.PersistentArrayMap(null, 6, [new cljs.core.Keyword(null,"cx","cx",1272694324),new cljs.core.Keyword(null,"x","x",2099068185).cljs$core$IFn$_invoke$arity$1(turn),new cljs.core.Keyword(null,"cy","cy",755331060),(new cljs.core.Keyword(null,"y","y",-1757859776).cljs$core$IFn$_invoke$arity$1(turn) * 0.8),new cljs.core.Keyword(null,"r","r",-471384190),(5),new cljs.core.Keyword(null,"fill","fill",883462889),cogito.semantic_map_simple.get_participant_color(new cljs.core.Keyword(null,"participant_name","participant_name",1835821395).cljs$core$IFn$_invoke$arity$1(turn)),new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"cursor","cursor",1011937484),"pointer"], null),new cljs.core.Keyword(null,"on-click","on-click",1632826543),((function (i__11357,turn,c__5478__auto__,size__5479__auto__,b__11358,s__11356__$2,temp__5804__auto__,embeddings,selected_turn){
 return (function (){
 return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.semantic-map-simple","set-selected-turn","cogito.semantic-map-simple/set-selected-turn",1855670088),turn], null));
-});})(i__6783,turn,c__5478__auto__,size__5479__auto__,b__6784,s__6782__$2,temp__5804__auto__,embeddings,selected_turn))
+});})(i__11357,turn,c__5478__auto__,size__5479__auto__,b__11358,s__11356__$2,temp__5804__auto__,embeddings,selected_turn))
 ], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"turn_id","turn_id",-911869226).cljs$core$IFn$_invoke$arity$1(turn)], null)));
 
-var G__6839 = (i__6783 + (1));
-i__6783 = G__6839;
+var G__11374 = (i__11357 + (1));
+i__11357 = G__11374;
 continue;
 } else {
 return true;
@@ -106,17 +106,17 @@ return true;
 break;
 }
 })()){
-return cljs.core.chunk_cons(cljs.core.chunk(b__6784),cogito$semantic_map_simple$simple_map_view_$_iter__6781(cljs.core.chunk_rest(s__6782__$2)));
+return cljs.core.chunk_cons(cljs.core.chunk(b__11358),cogito$semantic_map_simple$simple_map_view_$_iter__11355(cljs.core.chunk_rest(s__11356__$2)));
 } else {
-return cljs.core.chunk_cons(cljs.core.chunk(b__6784),null);
+return cljs.core.chunk_cons(cljs.core.chunk(b__11358),null);
 }
 } else {
-var turn = cljs.core.first(s__6782__$2);
-return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"circle","circle",1903212362),new cljs.core.PersistentArrayMap(null, 6, [new cljs.core.Keyword(null,"cx","cx",1272694324),new cljs.core.Keyword(null,"x","x",2099068185).cljs$core$IFn$_invoke$arity$1(turn),new cljs.core.Keyword(null,"cy","cy",755331060),(new cljs.core.Keyword(null,"y","y",-1757859776).cljs$core$IFn$_invoke$arity$1(turn) * 0.8),new cljs.core.Keyword(null,"r","r",-471384190),(5),new cljs.core.Keyword(null,"fill","fill",883462889),cogito.semantic_map_simple.get_participant_color(new cljs.core.Keyword(null,"participant_name","participant_name",1835821395).cljs$core$IFn$_invoke$arity$1(turn)),new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"cursor","cursor",1011937484),"pointer"], null),new cljs.core.Keyword(null,"on-click","on-click",1632826543),((function (turn,s__6782__$2,temp__5804__auto__,embeddings,selected_turn){
+var turn = cljs.core.first(s__11356__$2);
+return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"circle","circle",1903212362),new cljs.core.PersistentArrayMap(null, 6, [new cljs.core.Keyword(null,"cx","cx",1272694324),new cljs.core.Keyword(null,"x","x",2099068185).cljs$core$IFn$_invoke$arity$1(turn),new cljs.core.Keyword(null,"cy","cy",755331060),(new cljs.core.Keyword(null,"y","y",-1757859776).cljs$core$IFn$_invoke$arity$1(turn) * 0.8),new cljs.core.Keyword(null,"r","r",-471384190),(5),new cljs.core.Keyword(null,"fill","fill",883462889),cogito.semantic_map_simple.get_participant_color(new cljs.core.Keyword(null,"participant_name","participant_name",1835821395).cljs$core$IFn$_invoke$arity$1(turn)),new cljs.core.Keyword(null,"style","style",-496642736),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"cursor","cursor",1011937484),"pointer"], null),new cljs.core.Keyword(null,"on-click","on-click",1632826543),((function (turn,s__11356__$2,temp__5804__auto__,embeddings,selected_turn){
 return (function (){
 return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.semantic-map-simple","set-selected-turn","cogito.semantic-map-simple/set-selected-turn",1855670088),turn], null));
-});})(turn,s__6782__$2,temp__5804__auto__,embeddings,selected_turn))
-], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"turn_id","turn_id",-911869226).cljs$core$IFn$_invoke$arity$1(turn)], null)),cogito$semantic_map_simple$simple_map_view_$_iter__6781(cljs.core.rest(s__6782__$2)));
+});})(turn,s__11356__$2,temp__5804__auto__,embeddings,selected_turn))
+], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"turn_id","turn_id",-911869226).cljs$core$IFn$_invoke$arity$1(turn)], null)),cogito$semantic_map_simple$simple_map_view_$_iter__11355(cljs.core.rest(s__11356__$2)));
 }
 } else {
 return null;

@@ -1,20 +1,20 @@
 goog.provide('cogito.meetings');
-re_frame.core.reg_event_fx.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","delete-meeting","cogito.meetings/delete-meeting",-1708741737),(function (_,p__6719){
-var vec__6720 = p__6719;
-var ___$1 = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6720,(0),null);
-var block_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6720,(1),null);
-var meeting_name = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6720,(2),null);
+re_frame.core.reg_event_fx.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","delete-meeting","cogito.meetings/delete-meeting",-1708741737),(function (_,p__11306){
+var vec__11307 = p__11306;
+var ___$1 = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11307,(0),null);
+var block_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11307,(1),null);
+var meeting_name = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11307,(2),null);
 if(cljs.core.truth_(confirm(["Are you sure you want to delete the meeting '",cljs.core.str.cljs$core$IFn$_invoke$arity$1(meeting_name),"'? This action cannot be undone."].join('')))){
 fetch(["/api/meetings/",cljs.core.str.cljs$core$IFn$_invoke$arity$1(block_id)].join(''),({"method": "DELETE", "credentials": "same-origin"})).then((function (response){
 if(cljs.core.truth_(response.ok)){
-return response.json().then((function (p1__6716_SHARP_){
-alert(cljs.core.get.cljs$core$IFn$_invoke$arity$3(cljs.core.js__GT_clj.cljs$core$IFn$_invoke$arity$variadic(p1__6716_SHARP_,cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"keywordize-keys","keywordize-keys",1310784252),true], 0)),new cljs.core.Keyword(null,"message","message",-406056002),"Meeting deleted"));
+return response.json().then((function (p1__11304_SHARP_){
+alert(cljs.core.get.cljs$core$IFn$_invoke$arity$3(cljs.core.js__GT_clj.cljs$core$IFn$_invoke$arity$variadic(p1__11304_SHARP_,cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"keywordize-keys","keywordize-keys",1310784252),true], 0)),new cljs.core.Keyword(null,"message","message",-406056002),"Meeting deleted"));
 
 return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.meetings","load-meetings","cogito.meetings/load-meetings",-1936673641)], null));
 }));
 } else {
-return response.json().then((function (p1__6717_SHARP_){
-return alert(["Error: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.get.cljs$core$IFn$_invoke$arity$3(cljs.core.js__GT_clj.cljs$core$IFn$_invoke$arity$variadic(p1__6717_SHARP_,cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"keywordize-keys","keywordize-keys",1310784252),true], 0)),new cljs.core.Keyword(null,"error","error",-978969032),"Unknown error"))].join(''));
+return response.json().then((function (p1__11305_SHARP_){
+return alert(["Error: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.get.cljs$core$IFn$_invoke$arity$3(cljs.core.js__GT_clj.cljs$core$IFn$_invoke$arity$variadic(p1__11305_SHARP_,cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"keywordize-keys","keywordize-keys",1310784252),true], 0)),new cljs.core.Keyword(null,"error","error",-978969032),"Unknown error"))].join(''));
 }));
 }
 })).catch((function (){
@@ -26,8 +26,8 @@ return alert("Network error occurred");
 return cljs.core.PersistentArrayMap.EMPTY;
 }));
 re_frame.core.reg_event_fx.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","load-meetings","cogito.meetings/load-meetings",-1936673641),(function (_,___$1){
-fetch("/api/meetings",({"credentials": "same-origin"})).then((function (p1__6737_SHARP_){
-return p1__6737_SHARP_.json();
+fetch("/api/meetings",({"credentials": "same-origin"})).then((function (p1__11315_SHARP_){
+return p1__11315_SHARP_.json();
 })).then((function (data){
 return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.meetings","meetings-loaded","cogito.meetings/meetings-loaded",1795033229),cljs.core.js__GT_clj.cljs$core$IFn$_invoke$arity$variadic(data,cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([new cljs.core.Keyword(null,"keywordize-keys","keywordize-keys",1310784252),true], 0))], null));
 })).catch((function (error){
@@ -36,22 +36,22 @@ return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.co
 
 return cljs.core.PersistentArrayMap.EMPTY;
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","meetings-loaded","cogito.meetings/meetings-loaded",1795033229),(function (db,p__6742){
-var vec__6744 = p__6742;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6744,(0),null);
-var meetings = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6744,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","meetings-loaded","cogito.meetings/meetings-loaded",1795033229),(function (db,p__11323){
+var vec__11325 = p__11323;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11325,(0),null);
+var meetings = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11325,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword(null,"meetings","meetings",39002138),meetings);
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","meetings-load-failed","cogito.meetings/meetings-load-failed",1285555575),(function (db,p__6768){
-var vec__6769 = p__6768;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6769,(0),null);
-var error = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6769,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","meetings-load-failed","cogito.meetings/meetings-load-failed",1285555575),(function (db,p__11328){
+var vec__11329 = p__11328;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11329,(0),null);
+var error = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11329,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword(null,"meetings-error","meetings-error",-235243810),error);
 }));
-re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","set-selected-meeting","cogito.meetings/set-selected-meeting",-850642765),(function (db,p__6772){
-var vec__6773 = p__6772;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6773,(0),null);
-var meeting_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6773,(1),null);
+re_frame.core.reg_event_db.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword("cogito.meetings","set-selected-meeting","cogito.meetings/set-selected-meeting",-850642765),(function (db,p__11337){
+var vec__11338 = p__11337;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11338,(0),null);
+var meeting_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11338,(1),null);
 return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.Keyword(null,"selected-meeting","selected-meeting",1294338347),meeting_id);
 }));
 re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword("cogito.meetings","meetings","cogito.meetings/meetings",608972925),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db,_){
@@ -67,11 +67,11 @@ cogito.meetings.format_date = (function cogito$meetings$format_date(date_str){
 if(cljs.core.truth_(date_str)){
 try{var date = (new Date(date_str));
 return date.toLocaleDateString("en-US",({"year": "numeric", "month": "short", "day": "numeric"}));
-}catch (e6789){if((e6789 instanceof Error)){
-var e = e6789;
+}catch (e11349){if((e11349 instanceof Error)){
+var e = e11349;
 return date_str;
 } else {
-throw e6789;
+throw e11349;
 
 }
 }} else {
@@ -125,25 +125,25 @@ var error = re_frame.core.subscribe.cljs$core$IFn$_invoke$arity$1(new cljs.core.
 return reagent.core.create_class.cljs$core$IFn$_invoke$arity$1(new cljs.core.PersistentArrayMap(null, 2, [new cljs.core.Keyword(null,"component-did-mount","component-did-mount",-1126910518),(function (){
 return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.meetings","load-meetings","cogito.meetings/load-meetings",-1936673641)], null));
 }),new cljs.core.Keyword(null,"reagent-render","reagent-render",-985383853),(function (){
-return new cljs.core.PersistentVector(null, 6, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"], null),new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"mb-8"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h1","h1",-1896887462),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-3xl font-bold text-gray-900"], null),"Meetings"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-gray-600 mt-2"], null),"Browse and analyze your conversation data"], null)], null),(cljs.core.truth_(cljs.core.deref(error))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"bg-red-50 border border-red-200 rounded-md p-4 mb-6"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"flex"], null),new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"ml-3"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h3","h3",2067611163),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-sm font-medium text-red-800"], null),"Error loading meetings"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"mt-2 text-sm text-red-700"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.deref(error))], null)], null)], null)], null)], null):null),(((((cljs.core.deref(meetings) == null)) && ((cljs.core.deref(error) == null))))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"flex justify-center items-center py-12"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"], null)], null)], null):null),(cljs.core.truth_(cljs.core.deref(meetings))?((cljs.core.seq(cljs.core.deref(meetings)))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"space-y-4"], null),(function (){var iter__5480__auto__ = (function cogito$meetings$meetings_list_$_iter__6816(s__6817){
+return new cljs.core.PersistentVector(null, 6, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8"], null),new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"mb-8"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h1","h1",-1896887462),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-3xl font-bold text-gray-900"], null),"Meetings"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-gray-600 mt-2"], null),"Browse and analyze your conversation data"], null)], null),(cljs.core.truth_(cljs.core.deref(error))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"bg-red-50 border border-red-200 rounded-md p-4 mb-6"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"flex"], null),new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"ml-3"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"h3","h3",2067611163),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"text-sm font-medium text-red-800"], null),"Error loading meetings"], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"mt-2 text-sm text-red-700"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"p","p",151049309),cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.deref(error))], null)], null)], null)], null)], null):null),(((((cljs.core.deref(meetings) == null)) && ((cljs.core.deref(error) == null))))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"flex justify-center items-center py-12"], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"], null)], null)], null):null),(cljs.core.truth_(cljs.core.deref(meetings))?((cljs.core.seq(cljs.core.deref(meetings)))?new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),"space-y-4"], null),(function (){var iter__5480__auto__ = (function cogito$meetings$meetings_list_$_iter__11359(s__11360){
 return (new cljs.core.LazySeq(null,(function (){
-var s__6817__$1 = s__6817;
+var s__11360__$1 = s__11360;
 while(true){
-var temp__5804__auto__ = cljs.core.seq(s__6817__$1);
+var temp__5804__auto__ = cljs.core.seq(s__11360__$1);
 if(temp__5804__auto__){
-var s__6817__$2 = temp__5804__auto__;
-if(cljs.core.chunked_seq_QMARK_(s__6817__$2)){
-var c__5478__auto__ = cljs.core.chunk_first(s__6817__$2);
+var s__11360__$2 = temp__5804__auto__;
+if(cljs.core.chunked_seq_QMARK_(s__11360__$2)){
+var c__5478__auto__ = cljs.core.chunk_first(s__11360__$2);
 var size__5479__auto__ = cljs.core.count(c__5478__auto__);
-var b__6819 = cljs.core.chunk_buffer(size__5479__auto__);
-if((function (){var i__6818 = (0);
+var b__11362 = cljs.core.chunk_buffer(size__5479__auto__);
+if((function (){var i__11361 = (0);
 while(true){
-if((i__6818 < size__5479__auto__)){
-var meeting = cljs.core._nth(c__5478__auto__,i__6818);
-cljs.core.chunk_append(b__6819,cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [cogito.meetings.simple_meeting_item,meeting], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(meeting)], null)));
+if((i__11361 < size__5479__auto__)){
+var meeting = cljs.core._nth(c__5478__auto__,i__11361);
+cljs.core.chunk_append(b__11362,cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [cogito.meetings.simple_meeting_item,meeting], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(meeting)], null)));
 
-var G__6894 = (i__6818 + (1));
-i__6818 = G__6894;
+var G__11379 = (i__11361 + (1));
+i__11361 = G__11379;
 continue;
 } else {
 return true;
@@ -151,13 +151,13 @@ return true;
 break;
 }
 })()){
-return cljs.core.chunk_cons(cljs.core.chunk(b__6819),cogito$meetings$meetings_list_$_iter__6816(cljs.core.chunk_rest(s__6817__$2)));
+return cljs.core.chunk_cons(cljs.core.chunk(b__11362),cogito$meetings$meetings_list_$_iter__11359(cljs.core.chunk_rest(s__11360__$2)));
 } else {
-return cljs.core.chunk_cons(cljs.core.chunk(b__6819),null);
+return cljs.core.chunk_cons(cljs.core.chunk(b__11362),null);
 }
 } else {
-var meeting = cljs.core.first(s__6817__$2);
-return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [cogito.meetings.simple_meeting_item,meeting], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(meeting)], null)),cogito$meetings$meetings_list_$_iter__6816(cljs.core.rest(s__6817__$2)));
+var meeting = cljs.core.first(s__11360__$2);
+return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [cogito.meetings.simple_meeting_item,meeting], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(meeting)], null)),cogito$meetings$meetings_list_$_iter__11359(cljs.core.rest(s__11360__$2)));
 }
 } else {
 return null;
@@ -172,8 +172,8 @@ return iter__5480__auto__(cljs.core.deref(meetings));
 });
 cogito.meetings.meeting_detail = (function cogito$meetings$meeting_detail(meeting_id){
 var meetings = re_frame.core.subscribe.cljs$core$IFn$_invoke$arity$1(new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword("cogito.meetings","meetings","cogito.meetings/meetings",608972925)], null));
-var meeting = (cljs.core.truth_(cljs.core.deref(meetings))?cljs.core.first(cljs.core.filter.cljs$core$IFn$_invoke$arity$2((function (p1__6830_SHARP_){
-return cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(p1__6830_SHARP_),meeting_id);
+var meeting = (cljs.core.truth_(cljs.core.deref(meetings))?cljs.core.first(cljs.core.filter.cljs$core$IFn$_invoke$arity$2((function (p1__11369_SHARP_){
+return cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword(null,"block_id","block_id",-759441496).cljs$core$IFn$_invoke$arity$1(p1__11369_SHARP_),meeting_id);
 }),cljs.core.deref(meetings))):null);
 return (function (){
 if(cljs.core.truth_(meeting)){
