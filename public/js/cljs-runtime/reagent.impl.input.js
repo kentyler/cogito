@@ -3,10 +3,10 @@ reagent.impl.input.these_inputs_have_selection_api = new cljs.core.PersistentHas
 reagent.impl.input.has_selection_api_QMARK_ = (function reagent$impl$input$has_selection_api_QMARK_(input_type){
 return cljs.core.contains_QMARK_(reagent.impl.input.these_inputs_have_selection_api,input_type);
 });
-reagent.impl.input.input_node_set_value = (function reagent$impl$input$input_node_set_value(node,rendered_value,dom_value,component,p__12102){
-var map__12103 = p__12102;
-var map__12103__$1 = cljs.core.__destructure_map(map__12103);
-var on_write = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__12103__$1,new cljs.core.Keyword(null,"on-write","on-write",31519475));
+reagent.impl.input.input_node_set_value = (function reagent$impl$input$input_node_set_value(node,rendered_value,dom_value,component,p__8312){
+var map__8313 = p__8312;
+var map__8313__$1 = cljs.core.__destructure_map(map__8313);
+var on_write = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__8313__$1,new cljs.core.Keyword(null,"on-write","on-write",31519475));
 if((!((((node === document.activeElement)) && (((reagent.impl.input.has_selection_api_QMARK_(node.type)) && (((typeof rendered_value === 'string') && (typeof dom_value === 'string'))))))))){
 (component.cljsDOMValue = rendered_value);
 
@@ -123,8 +123,8 @@ delete jsprops["value"];
 
 (jsprops.defaultValue = value);
 
-(jsprops.onChange = (function (p1__12111_SHARP_){
-return reagent.impl.input.input_handle_change(this$,on_change,p1__12111_SHARP_);
+(jsprops.onChange = (function (p1__8355_SHARP_){
+return reagent.impl.input.input_handle_change(this$,on_change,p1__8355_SHARP_);
 }));
 
 return (jsprops.ref = this$.reagentRefFn);
@@ -136,8 +136,8 @@ reagent.impl.input.input_unmount = (function reagent$impl$input$input_unmount(th
 return (this$.cljsInputLive = null);
 });
 reagent.impl.input.input_component_QMARK_ = (function reagent$impl$input$input_component_QMARK_(x){
-var G__12114 = x;
-switch (G__12114) {
+var G__8364 = x;
+switch (G__8364) {
 case "input":
 case "textarea":
 return true;

@@ -29,10 +29,10 @@ return new cljs.core.Keyword(null,"client-selection-error","client-selection-err
 re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword(null,"logging-out?","logging-out?",-1351512203),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db){
 return new cljs.core.Keyword(null,"logging-out?","logging-out?",-1351512203).cljs$core$IFn$_invoke$arity$1(db);
 })], 0));
-re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword(null,"current-alternative-index","current-alternative-index",-989082446),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db,p__6754){
-var vec__6755 = p__6754;
-var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6755,(0),null);
-var turn_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__6755,(1),null);
+re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword(null,"current-alternative-index","current-alternative-index",-989082446),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db,p__11482){
+var vec__11483 = p__11482;
+var _ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11483,(0),null);
+var turn_id = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__11483,(1),null);
 return cljs.core.get_in.cljs$core$IFn$_invoke$arity$3(db,new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"alternative-indices","alternative-indices",2011932146),turn_id], null),(0));
 })], 0));
 re_frame.core.reg_sub.cljs$core$IFn$_invoke$arity$variadic(new cljs.core.Keyword("workbench","active-tab","workbench/active-tab",-23767367),cljs.core.prim_seq.cljs$core$IFn$_invoke$arity$2([(function (db){
