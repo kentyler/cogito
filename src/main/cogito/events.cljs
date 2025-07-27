@@ -32,17 +32,19 @@
      {:db (assoc db :loading? true)
       :fetch-response {:prompt prompt
                        :conversation-id (:conversation-id db)
+                       :meeting-id (get-in db [:active-meeting :meeting_id])
                        :context response-context}})))
 
 (rf/reg-fx
  :fetch-response
- (fn [{:keys [prompt conversation-id context]}]
+ (fn [{:keys [prompt conversation-id meeting-id context]}]
    (-> (js/fetch "/api/conversational-turn"
                  (clj->js {:method "POST"
                            :headers {"Content-Type" "application/json"}
                            :credentials "include"
                            :body (js/JSON.stringify (clj->js {:content prompt
                                                              :conversation_id conversation-id
+                                                             :meeting_id meeting-id
                                                              :context context}))}))
        (.then #(.json %))
        (.then #(rf/dispatch [:handle-llm-response (js->clj % :keywordize-keys true)]))
@@ -267,6 +269,44 @@
        (update :bot-creation/shutting-down dissoc bot-id)
        (assoc :bot-creation/message {:type :error
                                      :text "Failed to shut down bot"}))))
+
+;; Meeting join/create events
+(rf/reg-event-db
+ :join-meeting
+ (fn [db [_ meeting]]
+   (assoc db :active-meeting meeting)))
+
+(rf/reg-event-fx
+ :create-new-meeting
+ (fn [{:keys [db]} [_ meeting-name]]
+   {:db (assoc db :creating-meeting? true)
+    :http-xhrio {:method          :post
+                 :uri             "/api/meetings/create"
+                 :params          {:meeting_name meeting-name}
+                 :format          (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success      [:meeting-created]
+                 :on-failure      [:meeting-creation-failed]}}))
+
+(rf/reg-event-fx
+ :meeting-created
+ (fn [{:keys [db]} [_ response]]
+   {:db (-> db
+            (assoc :creating-meeting? false)
+            (assoc :active-meeting (assoc response :block_id (:meeting_id response))))
+    :dispatch-n [[:cogito.meetings/load-meetings]
+                 [:workbench/set-active-tab :conversation]]}))
+
+(rf/reg-event-db
+ :meeting-creation-failed
+ (fn [db [_ error]]
+   (assoc db :creating-meeting? false
+             :meeting-creation-error error)))
+
+(rf/reg-event-db
+ :leave-meeting
+ (fn [db _]
+   (dissoc db :active-meeting)))
 
 ;; Stuck meetings events
 (rf/reg-event-fx

@@ -63,8 +63,8 @@ let TranscriptBufferAgent;
 let TurnEmbeddingAgent;
 let SpeakerProfileAgent;
 let embeddingAgent;
-const meetingBuffers = new Map(); // blockMeetingId -> TranscriptBufferAgent
-const meetingSpeakerAgents = new Map(); // blockMeetingId -> SpeakerProfileAgent
+const meetingBuffers = new Map(); // meetingId -> TranscriptBufferAgent
+const meetingSpeakerAgents = new Map(); // meetingId -> SpeakerProfileAgent
 
 const app = express();
 
@@ -519,7 +519,7 @@ app.get('/api/auth-status', (req, res) => {
 // Conversational REPL endpoint
 app.post('/api/conversational-turn', requireAuth, async (req, res) => {
   try {
-    const { content, conversation_id, context } = req.body;
+    const { content, conversation_id, meeting_id, context } = req.body;
     const user_id = req.session.user.user_id;
     
     if (!content) {
@@ -531,7 +531,8 @@ app.post('/api/conversational-turn', requireAuth, async (req, res) => {
       participant_id: user_id,
       content: content,
       source_type: 'conversational-repl-user',
-      metadata: { conversation_id }
+      metadata: { conversation_id },
+      meeting_id: meeting_id  // Associate turn with meeting if provided
     });
     
     // Generate LLM response
@@ -616,6 +617,7 @@ Assess whether multiple conversation territories exist, then respond appropriate
           content: llmResponse,
           source_type: 'conversational-repl-llm',
           source_turn_id: userTurn.turn_id,
+          meeting_id: meeting_id,  // Associate turn with meeting if provided
           metadata: { 
             conversation_id, 
             user_turn_id: userTurn.turn_id,
@@ -631,6 +633,7 @@ Assess whether multiple conversation territories exist, then respond appropriate
           content: llmResponse,
           source_type: 'conversational-repl-llm',
           source_turn_id: userTurn.turn_id,
+          meeting_id: meeting_id,  // Associate turn with meeting if provided
           metadata: { 
             conversation_id, 
             user_turn_id: userTurn.turn_id,
@@ -716,21 +719,21 @@ app.get('/api/similar-turns/:turnId', requireAuth, async (req, res) => {
 });
 
 // Similarity analysis endpoints
-app.get('/api/analyze-block/:blockId', requireAuth, async (req, res) => {
+app.get('/api/analyze-meeting/:meetingId', requireAuth, async (req, res) => {
   try {
-    const { blockId } = req.params;
+    const { meetingId } = req.params;
     const { minContentLength, sourceTypes } = req.query;
     
     const options = {};
     if (minContentLength) options.minContentLength = parseInt(minContentLength);
     if (sourceTypes) options.sourceTypes = sourceTypes.split(',');
     
-    const analysis = await similarityOrchestrator.analyzeBlock(blockId, options);
+    const analysis = await similarityOrchestrator.analyzeBlock(meetingId, options);
     res.json(analysis);
     
   } catch (error) {
-    console.error('Block analysis error:', error);
-    res.status(500).json({ error: 'Failed to analyze block' });
+    console.error('Meeting analysis error:', error);
+    res.status(500).json({ error: 'Failed to analyze meeting' });
   }
 });
 
@@ -752,13 +755,13 @@ app.get('/api/analyze-turn/:turnId', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/available-blocks', requireAuth, async (req, res) => {
+app.get('/api/available-meetings', requireAuth, async (req, res) => {
   try {
-    const blocks = await similarityOrchestrator.getAvailableBlocks();
-    res.json(blocks);
+    const meetings = await similarityOrchestrator.getAvailableBlocks();
+    res.json(meetings);
   } catch (error) {
-    console.error('Available blocks error:', error);
-    res.status(500).json({ error: 'Failed to get available blocks' });
+    console.error('Available meetings error:', error);
+    res.status(500).json({ error: 'Failed to get available meetings' });
   }
 });
 
@@ -767,27 +770,26 @@ app.get('/api/meetings', requireAuth, async (req, res) => {
   try {
     const query = `
       SELECT 
-        b.block_id,
-        b.name as block_name,
-        b.created_at,
-        b.metadata,
-        bm.meeting_url,
-        bm.started_at as meeting_start_time,
-        bm.ended_at as meeting_end_time,
-        bm.status,
+        m.meeting_id as block_id,  -- Keep legacy field name for frontend compatibility
+        m.name as block_name,       -- Keep legacy field name for frontend compatibility
+        m.created_at,
+        m.metadata,
+        m.meeting_url,
+        m.started_at as meeting_start_time,
+        m.ended_at as meeting_end_time,
+        m.status,
         COUNT(t.turn_id)::integer as turn_count,
         COUNT(CASE WHEN t.content_embedding IS NOT NULL THEN 1 END)::integer as embedded_count,
         COUNT(DISTINCT t.participant_id)::integer as participant_count,
         array_agg(DISTINCT p.name) FILTER (WHERE p.name IS NOT NULL) as participant_names,
         MIN(t.created_at) as first_turn_time,
         MAX(t.created_at) as last_turn_time
-      FROM conversation.blocks b
-      LEFT JOIN conversation.block_meetings bm ON b.block_id = bm.block_id
-      LEFT JOIN conversation.turns t ON b.block_id = t.block_id
+      FROM conversation.meetings m
+      LEFT JOIN conversation.turns t ON m.meeting_id = t.meeting_id
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
-      WHERE b.block_type = 'meeting' OR bm.block_id IS NOT NULL
-      GROUP BY b.block_id, b.name, b.created_at, b.metadata, bm.meeting_url, bm.started_at, bm.ended_at, bm.status
-      ORDER BY b.created_at DESC
+      WHERE m.meeting_type != 'system'  -- Exclude migration tracking records
+      GROUP BY m.meeting_id, m.name, m.created_at, m.metadata, m.meeting_url, m.started_at, m.ended_at, m.status
+      ORDER BY m.created_at DESC
     `;
     
     const result = await pool.query(query);
@@ -799,9 +801,9 @@ app.get('/api/meetings', requireAuth, async (req, res) => {
 });
 
 // Get meeting embeddings for semantic map
-app.get('/api/meetings/:blockId/embeddings', requireAuth, async (req, res) => {
+app.get('/api/meetings/:meetingId/embeddings', requireAuth, async (req, res) => {
   try {
-    const { blockId } = req.params;
+    const { meetingId } = req.params;
     
     // First, get the dimensionality reduction to 2D using t-SNE or PCA approximation
     // For now, we'll use a simple approach - later this could use proper t-SNE
@@ -817,12 +819,12 @@ app.get('/api/meetings/:blockId/embeddings', requireAuth, async (req, res) => {
         t.content_embedding
       FROM conversation.turns t
       LEFT JOIN conversation.participants p ON t.participant_id = p.id
-      WHERE t.block_id = $1
+      WHERE t.meeting_id = $1
         AND t.content_embedding IS NOT NULL
       ORDER BY t.timestamp
-    `;
+    `);
     
-    const result = await pool.query(query, [blockId]);
+    const result = await pool.query(query, [meetingId]);
     
     if (result.rows.length === 0) {
       return res.json({ embeddings: [], message: 'No embeddings found for this meeting' });
@@ -930,9 +932,9 @@ app.get('/api/meetings/:blockId/embeddings', requireAuth, async (req, res) => {
 });
 
 // Delete a meeting and all associated data
-app.delete('/api/meetings/:blockId', requireAuth, async (req, res) => {
+app.delete('/api/meetings/:meetingId', requireAuth, async (req, res) => {
   try {
-    const { blockId } = req.params;
+    const { meetingId } = req.params;
     
     // Start a transaction to ensure all deletions succeed or fail together
     const client = await pool.connect();
@@ -940,38 +942,35 @@ app.delete('/api/meetings/:blockId', requireAuth, async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // Get all turn IDs associated with this block for deletion
+      // Get all turn IDs associated with this meeting for deletion
       const turnsResult = await client.query(`
         SELECT turn_id 
         FROM conversation.turns
-        WHERE block_id = $1
-      `, [blockId]);
+        WHERE meeting_id = $1
+      `, [meetingId]);
       
       const turnIds = turnsResult.rows.map(row => row.turn_id);
       
       // Delete in the correct order to avoid foreign key constraint violations
       
-      // 1. Delete turns (now they belong directly to the block)
+      // 1. Delete turns (now they belong directly to the meeting)
       if (turnIds.length > 0) {
         const turnIdsList = turnIds.map((_, i) => `$${i + 1}`).join(',');
         await client.query(`DELETE FROM conversation.turns WHERE turn_id IN (${turnIdsList})`, turnIds);
       }
       
-      // 2. Delete block_meetings
-      await client.query('DELETE FROM conversation.block_meetings WHERE block_id = $1', [blockId]);
-      
-      // 3. Delete the block itself
-      const blockResult = await client.query('DELETE FROM conversation.blocks WHERE block_id = $1 RETURNING name', [blockId]);
+      // 2. Delete the meeting itself
+      const meetingResult = await client.query('DELETE FROM conversation.meetings WHERE meeting_id = $1 RETURNING name', [meetingId]);
       
       await client.query('COMMIT');
       
-      if (blockResult.rows.length === 0) {
+      if (meetingResult.rows.length === 0) {
         return res.status(404).json({ error: 'Meeting not found' });
       }
       
       res.json({ 
         success: true, 
-        message: `Meeting "${blockResult.rows[0].name}" deleted successfully`,
+        message: `Meeting "${meetingResult.rows[0].name}" deleted successfully`,
         deletedTurns: turnIds.length
       });
       
@@ -988,31 +987,31 @@ app.delete('/api/meetings/:blockId', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/block-summary/:blockId', requireAuth, async (req, res) => {
+app.get('/api/meeting-summary/:meetingId', requireAuth, async (req, res) => {
   try {
-    const { blockId } = req.params;
-    const summary = await similarityOrchestrator.getSummaryStats(blockId);
+    const { meetingId } = req.params;
+    const summary = await similarityOrchestrator.getSummaryStats(meetingId);
     res.json(summary);
   } catch (error) {
-    console.error('Block summary error:', error);
-    res.status(500).json({ error: 'Failed to get block summary' });
+    console.error('Meeting summary error:', error);
+    res.status(500).json({ error: 'Failed to get meeting summary' });
   }
 });
 
-app.post('/api/compare-blocks', requireAuth, async (req, res) => {
+app.post('/api/compare-meetings', requireAuth, async (req, res) => {
   try {
-    const { blockId1, blockId2, options = {} } = req.body;
+    const { meetingId1, meetingId2, options = {} } = req.body;
     
-    if (!blockId1 || !blockId2) {
-      return res.status(400).json({ error: 'Two block IDs are required' });
+    if (!meetingId1 || !meetingId2) {
+      return res.status(400).json({ error: 'Two meeting IDs are required' });
     }
     
-    const comparison = await similarityOrchestrator.compareBlocks(blockId1, blockId2, options);
+    const comparison = await similarityOrchestrator.compareBlocks(meetingId1, meetingId2, options);
     res.json(comparison);
     
   } catch (error) {
-    console.error('Block comparison error:', error);
-    res.status(500).json({ error: 'Failed to compare blocks' });
+    console.error('Meeting comparison error:', error);
+    res.status(500).json({ error: 'Failed to compare meetings' });
   }
 });
 
@@ -1041,21 +1040,21 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
     }
 
 
-    // Check if we already have a block for this session
-    let blockResult = await pool.query(
-      'SELECT block_id FROM conversation.blocks WHERE name = $1 AND block_type = $2',
+    // Check if we already have a meeting for this session
+    let meetingResult = await pool.query(
+      'SELECT meeting_id FROM conversation.meetings WHERE name = $1 AND meeting_type = $2',
       [`${platform} Session ${sessionId}`, 'browser_conversation']
     );
 
-    let blockId;
-    if (blockResult.rows.length === 0) {
-      // Create new block for this browser session
-      const newBlockId = uuidv4();
+    let meetingId;
+    if (meetingResult.rows.length === 0) {
+      // Create new meeting for this browser session
+      const newMeetingId = uuidv4();
       await pool.query(`
-        INSERT INTO conversation.blocks (block_id, name, description, block_type, metadata, created_at, updated_at)
+        INSERT INTO conversation.meetings (meeting_id, name, description, meeting_type, metadata, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       `, [
-        newBlockId,
+        newMeetingId,
         `${platform} Session ${sessionId}`,
         `Browser conversation session on ${platform} started at ${new Date().toISOString()}`,
         'browser_conversation',
@@ -1066,10 +1065,10 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
           ...metadata 
         })
       ]);
-      blockId = newBlockId;
-      console.log(`✅ Created new browser session block: ${blockId}`);
+      meetingId = newMeetingId;
+      console.log(`✅ Created new browser session meeting: ${meetingId}`);
     } else {
-      blockId = blockResult.rows[0].block_id;
+      meetingId = meetingResult.rows[0].meeting_id;
     }
 
     // Create turns for user prompt and AI response
@@ -1078,7 +1077,7 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
     
     // Insert user turn
     await pool.query(`
-      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, block_id, created_at)
+      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, meeting_id, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
     `, [
       userTurnId, 
@@ -1086,13 +1085,13 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
       'user_input', 
       JSON.stringify({ sessionId, platform, url }),
       timestamp || new Date().toISOString(),
-      blockId
+      meetingId
     ]);
 
     // Insert AI turn with slightly later timestamp to ensure ordering
     const aiTimestamp = timestamp ? new Date(timestamp).getTime() + 1 : Date.now() + 1;
     await pool.query(`
-      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, block_id, created_at)
+      INSERT INTO conversation.turns (turn_id, content, source_type, metadata, timestamp, meeting_id, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
     `, [
       aiTurnId, 
@@ -1100,14 +1099,14 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
       `${platform}_response`, 
       JSON.stringify({ sessionId, platform, url, ...metadata }),
       new Date(aiTimestamp).toISOString(),
-      blockId
+      meetingId
     ]);
 
     console.log(`✅ Captured browser conversation: ${platform} session ${sessionId}`);
     
     res.json({ 
       success: true, 
-      blockId,
+      meetingId,
       message: 'Conversation captured successfully' 
     });
 
@@ -1117,6 +1116,50 @@ app.post('/api/capture-browser-conversation', async (req, res) => {
       error: 'Failed to capture conversation',
       details: error.message 
     });
+  }
+});
+
+// Create a simple meeting for conversation
+app.post('/api/meetings/create', requireAuth, async (req, res) => {
+  try {
+    const { meeting_name } = req.body;
+    const user_id = req.session.user.user_id || req.session.user.id;
+    const client_id = req.session.user.client_id;
+    
+    if (!meeting_name) {
+      return res.status(400).json({ error: 'Meeting name is required' });
+    }
+    
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    
+    // Create a meeting
+    const meetingResult = await pool.query(
+      `INSERT INTO conversation.meetings (name, description, meeting_type, created_by_user_id, client_id, metadata) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        meeting_name,
+        `Conversation meeting created on ${new Date().toISOString()}`,
+        'conversation',
+        user_id,
+        client_id,
+        { source: 'conversational-repl' }
+      ]
+    );
+    
+    const meeting = meetingResult.rows[0];
+    
+    // Return the meeting info
+    res.json({
+      meeting_id: meeting.meeting_id,
+      name: meeting.name,
+      created_at: meeting.created_at,
+      status: 'active'
+    });
+    
+  } catch (error) {
+    console.error('Meeting creation error:', error);
+    res.status(500).json({ error: 'Failed to create meeting' });
   }
 });
 
@@ -1218,34 +1261,37 @@ app.post('/api/create-bot', requireAuth, upload.array('files', 10), async (req, 
     const botData = await recallResponse.json();
     console.log('Bot created:', botData);
     
-    console.log('Creating block and meeting record for bot:', botData.id);
+    console.log('Creating meeting record for bot:', botData.id);
     
-    // Create a block for this meeting with proper user and client IDs
-    const blockResult = await pool.query(
-      `INSERT INTO conversation.blocks (name, description, block_type, created_by_user_id, client_id, metadata) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    // Create a meeting with proper user and client IDs
+    const meetingResult = await pool.query(
+      `INSERT INTO conversation.meetings (name, description, meeting_type, created_by_user_id, client_id, metadata, meeting_url, recall_bot_id, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
         meeting_name || `Meeting ${new Date().toISOString()}`,
         `Meeting from ${meeting_url}`,
         'meeting',
         user_id,     // The actual user who created it
         client_id,   // The client that user belongs to
-        { created_by: 'recall_bot', recall_bot_id: botData.id }
+        JSON.stringify({ created_by: 'recall_bot', recall_bot_id: botData.id }),
+        meeting_url,
+        botData.id,
+        'joining'
       ]
     );
-    const block = blockResult.rows[0];
-    console.log('Block created:', block.block_id);
+    const meeting = meetingResult.rows[0];
+    console.log('Meeting created:', meeting.meeting_id);
     
-    // Create meeting-specific data
+    // Update meeting with transcript email
     const userEmail = req.session.user.email;
     
-    const meetingResult = await pool.query(
-      `INSERT INTO conversation.block_meetings (block_id, recall_bot_id, meeting_url, invited_by_user_id, transcript_email, status, meeting_name) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [block.block_id, botData.id, meeting_url, user_id, userEmail, 'joining', meeting_name || 'Unnamed Meeting']
+    await pool.query(
+      `UPDATE conversation.meetings 
+       SET transcript_email = $1, invited_by_user_id = $2
+       WHERE meeting_id = $3`,
+      [userEmail, user_id, meeting.meeting_id]
     );
-    const meeting = meetingResult.rows[0];
-    console.log('Meeting record created:', meeting.block_id);
+    console.log('Meeting record updated with email:', meeting.meeting_id);
     
     // Process uploaded files if any
     let uploadedFiles = [];
@@ -1263,9 +1309,9 @@ app.post('/api/create-bot', requireAuth, upload.array('files', 10), async (req, 
           
           // Link file to meeting via junction table
           await pool.query(
-            `INSERT INTO conversation.block_meeting_files (block_meeting_id, file_upload_id, created_by_user_id) 
+            `INSERT INTO conversation.meeting_files (meeting_id, file_upload_id, created_by_user_id) 
              VALUES ($1, $2, $3)`,
-            [meeting.id, fileUpload.id, user_id]
+            [meeting.meeting_id, fileUpload.id, user_id]
           );
           
           uploadedFiles.push({
@@ -1291,7 +1337,6 @@ app.post('/api/create-bot', requireAuth, upload.array('files', 10), async (req, 
     res.json({
       bot: botData,
       meeting: meeting,
-      block: block,
       uploadedFiles: uploadedFiles
     });
   } catch (error) {
@@ -1309,15 +1354,15 @@ app.get('/api/bots', requireAuth, async (req, res) => {
     
     const result = await pool.query(`
       SELECT 
-        id,
+        meeting_id as id,
         recall_bot_id as bot_id,
         meeting_url,
-        meeting_name,
+        name as meeting_name,
         status,
         created_at,
         updated_at
-      FROM conversation.block_meetings
-      WHERE status = 'active'
+      FROM conversation.meetings
+      WHERE status = 'active' AND meeting_type != 'system'
       ORDER BY created_at DESC
     `);
     
@@ -1334,17 +1379,17 @@ app.get('/api/stuck-meetings', requireAuth, async (req, res) => {
     console.log('Fetching stuck meetings...');
     const result = await pool.query(`
       SELECT 
-        id,
+        meeting_id as id,
         recall_bot_id as meeting_id,
         meeting_url,
-        meeting_name,
+        name as meeting_name,
         status,
         created_at,
         updated_at,
         recall_bot_id as bot_id,
         0 as turn_count
-      FROM conversation.block_meetings
-      WHERE status = 'joining'
+      FROM conversation.meetings
+      WHERE status = 'joining' AND meeting_type != 'system'
       ORDER BY created_at DESC
     `);
     
@@ -1363,7 +1408,7 @@ app.post('/api/stuck-meetings/:meetingId/complete', requireAuth, async (req, res
     
     // Update the meeting status to completed
     const result = await pool.query(`
-      UPDATE conversation.block_meetings 
+      UPDATE conversation.meetings 
       SET status = 'completed', updated_at = NOW()
       WHERE recall_bot_id = $1
       RETURNING *
@@ -1373,7 +1418,7 @@ app.post('/api/stuck-meetings/:meetingId/complete', requireAuth, async (req, res
       return res.status(404).json({ error: 'Meeting not found' });
     }
     
-    // Note: Only updating block_meetings table since that's where the meeting status is tracked
+    // Note: Only updating meetings table since that's where the meeting status is tracked
     
     res.json({ 
       success: true, 
@@ -1394,9 +1439,9 @@ app.post('/api/bots/:botId/leave', requireAuth, async (req, res) => {
     
     console.log(`Shutting down bot ${botId} for user ${user_id}`);
     
-    // Update the bot status to leaving in block_meetings table
+    // Update the bot status to leaving in meetings table
     const updateResult = await pool.query(`
-      UPDATE conversation.block_meetings 
+      UPDATE conversation.meetings 
       SET status = 'leaving', updated_at = NOW()
       WHERE recall_bot_id = $1
       RETURNING *
@@ -1414,7 +1459,7 @@ app.post('/api/bots/:botId/leave', requireAuth, async (req, res) => {
     setTimeout(async () => {
       try {
         await pool.query(`
-          UPDATE conversation.block_meetings 
+          UPDATE conversation.meetings 
           SET status = 'inactive', updated_at = NOW()
           WHERE recall_bot_id = $1
         `, [botId]);
@@ -1454,12 +1499,11 @@ app.post('/webhook/chat', async (req, res) => {
     
     console.log(`💬 Chat message from bot ${botId}: "${messageText}"`);
     
-    // Find the meeting for this bot with client info
+    // Find the meeting for this bot
     const meetingResult = await pool.query(`
-      SELECT bm.*, b.client_id 
-      FROM conversation.block_meetings bm
-      JOIN conversation.blocks b ON b.block_id = bm.block_id
-      WHERE bm.recall_bot_id = $1
+      SELECT * 
+      FROM conversation.meetings
+      WHERE recall_bot_id = $1 AND meeting_type != 'system'
     `, [botId]);
     
     if (meetingResult.rows.length === 0) {
@@ -1468,7 +1512,7 @@ app.post('/webhook/chat', async (req, res) => {
     }
     
     const meeting = meetingResult.rows[0];
-    const blockId = meeting.block_id;
+    const meetingId = meeting.meeting_id;
     
     // Extract participant info if available  
     const participantData = data.data?.participant;
@@ -1482,7 +1526,7 @@ app.post('/webhook/chat', async (req, res) => {
     
     // Append chat message to conversation timeline
     const chatEntry = `[${senderName} via chat] ${messageText}\n`;
-    await appendToConversation(blockId, chatEntry);
+    await appendToConversation(meetingId, chatEntry);
     console.log(`📝 Appended chat message from ${senderName}`);
     
     // Check if this is a question command or directed at Cogito
@@ -1498,8 +1542,8 @@ app.post('/webhook/chat', async (req, res) => {
       
       // Get conversation context from the timeline
       const conversationResult = await pool.query(
-        'SELECT full_transcript FROM conversation.block_meetings WHERE block_id = $1',
-        [blockId]
+        'SELECT full_transcript FROM conversation.meetings WHERE meeting_id = $1',
+        [meetingId]
       );
       
       const transcriptArray = conversationResult.rows[0]?.full_transcript || [];
@@ -1527,9 +1571,9 @@ app.post('/webhook/chat', async (req, res) => {
             try {
               // First check if there are any files associated with this meeting
               const meetingFileIds = await pool.query(`
-                SELECT file_upload_id FROM conversation.block_meeting_files 
-                WHERE block_meeting_id = $1
-              `, [meeting.id]);
+                SELECT file_upload_id FROM conversation.meeting_files 
+                WHERE meeting_id = $1
+              `, [meeting.meeting_id]);
               
               // Only search files if there are files associated with this meeting
               if (meetingFileIds.rows.length > 0) {
@@ -1596,9 +1640,9 @@ Please provide a helpful, contextual response based on the meeting content and a
               const uploadedFiles = await pool.query(`
                 SELECT f.filename, f.description
                 FROM files.file_uploads f
-                JOIN conversation.block_meeting_files bmf ON bmf.file_upload_id = f.id
-                WHERE bmf.block_meeting_id = $1
-              `, [meeting.id]);
+                JOIN conversation.meeting_files mf ON mf.file_upload_id = f.id
+                WHERE mf.meeting_id = $1
+              `, [meeting.meeting_id]);
               
               if (uploadedFiles.rows.length > 0) {
                 uploadedFilesContext = '\n\nUPLOADED MEETING RESOURCES:\n' + 
@@ -1666,7 +1710,7 @@ Keep it brief and focused on what's happening right now in the meeting.`;
           
           // Append Cogito's response to the conversation timeline
           const cogitoEntry = `[Cogito via chat] ${response}\n`;
-          await appendToConversation(blockId, cogitoEntry);
+          await appendToConversation(meetingId, cogitoEntry);
           console.log('📝 Appended Cogito response to timeline');
         } else {
           const errorText = await chatResponse.text();
@@ -1708,27 +1752,27 @@ const meetingLastActivity = new Map();
 
 // Transcript processing helper functions
 async function processTranscriptChunk(meeting, speakerName, text) {
-  const blockMeetingId = meeting.block_meeting_id;
+  const meetingId = meeting.meeting_id;
   
   // Get or create speaker profile agent for this meeting
-  let speakerAgent = meetingSpeakerAgents.get(blockMeetingId);
+  let speakerAgent = meetingSpeakerAgents.get(meetingId);
   if (!speakerAgent) {
     speakerAgent = new SpeakerProfileAgent({
       meetingUrl: meeting.meeting_url,
       profileTurnLimit: 50
     });
-    meetingSpeakerAgents.set(blockMeetingId, speakerAgent);
-    console.log(`👥 Created speaker profile agent for meeting ${blockMeetingId} with context: ${speakerAgent.context}`);
+    meetingSpeakerAgents.set(meetingId, speakerAgent);
+    console.log(`👥 Created speaker profile agent for meeting ${meetingId} with context: ${speakerAgent.context}`);
   }
   
   // Get or create transcript buffer for this meeting
-  let buffer = meetingBuffers.get(blockMeetingId);
+  let buffer = meetingBuffers.get(meetingId);
   if (!buffer) {
     buffer = new TranscriptBufferAgent({
       maxLength: 1000,
       onTurnReady: async (turn) => {
         // Process speaker profile first to get user_id
-        const userId = await speakerAgent.processSpeaker(turn.speaker, turn.blockId);
+        const userId = await speakerAgent.processSpeaker(turn.speaker, turn.meetingId);
         
         // Add user_id to turn if speaker was identified
         if (userId) {
@@ -1743,13 +1787,12 @@ async function processTranscriptChunk(meeting, speakerName, text) {
     
     // Initialize buffer for this meeting
     buffer.startNewBlock({
-      blockId: meeting.block_id,
-      blockMeetingId: blockMeetingId,
+      meetingId: meeting.meeting_id,
       clientId: meeting.client_id || 6 // Default to cogito client
     });
     
-    meetingBuffers.set(blockMeetingId, buffer);
-    console.log(`🔧 Created transcript buffer for meeting ${blockMeetingId}`);
+    meetingBuffers.set(meetingId, buffer);
+    console.log(`🔧 Created transcript buffer for meeting ${meetingId}`);
   }
   
   // Add chunk to buffer (will trigger flush when appropriate)
@@ -1760,37 +1803,37 @@ async function processTranscriptChunk(meeting, speakerName, text) {
   });
 }
 
-async function endMeetingTranscriptProcessing(blockMeetingId) {
-  const buffer = meetingBuffers.get(blockMeetingId);
-  const speakerAgent = meetingSpeakerAgents.get(blockMeetingId);
+async function endMeetingTranscriptProcessing(meetingId) {
+  const buffer = meetingBuffers.get(meetingId);
+  const speakerAgent = meetingSpeakerAgents.get(meetingId);
   
   let summary = null;
   if (buffer) {
     summary = await buffer.endBlock();
-    meetingBuffers.delete(blockMeetingId);
-    console.log(`🏁 Ended transcript processing for meeting ${blockMeetingId}: ${summary.totalTurns} turns processed`);
+    meetingBuffers.delete(meetingId);
+    console.log(`🏁 Ended transcript processing for meeting ${meetingId}: ${summary.totalTurns} turns processed`);
   }
   
   if (speakerAgent) {
     const stats = speakerAgent.getStats();
-    meetingSpeakerAgents.delete(blockMeetingId);
-    console.log(`👥 Cleaned up speaker agent for meeting ${blockMeetingId}: ${stats.cachedSpeakers} speakers, ${stats.processedSpeakers} profiles generated`);
+    meetingSpeakerAgents.delete(meetingId);
+    console.log(`👥 Cleaned up speaker agent for meeting ${meetingId}: ${stats.cachedSpeakers} speakers, ${stats.processedSpeakers} profiles generated`);
   }
   
   return summary;
 }
 
 // Simple conversation timeline helper
-async function appendToConversation(blockId, content) {
+async function appendToConversation(meetingId, content) {
   try {
     // Get current transcript
     const currentResult = await pool.query(
-      'SELECT full_transcript FROM conversation.block_meetings WHERE block_id = $1',
-      [blockId]
+      'SELECT full_transcript FROM conversation.meetings WHERE meeting_id = $1',
+      [meetingId]
     );
     
     if (currentResult.rows.length === 0) {
-      console.error(`❌ Block meeting not found: ${blockId}`);
+      console.error(`❌ Meeting not found: ${meetingId}`);
       return false;
     }
     
@@ -1809,8 +1852,8 @@ async function appendToConversation(blockId, content) {
     
     // Update with the new transcript array
     const result = await pool.query(
-      'UPDATE conversation.block_meetings SET full_transcript = $1 WHERE block_id = $2 RETURNING *',
-      [JSON.stringify(transcript), blockId]
+      'UPDATE conversation.meetings SET full_transcript = $1 WHERE meeting_id = $2 RETURNING *',
+      [JSON.stringify(transcript), meetingId]
     );
     
     return true;
@@ -1921,9 +1964,9 @@ function formatTranscriptForEmail(transcriptArray) {
 }
 
 // Send transcript email function
-async function sendTranscriptEmail(blockId, meeting) {
+async function sendTranscriptEmail(meetingId, meeting) {
   try {
-    console.log(`📧 Preparing to send transcript email for block_id: ${blockId}`);
+    console.log(`📧 Preparing to send transcript email for meeting_id: ${meetingId}`);
     
     if (!meeting.transcript_email) {
       console.error('❌ No email address configured for this meeting');
@@ -1996,10 +2039,10 @@ ${transcriptText}
     
     // Mark as sent in database
     await pool.query(`
-      UPDATE conversation.block_meetings 
+      UPDATE conversation.meetings 
       SET email_sent = TRUE 
-      WHERE block_id = $1
-    `, [blockId]);
+      WHERE meeting_id = $1
+    `, [meetingId]);
     
     console.log('✅ Database updated: email_sent = TRUE');
     
@@ -2025,7 +2068,7 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     
     // Get meeting info
     const meetingResult = await pool.query(
-      'SELECT * FROM conversation.block_meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
+      'SELECT * FROM conversation.meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
       [botId, 'completed', 'failed']
     );
     
@@ -2037,18 +2080,18 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     const meeting = meetingResult.rows[0];
     
     // End transcript processing for this meeting
-    await endMeetingTranscriptProcessing(meeting.block_meeting_id);
+    await endMeetingTranscriptProcessing(meeting.meeting_id);
     
     // Update meeting status 
     await pool.query(
-      `UPDATE conversation.block_meetings 
+      `UPDATE conversation.meetings 
        SET status = $1, ended_at = NOW()
        WHERE recall_bot_id = $2`,
       ['completed', botId]
     );
     
     // Append completion info to transcript
-    await appendToConversation(meeting.block_id, `[System] Meeting ended: ${reason}`);
+    await appendToConversation(meeting.meeting_id, `[System] Meeting ended: ${reason}`);
     
     console.log(`✅ Meeting ${botId} completed due to ${reason}`);
     
@@ -2058,7 +2101,7 @@ async function completeMeetingByInactivity(botId, reason = 'inactivity') {
     // Send email transcript
     if (meeting.transcript_email && meeting.full_transcript) {
       try {
-        await sendTranscriptEmail(meeting.block_id, meeting);
+        await sendTranscriptEmail(meeting.meeting_id, meeting);
         console.log(`✅ Transcript email sent to: ${meeting.transcript_email}`);
       } catch (error) {
         console.error(`❌ Failed to send transcript email:`, error);
@@ -2095,10 +2138,11 @@ async function cleanupInactiveMeetings() {
     
     // Check database for meetings that are stuck in joining/active status for too long
     const stuckMeetingsResult = await pool.query(`
-      SELECT recall_bot_id, meeting_name, created_at, status
-      FROM conversation.block_meetings
+      SELECT recall_bot_id, name as meeting_name, created_at, status
+      FROM conversation.meetings
       WHERE status IN ('joining', 'active') 
         AND created_at < NOW() - INTERVAL '4 hours'
+        AND meeting_type != 'system'
     `);
     
     for (const meeting of stuckMeetingsResult.rows) {
@@ -2108,8 +2152,8 @@ async function cleanupInactiveMeetings() {
     
     // Clean up memory for completed meetings
     const activeMeetings = await pool.query(`
-      SELECT recall_bot_id FROM conversation.block_meetings
-      WHERE status IN ('joining', 'active')
+      SELECT recall_bot_id FROM conversation.meetings
+      WHERE status IN ('joining', 'active') AND meeting_type != 'system'
     `);
     
     const activeBotIds = new Set(activeMeetings.rows.map(m => m.recall_bot_id));
@@ -2124,20 +2168,20 @@ async function cleanupInactiveMeetings() {
     // Clean up transcript buffers for completed meetings
     const activeMeetingIds = new Set();
     for (const meeting of activeMeetings.rows) {
-      // Get block_meeting_id for active meetings
+      // Get meeting_id for active meetings
       const meetingDetails = await pool.query(
-        'SELECT block_meeting_id FROM conversation.block_meetings WHERE recall_bot_id = $1',
+        'SELECT meeting_id FROM conversation.meetings WHERE recall_bot_id = $1',
         [meeting.recall_bot_id]
       );
       if (meetingDetails.rows.length > 0) {
-        activeMeetingIds.add(meetingDetails.rows[0].block_meeting_id);
+        activeMeetingIds.add(meetingDetails.rows[0].meeting_id);
       }
     }
     
     // Remove buffers for completed meetings
-    for (const blockMeetingId of meetingBuffers.keys()) {
-      if (!activeMeetingIds.has(blockMeetingId)) {
-        await endMeetingTranscriptProcessing(blockMeetingId);
+    for (const meetingId of meetingBuffers.keys()) {
+      if (!activeMeetingIds.has(meetingId)) {
+        await endMeetingTranscriptProcessing(meetingId);
       }
     }
     
@@ -2220,10 +2264,9 @@ async function startServer() {
           
           // Get meeting info
           const meetingResult = await pool.query(`
-            SELECT bm.*, b.client_id 
-            FROM conversation.block_meetings bm
-            JOIN conversation.blocks b ON b.block_id = bm.block_id
-            WHERE bm.recall_bot_id = $1
+            SELECT * 
+            FROM conversation.meetings
+            WHERE recall_bot_id = $1 AND meeting_type != 'system'
           `, [botId]);
           
           if (meetingResult.rows.length === 0) {
@@ -2255,7 +2298,7 @@ async function startServer() {
           if (text.length > 0) {
             // Append directly to conversation timeline (legacy approach)
             const conversationEntry = `[${speakerName}] ${text}\n`;
-            const success = await appendToConversation(meeting.block_id, conversationEntry);
+            const success = await appendToConversation(meeting.meeting_id, conversationEntry);
             
             if (success) {
               console.log(`📝 Appended transcript from ${speakerName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);

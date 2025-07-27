@@ -89,6 +89,12 @@
            (or (:participant_count meeting) 0) " participants")]]
     
     [:div {:class "flex gap-2"}
+     [:button {:class "px-3 py-1 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors duration-200"
+               :on-click #(do
+                            (rf/dispatch [:join-meeting meeting])
+                            (rf/dispatch [:workbench/set-active-tab :conversation]))}
+      "Join"]
+     
      [:button {:class "px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors duration-200"
                :on-click #(rf/dispatch [::set-selected-meeting (:block_id meeting)])}
       "View"]
@@ -119,9 +125,16 @@
          
          ;; Header
          [:div {:class "mb-8"}
-          [:h1 {:class "text-3xl font-bold text-gray-900"} "Meetings"]
-          [:p {:class "text-gray-600 mt-2"} 
-           "Browse and analyze your conversation data"]]
+          [:div {:class "flex justify-between items-center"}
+           [:div
+            [:h1 {:class "text-3xl font-bold text-gray-900"} "Meetings"]
+            [:p {:class "text-gray-600 mt-2"} 
+             "Browse and analyze your conversation data"]]
+           [:button {:class "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200"
+                     :on-click #(let [meeting-name (js/prompt "Enter meeting name:")]
+                                  (when meeting-name
+                                    (rf/dispatch [:create-new-meeting meeting-name])))}
+            "New Meeting"]]]
          
          ;; Error state
          (when @error

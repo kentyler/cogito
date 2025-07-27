@@ -71,9 +71,21 @@
          (if @logging-out? "Logging out..." "Logout")]]])))
 
 (defn conversation-tab []
-  (let [turns (rf/subscribe [:turns])]
+  (let [turns (rf/subscribe [:turns])
+        active-meeting (rf/subscribe [:active-meeting])]
     (fn []
       [:div.conversation-tab
+       (when @active-meeting
+         [:div.bg-blue-50.border-b.border-blue-200.px-4.py-3.mb-4
+          [:div.flex.justify-between.items-center
+           [:div
+            [:h2.text-lg.font-semibold.text-blue-900 
+             (str "Meeting: " (or (:name @active-meeting) (:block_name @active-meeting) "Unnamed Meeting"))]
+            [:p.text-sm.text-blue-700 
+             (str "ID: " (or (:meeting_id @active-meeting) (:block_id @active-meeting)))]]
+           [:button.px-3.py-1.text-sm.bg-blue-600.text-white.rounded.hover:bg-blue-700
+            {:on-click #(rf/dispatch [:leave-meeting])}
+            "Leave Meeting"]]])
        [:div.conversation-history
         (for [turn @turns]
           ^{:key (:id turn)}
