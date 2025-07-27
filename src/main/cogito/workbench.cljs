@@ -47,14 +47,6 @@
           :on-click #(rf/dispatch [:workbench/set-active-tab :conversation])}
          "Conversation"]
         [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :story-arc) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :story-arc])}
-         "Story Arc"]
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :analysis) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :analysis])}
-         "Analysis"]
-        [:button.tab-button.px-4.py-2.border-b-2
          {:class (if (= @active-tab :meetings) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
           :on-click #(rf/dispatch [:workbench/set-active-tab :meetings])}
          "Meetings"]
@@ -65,7 +57,11 @@
         [:button.tab-button.px-4.py-2.border-b-2
          {:class (if (= @active-tab :map) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
           :on-click #(rf/dispatch [:workbench/set-active-tab :map])}
-         "Map"]]
+         "Map"]
+        [:button.tab-button.px-4.py-2.border-b-2
+         {:class (if (= @active-tab :meeting-files) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
+          :on-click #(rf/dispatch [:workbench/set-active-tab :meeting-files])}
+         "Meeting Files"]]
        [:div.flex.items-center.space-x-4
         [:span.text-sm.text-gray-600 
          (str "Logged in as " (:email @user))]
@@ -84,10 +80,10 @@
           [turn-display turn])]
        [prompt-input]])))
 
-(defn analysis-tab []
-  [:div.analysis-tab.p-4
-   [:h2.text-xl.font-semibold.mb-4 "Similarity Analysis"]
-   [:p.text-gray-600 "Coming soon: Real-time similarity analysis, turn comparisons, and conversation insights."]])
+(defn meeting-files-tab []
+  [:div.meeting-files-tab.p-4
+   [:h2.text-xl.font-semibold.mb-4 "Meeting Files"]
+   [:p.text-gray-600 "Coming soon: Upload and manage files for meeting contexts, search across meeting documents, and file-based insights."]])
 
 (defn panel []
   (let [active-tab (rf/subscribe [:workbench/active-tab])]
@@ -96,9 +92,8 @@
        [tab-nav]
        (case @active-tab
          :conversation [conversation-tab]
-         :story-arc [story-arc/mount-component]
-         :analysis [analysis-tab]
          :meetings [meetings/meetings-page]
          :bot-creation [bot-creation/bot-creation-tab]
          :map [semantic-map/semantic-map-tab]
+         :meeting-files [meeting-files-tab]
          [conversation-tab])])))
