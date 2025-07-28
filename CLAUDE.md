@@ -88,6 +88,40 @@ This promotes:
 - Collaborative problem refinement
 - Emergence of deeper insights through dialogue
 
+## File Size Enforcement
+**CRITICAL**: File size limits are enforced to maintain optimal AI assistance:
+
+### Automatic Enforcement Systems
+1. **Pre-commit Hook** (`.git/hooks/pre-commit`)
+   - Prevents commits of files >200 lines
+   - Scans JavaScript, TypeScript, Python, and other code files
+   - Displays violations with line counts and guidance
+
+2. **ESLint Rules** (`eslint.config.js`)
+   - `max-lines`: Error at 200 lines (skipBlankLines: true, skipComments: true)
+   - `max-lines-per-function`: Warning at 50 lines per function
+   - `complexity`: Warning at complexity >10
+   - Test files allowed up to 300 lines
+
+3. **Available Commands**
+   - `npm run lint` - Full linting including file size checks
+   - `npm run lint:fix` - Auto-fix linting issues where possible
+   - `npm run lint:check-sizes` - Quick file size check only
+
+### Development Guidelines
+- **Target**: ~100 lines per file for optimal AI comprehension
+- **Hard limit**: 200 lines (enforced by pre-commit hook)
+- **When approaching limit**: Proactively break into focused modules
+- **Module structure**: Use `lib/component-name/` folders for related modules
+- **Backward compatibility**: Always maintain existing APIs when modularizing
+
+### Override Only When Necessary
+- Test files: Up to 300 lines allowed
+- Configuration files: Exempt from size limits
+- Generated files: Should be in ignored directories
+
+**Remember**: Small, focused files enable better AI understanding, easier debugging, and improved maintainability.
+
 ## Project Structure Guidelines
 **IMPORTANT**: Follow these conventions when creating files:
 - **Migration files** → Always create in `migrations/` folder
@@ -108,28 +142,17 @@ This promotes:
 ## Database Helper Functions
 **IMPORTANT**: These PostgreSQL functions are available for pattern management:
 
-### Pattern Management
-- `update_participant_patterns(participant_id, pattern_name, pattern_data)` - Updates participant patterns JSONB field
-  - Example: `SELECT update_participant_patterns(20, 'spiritual_surrender', '{"confidence": 0.95}'::jsonb)`
-  - Returns BOOLEAN (true if participant found and updated)
+### User-Centric Architecture
+**IMPORTANT CHANGE**: The system has migrated from participant-centric to user-centric architecture.
 
-### Participant Lookup
-- `find_participant_id(identifier)` - Looks up participant by name or email (tries both)
-- `get_participant_id_by_name(name)` - Looks up participant by display name
-- `get_participant_id_by_email(email)` - Looks up participant by email
-  - Example: `SELECT find_participant_id('Linden Vazey')` returns participant_id
-  - All return BIGINT participant_id or NULL if not found
+- Turns now reference `user_id` instead of `participant_id` where authentication is available
+- Pattern management has been simplified - analysis is done on-demand by LLMs
+- Anonymous/transcript turns (1479 of 1560) have no user identification
+- User-authenticated turns (81 of 1560) are linked to system users
 
-### Usage Pattern
-```javascript
-// Look up participant
-const result = await db.pool.query("SELECT find_participant_id($1)", ['Linden Vazey']);
-const participantId = result.rows[0].find_participant_id;
-
-// Update their patterns
-await db.pool.query("SELECT update_participant_patterns($1, $2, $3)", 
-    [participantId, 'pattern_name', patternDataJsonb]);
-```
+### User Statistics
+- Use `DatabaseAgent.getUserStats(userId)` to get user contribution statistics
+- Returns: total turns, meetings, first/last turn timestamps, average turn length
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
