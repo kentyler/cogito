@@ -24,7 +24,7 @@ async function testConnection() {
 }
 
 // Middleware to add database pool to requests
-export const databaseMiddleware = (req, res, next) => {
+const databaseMiddleware = (req, res, next) => {
   req.db = pool;
   next();
 };
