@@ -29,5 +29,11 @@ export const databaseMiddleware = (req, res, next) => {
   next();
 };
 
-export { pool, testConnection };
+// Initialize database (alias for testConnection + return pool)
+export async function initializeDatabase() {
+  await testConnection();
+  return pool;
+}
+
+export { pool, testConnection, databaseMiddleware };
 export default pool;
