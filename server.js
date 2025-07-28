@@ -4,7 +4,7 @@ import express from 'express';
 import http from 'http';
 
 // Import configuration
-import { initializeDatabase } from './server/config/database.js';
+import { initializeDatabase, databaseMiddleware } from './server/config/database.js';
 import { initializeEmail } from './server/config/email.js';
 import { configureMiddleware } from './server/config/middleware.js';
 
@@ -27,8 +27,7 @@ import webhookChatRoutes from './server/routes/webhook-chat.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
-import { FileUploadService } from './lib/file-upload-service.js';
-import Database from './lib/database.js';
+import { FileUploadService } from './lib/file-upload.js';
 
 const app = express();
 
@@ -50,14 +49,13 @@ async function startServer() {
   try {
     // Initialize database and core services
     const pool = await initializeDatabase();
-    const db = new Database(pool);
     const { anthropic, getEmailTransporter } = await initializeEmail();
     const fileUploadService = new FileUploadService(pool);
     
     // Configure middleware and inject dependencies
     app.use(configureMiddleware());
+    app.use(databaseMiddleware);
     app.use((req, res, next) => {
-      req.db = db;
       req.pool = pool;
       req.anthropic = anthropic;
       req.fileUploadService = fileUploadService;
