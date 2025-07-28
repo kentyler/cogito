@@ -6,7 +6,7 @@ import http from 'http';
 // Import configuration
 import { initializeDatabase, databaseMiddleware } from './server/config/database.js';
 import { initializeEmail } from './server/config/email.js';
-import { configureMiddleware } from './server/config/middleware.js';
+import { setupMiddleware } from './server/config/middleware.js';
 
 // Import services
 import { MeetingService } from './server/services/meeting-service.js';
@@ -53,7 +53,7 @@ async function startServer() {
     const fileUploadService = new FileUploadService(pool);
     
     // Configure middleware and inject dependencies
-    app.use(configureMiddleware());
+    setupMiddleware(app, pool);
     app.use(databaseMiddleware);
     app.use((req, res, next) => {
       req.pool = pool;
