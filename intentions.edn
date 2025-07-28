@@ -147,10 +147,10 @@
     :status "✅ FILE UPLOADS COMPLETED - Web links remain as future enhancement"
     :ui-location {:integrated-app "ClojureScript bot creation tab in main workbench"
                   :removed "conversational-repl/public/bot-manager/ (standalone interface removed to reduce confusion)"}
-    :database-design {:files {:existing-table "files.file_uploads (stores embeddings)"
-                             :existing-vectors "files.file_upload_vectors (chunked content with embeddings)"
-                             :junction-table "block_meeting_files (block_meeting_id, file_upload_id)"}
-                      :links {:new-table "block_meeting_links (block_meeting_id, url, title, content_text, embeddings)"}}
+    :database-design {:files {:existing-table "context.files (stores file content and metadata)"
+                             :existing-chunks "context.chunks (chunked content with embeddings)"
+                             :junction-table "meetings.meeting_files (meeting_id, file_id)"}
+                      :links {:new-table "meetings.meeting_links (meeting_id, url, title, content_text, embeddings) [future]"}}
     :existing-infrastructure {:service "lib/file-upload.js (FileUploadService class)"
                              :features ["File type detection" "Text extraction" "Content chunking (1000 chars, 200 overlap)"
                                        "OpenAI embedding generation" "Vector similarity search" "Background processing"]
@@ -178,7 +178,7 @@
                              :response-mechanism "Lines 1510-1519: Recall.ai send_chat_message API"}
     :resource-integration-architecture {:step-1 "Extract prompt (explicit from chat OR implicit from recent conversation)"
                                        :step-2 "Query both tables using prompt embedding similarity:"
-                                       :step-2a "files.file_uploads JOIN block_meeting_files for uploaded documents"
+                                       :step-2a "context.files JOIN meetings.meeting_files for uploaded documents"
                                        :step-2b "block_meeting_links for web resources"
                                        :step-3 "Augment Claude prompt with: conversation context + relevant files/links + extracted prompt"
                                        :integration-point "After line 1430 (context retrieval), before Claude API call"}}
@@ -241,7 +241,46 @@
                "Version-controlled diagram improvements"
                "Async collaboration during live meetings"
                "Living documents that grow through conversation"]
-    :status "FUTURE EXPLORATION - Requires wizard execution engine + collaborative diagram framework"}}
+    :status "FUTURE EXPLORATION - Requires wizard execution engine + collaborative diagram framework"}
+   
+   :ude-capture-ecosystem
+   {:question "How to capture UDEs (Undesirable Effects) during work and make them available as meeting resources?"
+    :intent "Create frictionless capture tools that feed raw organizational pain points into thinking tools wizards"
+    :vision "Hotkey-triggered capture tools that grab text/screenshots during work, building corpus for Theory of Constraints analysis"
+    :architecture {:capture-tools "Multiple platform-specific capture clients feeding unified database"
+                   :organic-collection "UDEs captured unsystematically, disconnected from each other initially"
+                   :meeting-integration "Bi-directional: select UDEs → suggest tools, OR select tools → find relevant UDEs"
+                   :llm-analysis "Pattern detection across disconnected UDEs to suggest appropriate thinking tools"}
+    :capture-workflows {:windows-hotkey "AutoHotkey tool: select text → hotkey → review popup → submit to API"
+                       :windows-snipping "Screenshot capture: hotkey → screen selection → image + optional text → submit"
+                       :macos-equivalent "Swift/Python/PyObjC implementation with same UX flow"
+                       :browser-extension "Capture from web pages as part of research/work"
+                       :mobile-capture "Quick UDE entry during meetings or field work"
+                       :email-integration "Forward problem emails as UDE entries"}
+    :project-structure {:isolation "capture-tools/ directory with independent tool subdirectories"
+                       :shared-components "capture-tools/shared/ for API client and UDE schema"
+                       :platform-tools {:windows "capture-tools/windows-hotkey/ (AutoHotkey + form popup)"
+                                       :macos "capture-tools/macos-hotkey/ (Swift/Python/PyObjC)"
+                                       :cross-platform "capture-tools/electron/ (future unified app)"
+                                       :web "capture-tools/browser-extension/ (existing pattern)"}
+                       :api-boundary "POST /api/udes with text, image, source info, metadata"}
+    :database-design {:udes-table "Simple schema: content_text, content_image, source_info, captured_at, captured_by, tool_name"
+                     :minimal-metadata "Timestamp, source context, capturing user - no forced categorization"
+                     :embedding-ready "Text content prepared for semantic similarity during meeting tool selection"}
+    :meeting-integration {:resource-selection "UDEs available alongside files/links during bot creation"
+                         :tool-suggestion "LLM analyzes UDE collection → suggests Current Reality Tree, Conflict Resolution, etc."
+                         :reverse-flow "User selects thinking tool → system finds relevant UDEs from corpus"
+                         :wizard-resources "UDEs become raw materials for executable diagram wizards"}
+    :thinking-tools-bridge {:toc-integration "UDEs as input to Theory of Constraints thinking processes"
+                           :pattern-analysis "Identify recurring themes, cause-effect relationships, stakeholder impacts"
+                           :tool-mapping "Current Reality Tree for system analysis, Evaporating Cloud for conflicts, etc."
+                           :facilitation-enhancement "Rich UDE corpus improves wizard-guided thinking sessions"}
+    :benefits ["Frictionless capture during natural work flow"
+               "Organic problem collection without forced structure"
+               "Rich corpus for pattern analysis and tool suggestion"
+               "Bridge between daily work frustrations and structured thinking"
+               "Cross-platform capture feeding unified analysis"]
+    :status "DESIGN PHASE - Ready for initial Windows hotkey prototype"}}
   
   :known-pain-points
   ["Claude searching migration files instead of querying live schema"

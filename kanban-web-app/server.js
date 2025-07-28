@@ -220,7 +220,7 @@ app.get('/api/games/:gameId/conversation', async (req, res) => {
         source_type,
         metadata,
         timestamp
-      FROM conversation.turns 
+      FROM meetings.turns 
       WHERE metadata->>'game_id' = $1
       ORDER BY timestamp
     `, [gameId.toString()]);
