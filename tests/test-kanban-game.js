@@ -118,7 +118,7 @@ async function testKanbanGame() {
         source_type,
         metadata->>'move_notation' as move_notation,
         timestamp
-      FROM conversation.turns 
+      FROM meetings.turns 
       WHERE metadata->>'game_id' = $1
       ORDER BY timestamp
     `, [gameId.toString()]);
