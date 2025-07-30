@@ -187,11 +187,19 @@
                  :on-success [:client-switched]
                  :on-failure [:client-switch-failed]}}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :client-switched
- (fn [db [_ response]]
-   (assoc db :switching-client? false
-             :user (:user response))))
+ (fn [{:keys [db]} [_ response]]
+   {:db (-> db 
+            (assoc :switching-client? false
+                   :user (:user response))
+            (dissoc :meetings :meetings-error)  ; Clear old meetings data
+            (dissoc :selected-meeting)  ; Clear any selected meeting
+            (dissoc :bot-creation/bots :bot-creation/running-bots)  ; Clear old bot data
+            (dissoc :stuck-meetings/meetings))  ; Clear old stuck meetings
+    :dispatch-n [[:cogito.meetings/load-meetings]  ; Refresh meetings for new client
+                 [:bot-creation/fetch-bots]  ; Refresh bots for new client
+                 [:fetch-available-clients]]}))
 
 (rf/reg-event-db
  :client-switch-failed
