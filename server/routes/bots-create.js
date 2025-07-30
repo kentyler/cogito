@@ -1,10 +1,11 @@
 import express from 'express';
 import fs from 'fs';
+import { requireAuth } from './auth.js';
 
 const router = express.Router();
 
 // Create bot endpoint - handles bot creation with Recall.ai
-router.post('/create-bot', async (req, res) => {
+router.post('/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
     const user_id = req.session.user.user_id || req.session.user.id;
