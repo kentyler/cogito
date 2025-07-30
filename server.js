@@ -98,11 +98,11 @@ async function startServer() {
     // Mount route handlers with /api prefix for auth routes
     app.use('/api', authRoutes);
     app.use('/api', authExtendedRoutes);
-    app.use(conversationRoutes);
+    app.use('/api', conversationRoutes);
     app.use(searchRoutes);
-    app.use(meetingsCrudRoutes);
-    app.use(meetingsEmbeddingsRoutes);
-    app.use(meetingsAdditionalRoutes);
+    app.use('/api', meetingsCrudRoutes);
+    app.use('/api', meetingsEmbeddingsRoutes);
+    app.use('/api', meetingsAdditionalRoutes);
     app.use(browserCaptureRoutes);
     app.use('/api', botsCreateRoutes);
     app.use('/api', botsManagementRoutes);
