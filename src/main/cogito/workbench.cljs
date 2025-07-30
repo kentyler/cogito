@@ -82,7 +82,7 @@
              [:select.text-sm.bg-white.border.border-gray-300.rounded.px-2.py-1.focus:outline-none.focus:ring-2.focus:ring-blue-500
               {:value (str (:client @user))
                :on-change #(let [selected-client-name (-> % .-target .-value)
-                                 selected-client (first (filter #(= (:client_name %) selected-client-name) @available-clients))]
+                                 selected-client (first (filter (fn [c] (= (:client_name c) selected-client-name)) @available-clients))]
                              (when selected-client
                                (rf/dispatch [:switch-client (:client_id selected-client)])))
                :disabled @switching-client?}
