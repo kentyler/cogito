@@ -1,9 +1,10 @@
 import express from 'express';
+import { requireAuth } from './auth.js';
 
 const router = express.Router();
 
 // Get meeting list with detailed information
-router.get('/meetings', async (req, res) => {
+router.get('/meetings', requireAuth, async (req, res) => {
   try {
     const query = `
       SELECT 
@@ -45,7 +46,7 @@ router.get('/meetings', async (req, res) => {
 });
 
 // Delete a meeting and all associated data
-router.delete('/meetings/:meetingId', async (req, res) => {
+router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     
