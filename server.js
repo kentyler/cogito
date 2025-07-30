@@ -95,9 +95,9 @@ async function startServer() {
       res.json({ status: 'healthy', service: 'conversational-repl' });
     });
     
-    // Mount route handlers
-    app.use(authRoutes);
-    app.use(authExtendedRoutes);
+    // Mount route handlers with /api prefix for auth routes
+    app.use('/api', authRoutes);
+    app.use('/api', authExtendedRoutes);
     app.use(conversationRoutes);
     app.use(searchRoutes);
     app.use(meetingsCrudRoutes);
