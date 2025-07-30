@@ -47,7 +47,7 @@ async function examples() {
     
     // Get participant by ID or email
     const participant = await dbAgent.query(
-      'SELECT * FROM conversation.participants WHERE email = $1',
+      'SELECT * FROM participants WHERE email = $1',
       ['ken@example.com']
     );
     
@@ -68,19 +68,17 @@ async function examples() {
     const result = await dbAgent.transaction(async (client) => {
       // All queries in here are part of the same transaction
       const blockResult = await client.query(
-        'INSERT INTO conversation.blocks (name, block_type) VALUES ($1, $2) RETURNING block_id',
+        'INSERT INTO blocks (name, block_type) VALUES ($1, $2) RETURNING block_id',
         ['Test Block', 'example']
       );
       
       const turnResult = await client.query(
-        'INSERT INTO conversation.turns (content, participant_id) VALUES ($1, $2) RETURNING turn_id',
+        'INSERT INTO meetings.turns (content, participant_id) VALUES ($1, $2) RETURNING turn_id',
         ['Test content', 3] // Ken's ID
       );
       
-      await client.query(
-        'INSERT INTO conversation.block_turns (block_id, turn_id, sequence_order) VALUES ($1, $2, $3)',
-        [blockResult.rows[0].block_id, turnResult.rows[0].turn_id, 1]
-      );
+      // Note: block_turns table has been removed
+      // Turns now directly reference meeting_id
       
       return { blockId: blockResult.rows[0].block_id };
     });
