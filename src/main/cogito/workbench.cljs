@@ -35,10 +35,18 @@
     ;; Pass the turn ID for response-set state management
     [renderer/render-response (assoc (:response turn) :turn-id (:id turn))]]])
 
+
 (defn tab-nav []
   (let [active-tab (rf/subscribe [:workbench/active-tab])
         user (rf/subscribe [:user])
-        logging-out? (rf/subscribe [:logging-out?])]
+        logging-out? (rf/subscribe [:logging-out?])
+        available-clients (rf/subscribe [:available-clients])
+        switching-client? (rf/subscribe [:switching-client?])]
+    
+    ;; Fetch available clients on component mount if we don't have them
+    (when (and @user (empty? @available-clients))
+      (rf/dispatch [:fetch-available-clients]))
+    
     (fn []
       [:div.tab-nav.flex.border-b.border-gray-200.mb-4.justify-between
        [:div.flex
@@ -63,8 +71,26 @@
           :on-click #(rf/dispatch [:workbench/set-active-tab :meeting-files])}
          "Meeting Files"]]
        [:div.flex.items-center.space-x-4
-        [:span.text-sm.text-gray-600 
-         (str "Logged in as " (:email @user))]
+        (if (> (count @available-clients) 1)
+          ;; Multiple clients - show dropdown with format "client:email"
+          [:div.flex.items-center.space-x-2
+           [:span.text-sm.text-gray-600 "Logged in as"]
+           [:select.text-sm.bg-white.border.border-gray-300.rounded.px-2.py-1.focus:outline-none.focus:ring-2.focus:ring-blue-500
+            {:value (str (:client @user))
+             :on-change #(let [selected-client-name (-> % .-target .-value)
+                               selected-client (first (filter #(= (:client_name %) selected-client-name) @available-clients))]
+                           (when selected-client
+                             (rf/dispatch [:switch-client (:client_id selected-client)])))
+             :disabled @switching-client?}
+            (for [client @available-clients]
+              ^{:key (:client_id client)}
+              [:option {:value (:client_name client)} 
+               (str (:client_name client) ":" (:email @user))])]
+           (when @switching-client?
+             [:span.text-xs.text-gray-500 "Switching..."])]
+          ;; Single client - show as text with format "client:email"
+          [:span.text-sm.text-gray-600 
+           (str "Logged in as " (when (:client @user) (str (:client @user) ":")) (:email @user))])
         [:button.px-3.py-1.text-sm.bg-red-500.text-white.rounded.hover:bg-red-600.disabled:opacity-50
          {:on-click #(rf/dispatch [:logout])
           :disabled @logging-out?}

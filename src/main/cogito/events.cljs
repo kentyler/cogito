@@ -150,6 +150,55 @@
                  :on-success [:logout-success]
                  :on-failure [:logout-success]}})) ; Treat failure as success for logout
 
+;; Fetch available clients for current user
+(rf/reg-event-fx
+ :fetch-available-clients
+ (fn [{:keys [db]} _]
+   {:http-xhrio {:method :get
+                 :uri "/api/available-clients"
+                 :headers {"Content-Type" "application/json"}
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:available-clients-received]
+                 :on-failure [:available-clients-failed]}}))
+
+(rf/reg-event-db
+ :available-clients-received
+ (fn [db [_ response]]
+   (assoc db :available-clients (:clients response)
+             :current-client-id (:current_client_id response))))
+
+(rf/reg-event-db
+ :available-clients-failed
+ (fn [db [_ error]]
+   (assoc db :available-clients-error "Failed to fetch available clients")))
+
+;; Switch client
+(rf/reg-event-fx
+ :switch-client
+ (fn [{:keys [db]} [_ client-id]]
+   {:db (assoc db :switching-client? true)
+    :http-xhrio {:method :post
+                 :uri "/api/switch-client"
+                 :headers {"Content-Type" "application/json"}
+                 :params {:client_id client-id}
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:client-switched]
+                 :on-failure [:client-switch-failed]}}))
+
+(rf/reg-event-db
+ :client-switched
+ (fn [db [_ response]]
+   (assoc db :switching-client? false
+             :user (:user response))))
+
+(rf/reg-event-db
+ :client-switch-failed
+ (fn [db [_ error]]
+   (assoc db :switching-client? false
+             :client-switch-error "Failed to switch client")))
+
 (rf/reg-event-db
  :logout-success
  (fn [db _]

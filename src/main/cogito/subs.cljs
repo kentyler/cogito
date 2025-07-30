@@ -128,3 +128,29 @@
  :stuck-meetings/completing
  (fn [db]
    (get db :stuck-meetings/completing {})))
+
+;; Client switching subscriptions
+(rf/reg-sub
+ :available-clients
+ (fn [db]
+   (get db :available-clients [])))
+
+(rf/reg-sub
+ :current-client-id
+ (fn [db]
+   (get db :current-client-id)))
+
+(rf/reg-sub
+ :switching-client?
+ (fn [db]
+   (get db :switching-client? false)))
+
+(rf/reg-sub
+ :client-switch-error
+ (fn [db]
+   (get db :client-switch-error)))
+
+(rf/reg-sub
+ :available-clients-error
+ (fn [db]
+   (get db :available-clients-error)))
