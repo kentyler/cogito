@@ -1,9 +1,10 @@
 import express from 'express';
+import { requireAuth } from './auth.js';
 
 const router = express.Router();
 
 // Get running bots endpoint
-router.get('/bots', async (req, res) => {
+router.get('/bots', requireAuth, async (req, res) => {
   try {
     const user_id = req.session.user.user_id || req.session.user.id;
     
@@ -29,7 +30,7 @@ router.get('/bots', async (req, res) => {
 });
 
 // Get stuck meetings endpoint
-router.get('/stuck-meetings', async (req, res) => {
+router.get('/stuck-meetings', requireAuth, async (req, res) => {
   try {
     console.log('Fetching stuck meetings...');
     const result = await req.db.query(`
@@ -57,7 +58,7 @@ router.get('/stuck-meetings', async (req, res) => {
 });
 
 // Force complete stuck meeting endpoint
-router.post('/stuck-meetings/:meetingId/complete', async (req, res) => {
+router.post('/stuck-meetings/:meetingId/complete', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     
@@ -87,7 +88,7 @@ router.post('/stuck-meetings/:meetingId/complete', async (req, res) => {
 });
 
 // Shutdown bot endpoint
-router.post('/bots/:botId/leave', async (req, res) => {
+router.post('/bots/:botId/leave', requireAuth, async (req, res) => {
   try {
     const { botId } = req.params;
     const user_id = req.session.user.user_id || req.session.user.id;

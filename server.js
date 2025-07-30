@@ -104,8 +104,8 @@ async function startServer() {
     app.use(meetingsEmbeddingsRoutes);
     app.use(meetingsAdditionalRoutes);
     app.use(browserCaptureRoutes);
-    app.use(botsCreateRoutes);
-    app.use(botsManagementRoutes);
+    app.use('/api', botsCreateRoutes);
+    app.use('/api', botsManagementRoutes);
     app.use(webhookChatRoutes);
     
     // Create HTTP server
