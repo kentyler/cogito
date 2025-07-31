@@ -221,7 +221,8 @@
               [:div {:class "text-center py-12"}
                [:div {:class "text-gray-500"}
                 [:p {:class "text-lg"} "No meetings found"]
-                [:p {:class "text-sm mt-2"} "Create a new meeting bot to get started"]]]))]
+                [:p {:class "text-sm mt-2"} "Create a new meeting bot to get started"]]]))
+         ] ;; End of left panel
          
          ;; Right panel - Conversation
          [:div {:class "flex-1 border-l pl-4"}
