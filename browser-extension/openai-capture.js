@@ -3,6 +3,8 @@ class OpenAICapture {
   constructor() {
     this.lastMessageCount = 0;
     this.sessionId = this.generateSessionId();
+    this.captureEnabled = false;
+    this.currentClient = null;
     this.init();
   }
 
@@ -12,6 +14,22 @@ class OpenAICapture {
 
   init() {
     console.log('Cogito: OpenAI capture initialized');
+    
+    // Listen for messages from sidebar/background
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'TOGGLE_CAPTURE') {
+        this.captureEnabled = message.enabled;
+        this.currentClient = message.client;
+        console.log(`Cogito: Capture ${this.captureEnabled ? 'enabled' : 'disabled'}`);
+      }
+    });
+    
+    // Check initial state from storage
+    chrome.storage.local.get(['captureEnabled', 'currentClient'], (data) => {
+      this.captureEnabled = data.captureEnabled || false;
+      this.currentClient = data.currentClient;
+    });
+    
     this.startMonitoring();
   }
 
@@ -32,6 +50,11 @@ class OpenAICapture {
 
   checkForNewMessages() {
     try {
+      // Only process if capture is enabled
+      if (!this.captureEnabled || !this.currentClient) {
+        return;
+      }
+      
       const messages = this.extractMessages();
       if (messages.length > this.lastMessageCount) {
         const newMessages = messages.slice(this.lastMessageCount);
@@ -157,11 +180,7 @@ class OpenAICapture {
       data: conversationData
     });
 
-    console.log('Cogito: Captured OpenAI exchange', {
-      userPromptLength: exchange.userPrompt.length,
-      responseLength: exchange.gptResponse.length,
-      model: conversationData.metadata.model
-    });
+    console.log('Cogito: Captured OpenAI exchange');
   }
 
   detectModel() {
@@ -169,12 +188,6 @@ class OpenAICapture {
     const pageText = document.body.textContent || '';
     if (pageText.includes('GPT-4')) return 'gpt-4';
     if (pageText.includes('GPT-3.5')) return 'gpt-3.5-turbo';
-    
-    // Check URL for model indicators
-    const url = window.location.href;
-    if (url.includes('gpt-4')) return 'gpt-4';
-    if (url.includes('gpt-3')) return 'gpt-3.5-turbo';
-    
     return 'unknown';
   }
 }

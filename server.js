@@ -25,6 +25,7 @@ import browserCaptureRoutes from './server/routes/browser-capture.js';
 import botsCreateRoutes from './server/routes/bots-create.js';
 import botsManagementRoutes from './server/routes/bots-management.js';
 import webhookChatRoutes from './server/routes/webhook-chat.js';
+import extensionApiRoutes from './server/routes/extension-api.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -109,6 +110,7 @@ async function startServer() {
     app.use('/api', botsCreateRoutes);
     app.use('/api', botsManagementRoutes);
     app.use(webhookChatRoutes);
+    app.use('/api', extensionApiRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);

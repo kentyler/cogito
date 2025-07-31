@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">🧠 Cogito</div>
+      <div class="subtitle">AI Assistant</div>
+    </div>
+
+    <!-- Auth Section (shown when not logged in) -->
+    <div id="auth-section" class="section">
+      <h3>Connect to Cogito</h3>
+      <form id="login-form">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit" class="primary-btn">Login</button>
+      </form>
+      <div id="auth-error" class="error-message"></div>
+    </div>
+
+    <!-- Main Interface (shown when logged in) -->
+    <div id="main-interface" class="hidden">
+      <!-- User Info & Client Selector -->
+      <div class="user-section">
+        <div class="user-info">
+          <span id="user-email" class="user-email"></span>
+          <button id="logout-btn" class="link-btn">Logout</button>
+        </div>
+        
+        <!-- Client Selector (only shown if multiple clients) -->
+        <div id="client-selector-wrapper" class="hidden">
+          <select id="client-selector" class="client-selector">
+            <option value="">Select Client...</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Capture Toggle (only on AI sites) -->
+      <div id="capture-section" class="section hidden">
+        <div class="toggle-wrapper">
+          <label class="toggle-label">
+            <span>Capture Conversation</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="capture-toggle">
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+          <div id="capture-status" class="status-text"></div>
+        </div>
+      </div>
+
+      <!-- Query Interface -->
+      <div class="query-section section">
+        <h3>Ask Cogito</h3>
+        <form id="query-form">
+          <textarea 
+            id="query-input" 
+            class="query-input" 
+            placeholder="Enter your question or paste text to analyze..."
+            rows="4"
+          ></textarea>
+          <button type="submit" class="primary-btn" id="submit-query">
+            <span class="btn-text">Ask</span>
+            <span class="loading-spinner hidden">⏳</span>
+          </button>
+        </form>
+        
+        <!-- Response Area -->
+        <div id="response-area" class="response-area hidden">
+          <div class="response-header">
+            <h4>Response</h4>
+            <button id="clear-response" class="link-btn">Clear</button>
+          </div>
+          <div id="response-content" class="response-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <script src="lib/auth-manager.js"></script>
+  <script src="lib/query-manager.js"></script>
+  <script src="lib/ui-manager.js"></script>
+  <script src="sidebar-main.js"></script>
+</body>
+</html>
