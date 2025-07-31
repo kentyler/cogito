@@ -3,6 +3,8 @@ class ClaudeCapture {
   constructor() {
     this.lastMessageCount = 0;
     this.sessionId = this.generateSessionId();
+    this.captureEnabled = false;
+    this.currentClient = null;
     this.init();
   }
 
@@ -12,6 +14,22 @@ class ClaudeCapture {
 
   init() {
     console.log('Cogito: Claude capture initialized');
+    
+    // Listen for messages from sidebar/background
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === 'TOGGLE_CAPTURE') {
+        this.captureEnabled = message.enabled;
+        this.currentClient = message.client;
+        console.log(`Cogito: Capture ${this.captureEnabled ? 'enabled' : 'disabled'}`);
+      }
+    });
+    
+    // Check initial state from storage
+    chrome.storage.local.get(['captureEnabled', 'currentClient'], (data) => {
+      this.captureEnabled = data.captureEnabled || false;
+      this.currentClient = data.currentClient;
+    });
+    
     this.startMonitoring();
   }
 
@@ -32,6 +50,11 @@ class ClaudeCapture {
 
   checkForNewMessages() {
     try {
+      // Only process if capture is enabled
+      if (!this.captureEnabled || !this.currentClient) {
+        return;
+      }
+      
       const messages = this.extractMessages();
       if (messages.length > this.lastMessageCount) {
         const newMessages = messages.slice(this.lastMessageCount);

@@ -1,132 +1,108 @@
-// Background script for handling captured conversations
-class ConversationHandler {
+// Background script for handling sidebar and capture functionality
+class CogitoBackground {
   constructor() {
-    this.localEndpoint = 'http://localhost:3000/api/capture-browser-conversation';
-    this.hostedEndpoint = 'https://cogito-app.onrender.com/api/capture-browser-conversation';
-    this.healthEndpoint = null; // Will be set based on which service is used
+    this.localEndpoint = 'http://localhost:3000';
+    this.hostedEndpoint = 'https://cogito-app.onrender.com';
+    this.currentAuth = null;
+    this.currentClient = null;
     this.init();
   }
 
   init() {
-    // Listen for messages from content scripts
+    // Listen for messages from content scripts and sidebar
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'CAPTURE_CONVERSATION') {
-        this.handleConversation(message.data, sender, sendResponse);
-        return true; // Keep channel open for async response
+      switch (message.type) {
+        case 'CAPTURE_CONVERSATION':
+          this.handleConversation(message.data, sender, sendResponse);
+          return true;
+        case 'CLIENT_CHANGED':
+          this.handleClientChange(message.client);
+          break;
+        case 'TOGGLE_CAPTURE':
+          this.handleCaptureToggle(message.enabled, sender);
+          break;
+        case 'OPEN_SIDEBAR':
+          this.openSidebar();
+          break;
       }
+    });
+
+    // Set up action click to open sidebar
+    chrome.action.onClicked.addListener(() => {
+      this.openSidebar();
     });
 
     console.log('Cogito: Background script initialized');
   }
 
+  async openSidebar() {
+    const tab = await this.getCurrentTab();
+    if (tab) {
+      chrome.sidePanel.open({ tabId: tab.id });
+    }
+  }
+
+  async getCurrentTab() {
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        resolve(tabs[0]);
+      });
+    });
+  }
+
+  handleClientChange(client) {
+    this.currentClient = client;
+    console.log('Cogito: Client changed to:', client.name);
+  }
+
+  async handleCaptureToggle(enabled, sender) {
+    // Notify the appropriate content script
+    if (sender.tab) {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        type: 'CAPTURE_TOGGLE_RESPONSE',
+        enabled: enabled
+      });
+    }
+  }
+
   async handleConversation(conversationData, sender, sendResponse) {
     try {
-      // Add tab information
-      conversationData.tabId = sender.tab?.id;
-      conversationData.tabUrl = sender.tab?.url;
-
-      // Determine which service to use and ensure it's available
-      const serviceInfo = await this.determineService();
-      if (!serviceInfo.available) {
-        console.error('Cogito: No available service found');
-        sendResponse({ success: false, error: 'Service unavailable' });
+      // Get current auth and client info
+      const storage = await chrome.storage.local.get(['authToken', 'currentClient', 'baseUrl']);
+      
+      if (!storage.authToken || !storage.currentClient) {
+        sendResponse({ success: false, error: 'Not authenticated or no client selected' });
         return;
       }
 
-      // Send to appropriate API
-      const response = await this.sendToAPI(conversationData, serviceInfo.endpoint);
-      
-      if (response.ok) {
-        console.log(`Cogito: Conversation captured successfully via ${serviceInfo.type}`);
-        sendResponse({ success: true, service: serviceInfo.type });
-      } else {
-        console.error('Cogito: API error:', response.status, response.statusText);
-        sendResponse({ success: false, error: 'API error' });
-      }
-    } catch (error) {
-      console.error('Cogito: Error handling conversation:', error);
-      sendResponse({ success: false, error: error.message });
-    }
-  }
+      // Add tab and client information
+      conversationData.tabId = sender.tab?.id;
+      conversationData.tabUrl = sender.tab?.url;
+      conversationData.clientId = storage.currentClient.client_id;
 
-  async determineService() {
-    // First, check if user is authenticated with hosted service
-    const authStatus = await this.checkHostedAuth();
-    if (authStatus.authenticated) {
-      return {
-        type: 'hosted',
-        endpoint: this.hostedEndpoint,
-        available: true,
-        authenticated: true
-      };
-    }
-
-    // Fall back to local server if available
-    const localAvailable = await this.checkLocalServer();
-    if (localAvailable) {
-      return {
-        type: 'local',
-        endpoint: this.localEndpoint,
-        available: true,
-        authenticated: false
-      };
-    }
-
-    // No service available
-    return {
-      type: 'none',
-      endpoint: null,
-      available: false,
-      authenticated: false
-    };
-  }
-
-  async checkHostedAuth() {
-    try {
-      const response = await fetch('https://cogito-app.onrender.com/api/auth-status', {
-        method: 'GET',
-        credentials: 'include',
-        timeout: 5000
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return { authenticated: data.authenticated || false };
-      }
-    } catch (error) {
-      console.log('Cogito: Hosted service not available or not authenticated');
-    }
-    
-    return { authenticated: false };
-  }
-
-  async checkLocalServer() {
-    try {
-      const response = await fetch('http://localhost:3000/api/health', {
-        method: 'GET',
-        timeout: 2000
-      });
-      return response.ok;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  async sendToAPI(conversationData, endpoint) {
-    try {
+      // Send to capture endpoint
+      const endpoint = `${storage.baseUrl}/api/capture-browser-conversation`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${storage.authToken}`,
+          'X-Client-ID': storage.currentClient.client_id
         },
-        credentials: 'include', // Important for hosted service authentication
         body: JSON.stringify(conversationData)
       });
-
-      return response;
+      
+      if (response.ok) {
+        console.log(`Cogito: Conversation captured successfully for client ${storage.currentClient.name}`);
+        sendResponse({ success: true, client: storage.currentClient.name });
+      } else {
+        const errorText = await response.text();
+        console.error('Cogito: API error:', response.status, errorText);
+        sendResponse({ success: false, error: `API error: ${response.status}` });
+      }
     } catch (error) {
-      console.error('Cogito: Network error sending to API:', error);
-      throw error;
+      console.error('Cogito: Error handling conversation:', error);
+      sendResponse({ success: false, error: error.message });
     }
   }
 
@@ -136,20 +112,16 @@ class ConversationHandler {
     
     // Set default settings
     chrome.storage.local.set({
-      enabled: true,
-      apiEndpoint: this.apiEndpoint,
-      captureEnabled: {
-        claude: true,
-        openai: true
-      }
+      captureEnabled: false, // Disabled by default for privacy
+      baseUrl: this.localEndpoint
     });
   }
 }
 
 // Initialize background handler
-const conversationHandler = new ConversationHandler();
+const cogitoBackground = new CogitoBackground();
 
 // Handle extension lifecycle
 chrome.runtime.onInstalled.addListener(() => {
-  conversationHandler.handleInstall();
+  cogitoBackground.handleInstall();
 });

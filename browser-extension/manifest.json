@@ -6,7 +6,8 @@
   
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "sidePanel"
   ],
   
   "host_permissions": [
@@ -34,8 +35,11 @@
   },
   
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Cogito Conversation Capture"
+    "default_title": "Open Cogito Sidebar"
+  },
+  
+  "side_panel": {
+    "default_path": "sidebar.html"
   },
   
   "icons": {
