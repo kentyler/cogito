@@ -1008,7 +1008,6 @@ cogito$db$default_db:qw
 cogito$login$login_form:ow
 cogito$meetings$format_date:aw
 cogito$meetings$meeting_conversation_panel:cx
-cogito$meetings$meeting_detail:dw
 cogito$meetings$meetings_list:cw
 cogito$meetings$meetings_page:ew
 cogito$meetings$simple_meeting_item:bw
