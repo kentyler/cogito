@@ -275,8 +275,4 @@
         [:div "Meeting not found"]))))
 
 (defn meetings-page []
-  (let [selected-meeting (rf/subscribe [::selected-meeting])]
-    (fn []
-      (if @selected-meeting
-        [meeting-detail @selected-meeting]
-        [meetings-list]))))
+  [meetings-list])
