@@ -218,6 +218,28 @@
     :turns []
     :current-prompt ""}))
 
+;; Submit prompt with meeting context
+(rf/reg-event-fx
+ :submit-meeting-prompt
+ (fn [{:keys [db]} [_ prompt meeting-id]]
+   ;; Similar to submit-prompt but with meeting context
+   (let [most-recent-turn (last (:turns db))
+         response-context (when (and most-recent-turn 
+                                    (= :response-set (get-in most-recent-turn [:response :response-type])))
+                           (let [turn-id (:id most-recent-turn)
+                                 current-index (get-in db [:alternative-indices turn-id] 0)
+                                 alternatives (get-in most-recent-turn [:response :alternatives])
+                                 selected-alt (nth alternatives current-index nil)]
+                             {:responding-to-alternative {:turn-id turn-id
+                                                         :alternative-index current-index
+                                                         :alternative-id (:id selected-alt)
+                                                         :alternative-summary (:summary selected-alt)}}))]
+     {:db (assoc db :loading? true)
+      :fetch-response {:prompt prompt
+                       :conversation-id (:conversation-id db)
+                       :meeting-id meeting-id
+                       :context response-context}})))
+
 ;; Alternative index tracking for response sets
 (rf/reg-event-db
  :set-current-alternative

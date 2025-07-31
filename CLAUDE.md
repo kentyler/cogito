@@ -1,7 +1,9 @@
 # Claude Code Session Management
 
-## Auto-Loading Session Context
+## Auto-Loading Session Context (DEPRECATED)
+<!-- DEPRECATED: MCP server functionality replaced by Claude Projects built-in context management
 **COGITO AUTO-LOAD**: Session context is automatically loaded on startup when enabled.
+-->
 
 ## Auto-Generated Database Schema
 **AUTOMATIC**: Database schema is automatically dumped to `docs/database-schema-current.md` in multiple ways:
@@ -39,13 +41,15 @@ Previous sessions may contain:
 - Known issues and their solutions
 - **Active explorations** not yet crystallized
 
-## Commands
+## Commands (DEPRECATED - MCP Server Functionality)
+<!-- MOVED TO DEPRECATED: MCP server functionality replaced by Claude Projects
 - `mcp__cogito__load_session_context` - Manually load session context
 - `mcp__cogito__configure_session_settings` - Enable/disable auto-loading
 - Always check if session context was auto-loaded on startup
 - If auto-load is disabled, manually read `session-context.md` when present
 - Check for `exploration-*.md` files for emerging ideas
 - `intentions.edn` is now auto-loaded on startup for architectural context
+-->
 
 ## Working Patterns
 - **Genealogical development**: Projects grow from each other organically

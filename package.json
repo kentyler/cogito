@@ -15,7 +15,10 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs postgres",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint lib/ server.js scripts/ tests/",
+    "lint:fix": "eslint lib/ server.js scripts/ tests/ --fix",
+    "lint:check-sizes": "eslint lib/ --rule '{\"max-lines\": [\"error\", {\"max\": 200}]}'"
   },
   "keywords": [
     "ai",
@@ -47,6 +50,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "eslint": "^9.32.0",
     "jest": "^29.0.0",
     "shadow-cljs": "^2.26.0"
   },

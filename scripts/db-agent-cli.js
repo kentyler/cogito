@@ -178,7 +178,7 @@ async function showParticipant(identifier) {
   
   // Try to find participant
   const result = await dbAgent.query(
-    'SELECT * FROM conversation.participants WHERE id = $1 OR email = $1 OR name = $1',
+    'SELECT * FROM participants WHERE id = $1 OR email = $1 OR name = $1',
     [identifier]
   );
   
@@ -276,7 +276,7 @@ Examples:
   node scripts/db-agent-cli.js schema participants
   node scripts/db-agent-cli.js transcript search "conflict resolution"
   node scripts/db-agent-cli.js participant ken@example.com
-  node scripts/db-agent-cli.js query "SELECT COUNT(*) FROM conversation.turns"
+  node scripts/db-agent-cli.js query "SELECT COUNT(*) FROM meetings.turns"
   `);
 }
 
