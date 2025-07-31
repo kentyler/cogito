@@ -122,11 +122,11 @@ async function generateEmbeddingsForAllMeetings() {
     // Get all meetings that have transcripts but no embeddings
     const result = await pool.query(`
       SELECT 
-        id,
-        meeting_name,
+        meeting_id as id,
+        name as meeting_name,
         full_transcript,
         created_at
-      FROM conversation.block_meetings 
+      FROM conversation.meetings 
       WHERE full_transcript IS NOT NULL 
       AND full_transcript_embedding IS NULL
       ORDER BY created_at DESC
@@ -168,9 +168,9 @@ async function generateEmbeddingsForAllMeetings() {
         // Update the database with the embedding
         try {
           await pool.query(`
-            UPDATE conversation.block_meetings 
+            UPDATE conversation.meetings 
             SET full_transcript_embedding = $1 
-            WHERE id = $2
+            WHERE meeting_id = $2
           `, [JSON.stringify(embedding), meeting.id]);
           console.log('✅ Embedding saved to database');
           successful++;

@@ -1,0 +1,1 @@
+["^ ","~:resource-id",["~:shadow.build.modules/append","~:main"],"~:source","\ntry { cogito.core.init_BANG_(); } catch (e) { console.error(\"An error occurred when calling (cogito.core/init!)\"); console.error(e); }","~:js","\ntry { cogito.core.init_BANG_(); } catch (e) { console.error(\"An error occurred when calling (cogito.core/init!)\"); console.error(e); }"]

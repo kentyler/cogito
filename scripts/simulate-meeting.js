@@ -51,12 +51,12 @@ class MeetingSimulator {
    */
   async createBlock(clientId, userId) {
     // Generate a meeting ID by counting existing blocks for this client
-    const countQuery = `SELECT COUNT(*) as count FROM conversation.blocks WHERE client_id = $1`;
+    const countQuery = `SELECT COUNT(*) as count FROM blocks WHERE client_id = $1`;
     const countResult = await this.databaseAgent.query(countQuery, [clientId]);
     const meetingId = parseInt(countResult.rows[0].count) + 1;
     
     const query = `
-      INSERT INTO conversation.blocks (
+      INSERT INTO blocks (
         name,
         description,
         block_type,
