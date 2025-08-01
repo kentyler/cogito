@@ -14,11 +14,22 @@ export function setupMiddleware(app, pool) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Add CORS for browser extension
+  // Add CORS for browser extension and web clients
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin;
+    
+    // Allow browser extensions (chrome-extension:// or moz-extension://)
+    if (origin && (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://'))) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    } else {
+      // For non-extension requests, use wildcard
+      res.header('Access-Control-Allow-Origin', '*');
+    }
+    
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-ID');
+    
     if (req.method === 'OPTIONS') {
       res.sendStatus(200);
     } else {
@@ -26,18 +37,14 @@ export function setupMiddleware(app, pool) {
     }
   });
 
-  // CORS configuration for production
+  // Additional CORS configuration for production
   if (process.env.NODE_ENV === 'production') {
     app.use((req, res, next) => {
       const origin = req.headers.origin;
-      if (origin && origin.includes('cogito-meetings.onrender.com')) {
-        res.header('Access-Control-Allow-Origin', origin);
-        res.header('Access-Control-Allow-Credentials', 'true');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-      }
-      if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
+      // Skip if already handled by the previous middleware
+      if (origin && (origin.includes('cogito-meetings.onrender.com') || origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://'))) {
+        // Headers already set by previous middleware
+        return next();
       }
       next();
     });
