@@ -1,6 +1,7 @@
 import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
+import { setupCORS } from './cors.js';
 
 const pgSession = connectPgSimple(session);
 
@@ -10,45 +11,12 @@ export function setupMiddleware(app, pool) {
     app.set('trust proxy', 1);
   }
 
+  // Setup CORS before other middleware
+  setupCORS(app);
+  
   // Basic middleware
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-
-  // Add CORS for browser extension and web clients
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    
-    // Allow browser extensions (chrome-extension:// or moz-extension://)
-    if (origin && (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://'))) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-    } else {
-      // For non-extension requests, use wildcard
-      res.header('Access-Control-Allow-Origin', '*');
-    }
-    
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-ID');
-    
-    if (req.method === 'OPTIONS') {
-      res.sendStatus(200);
-    } else {
-      next();
-    }
-  });
-
-  // Additional CORS configuration for production
-  if (process.env.NODE_ENV === 'production') {
-    app.use((req, res, next) => {
-      const origin = req.headers.origin;
-      // Skip if already handled by the previous middleware
-      if (origin && (origin.includes('cogito-meetings.onrender.com') || origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://'))) {
-        // Headers already set by previous middleware
-        return next();
-      }
-      next();
-    });
-  }
 
   // Custom middleware to handle empty JSON bodies
   app.use((err, req, res, next) => {
