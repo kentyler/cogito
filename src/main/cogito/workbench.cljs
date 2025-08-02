@@ -5,7 +5,15 @@
             [cogito.story-arc :as story-arc]
             [cogito.bot-creation :as bot-creation]
             [cogito.meetings :as meetings]
-            [cogito.semantic-map-simple :as semantic-map]))
+            [cogito.semantic-map-simple :as semantic-map]
+            [cogito.daily-summary :as daily-summary]
+            [cogito.monthly-summary :as monthly-summary]
+            [cogito.upload-files-left-pane :as upload-left]
+            [cogito.upload-files-right-pane :as upload-right]
+            [cogito.transcripts-tab :as transcripts]
+            [cogito.tab-buttons :as tab-buttons]
+            [cogito.client-selector :as client-selector]
+            [cogito.logout-button :as logout-button]))
 
 (defn prompt-input []
   (let [current-prompt (rf/subscribe [:current-prompt])
@@ -37,11 +45,8 @@
 
 
 (defn tab-nav []
-  (let [active-tab (rf/subscribe [:workbench/active-tab])
-        user (rf/subscribe [:user])
-        logging-out? (rf/subscribe [:logging-out?])
-        available-clients (rf/subscribe [:available-clients])
-        switching-client? (rf/subscribe [:switching-client?])]
+  (let [user (rf/subscribe [:user])
+        available-clients (rf/subscribe [:available-clients])]
     
     ;; Fetch available clients on component mount if we don't have them
     (when (and @user (empty? @available-clients))
@@ -49,54 +54,10 @@
     
     (fn []
       [:div.tab-nav.flex.border-b.border-gray-200.mb-4.justify-between
-       [:div.flex
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :conversation) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :conversation])}
-         "Conversation"]
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :meetings) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :meetings])}
-         "Meetings"]
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :bot-creation) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :bot-creation])}
-         "Create Bot"]
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :map) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :map])}
-         "Map"]
-        [:button.tab-button.px-4.py-2.border-b-2
-         {:class (if (= @active-tab :meeting-files) "border-blue-500 text-blue-600" "border-transparent text-gray-500 hover:text-gray-700")
-          :on-click #(rf/dispatch [:workbench/set-active-tab :meeting-files])}
-         "Meeting Files"]]
+       [tab-buttons/tab-buttons-section]
        [:div.flex.items-center.space-x-4
-        (if (> (count @available-clients) 1)
-          ;; Multiple clients - show dropdown with format "client:email"  
-          [:div.flex.items-center.space-x-2
-           [:span.text-sm.text-gray-600 "Logged in as"]
-           (if @switching-client?
-             [:div.flex.items-center.space-x-2
-              [:span.text-sm.text-gray-500 "Switching clients..."]
-              [:div.animate-spin.rounded-full.h-3.w-3.border-b-2.border-blue-600]]
-             [:select.text-sm.bg-white.border.border-gray-300.rounded.px-2.py-1.focus:outline-none.focus:ring-2.focus:ring-blue-500
-              {:value (str (:client @user))
-               :on-change #(let [selected-client-name (-> % .-target .-value)
-                                 selected-client (first (filter (fn [c] (= (:client_name c) selected-client-name)) @available-clients))]
-                             (when selected-client
-                               (rf/dispatch [:switch-client (:client_id selected-client)])))
-               :disabled @switching-client?}
-              (for [client @available-clients]
-                ^{:key (:client_id client)}
-                [:option {:value (:client_name client)} 
-                 (str (:client_name client) ":" (:email @user))])])]
-          ;; Single client - show as text with format "client:email"
-          [:span.text-sm.text-gray-600 
-           (str "Logged in as " (when (:client @user) (str (:client @user) ":")) (:email @user))])
-        [:button.px-3.py-1.text-sm.bg-red-500.text-white.rounded.hover:bg-red-600.disabled:opacity-50
-         {:on-click #(rf/dispatch [:logout])
-          :disabled @logging-out?}
-         (if @logging-out? "Logging out..." "Logout")]]])))
+        [client-selector/client-selector]
+        [logout-button/logout-button]]])))
 
 (defn conversation-tab []
   (let [turns (rf/subscribe [:turns])
@@ -120,10 +81,15 @@
           [turn-display turn])]
        [prompt-input]])))
 
-(defn meeting-files-tab []
-  [:div.meeting-files-tab.p-4
-   [:h2.text-xl.font-semibold.mb-4 "Meeting Files"]
-   [:p.text-gray-600 "Coming soon: Upload and manage files for meeting contexts, search across meeting documents, and file-based insights."]])
+(defn upload-files-tab []
+  (let [uploaded-files (rf/subscribe [:upload-files/files])]
+    ;; Load files on mount
+    (when (empty? @uploaded-files)
+      (rf/dispatch [:upload-files/load-files]))
+    (fn []
+      [:div.upload-files-tab.h-full.flex
+       [upload-left/upload-files-left-pane]
+       [upload-right/upload-files-right-pane]])))
 
 (defn panel []
   (let [active-tab (rf/subscribe [:workbench/active-tab])]
@@ -135,5 +101,8 @@
          :meetings [meetings/meetings-page]
          :bot-creation [bot-creation/bot-creation-tab]
          :map [semantic-map/semantic-map-tab]
-         :meeting-files [meeting-files-tab]
+         :upload-files [upload-files-tab]
+         :daily-summary [daily-summary/daily-summary-tab]
+         :monthly-summary [monthly-summary/monthly-summary-tab]
+         :transcripts [transcripts/transcripts-tab]
          [conversation-tab])])))
