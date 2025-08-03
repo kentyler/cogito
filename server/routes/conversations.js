@@ -7,7 +7,7 @@ const router = express.Router();
 // Conversational REPL endpoint
 router.post('/conversational-turn', async (req, res) => {
   try {
-    const { content, conversation_id, meeting_id, context } = req.body;
+    const { content, meeting_id, context } = req.body;
     
     // Development mode: use a default user if no session
     let user_id;
@@ -30,16 +30,13 @@ router.post('/conversational-turn', async (req, res) => {
       user_id: user_id,
       content: content,
       source_type: 'conversational-repl-user',
-      metadata: { conversation_id },
+      metadata: {},
       meeting_id: meeting_id  // Associate turn with meeting if provided
     });
-    
     // Get the current user's client_id to filter discussions
     const { clientId, clientName } = await getClientInfo(req, user_id);
-
     // Get semantically similar conversation history for context
     const conversationContext = await buildConversationContext(req, userTurn, clientId);
-    
     // Generate LLM response
     let llmResponse;
     try {
@@ -149,7 +146,6 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
           source_turn_id: userTurn.turn_id,
           meeting_id: meeting_id,  // Associate turn with meeting if provided
           metadata: { 
-            conversation_id, 
             user_turn_id: userTurn.turn_id,
             response_type: 'response-set',
             has_alternatives: true
@@ -165,7 +161,6 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
           source_turn_id: userTurn.turn_id,
           meeting_id: meeting_id,  // Associate turn with meeting if provided
           metadata: { 
-            conversation_id, 
             user_turn_id: userTurn.turn_id,
             response_type: 'clojure-data'
           }
@@ -180,7 +175,6 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
         source_turn_id: userTurn.turn_id,
         meeting_id: meeting_id,  // Associate turn with meeting if provided
         metadata: { 
-          conversation_id, 
           user_turn_id: userTurn.turn_id,
           response_type: 'clojure-data'
         }
@@ -192,10 +186,8 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
       user_turn_id: userTurn.turn_id,
       prompt: content,
       response: llmResponse,
-      conversation_id: conversation_id || userTurn.turn_id,
       created_at: llmTurn.created_at
     });
-    
   } catch (error) {
     console.error('Conversational REPL error:', error);
     res.status(500).json({ error: 'Failed to process conversational turn' });
