@@ -1,13 +1,14 @@
 import express from 'express';
 import { createTurn } from '../lib/turn-compatibility.js';
 import { buildConversationContext, getClientInfo } from '../lib/conversation-context.js';
+import { buildConversationalPrompt, processLLMResponse } from '../lib/llm-prompt-builder.js';
 
 const router = express.Router();
 
 // Conversational REPL endpoint
 router.post('/conversational-turn', async (req, res) => {
   try {
-    const { content, meeting_id, context } = req.body;
+    const { content, context } = req.body;
     
     // Development mode: use a default user if no session
     let user_id;
@@ -24,6 +25,12 @@ router.post('/conversational-turn', async (req, res) => {
     if (!content) {
       return res.status(400).json({ error: 'Content is required' });
     }
+
+    // Get meeting_id from session (created during login/client selection)
+    const meeting_id = req.session?.meeting_id;
+    if (!meeting_id) {
+      return res.status(400).json({ error: 'No active session meeting found' });
+    }
     
     // Store the user's prompt as a turn with embedding
     const userTurn = await createTurn(req, {
@@ -31,7 +38,7 @@ router.post('/conversational-turn', async (req, res) => {
       content: content,
       source_type: 'conversational-repl-user',
       metadata: {},
-      meeting_id: meeting_id  // Associate turn with meeting if provided
+      meeting_id: meeting_id
     });
     // Get the current user's client_id to filter discussions
     const { clientId, clientName } = await getClientInfo(req, user_id);
@@ -41,64 +48,7 @@ router.post('/conversational-turn', async (req, res) => {
     let llmResponse;
     try {
       if (req.anthropic) {
-        const prompt = `You are powering a Conversational REPL that generates executable UI components.
-
-CONTEXTUAL AWARENESS:
-You have access to semantically similar past conversations from ${clientName}. These are discussions that are topically related to the current prompt. Use this context to:
-- Build upon previous discussions and topics within this organization that are similar to the current topic
-- Reference earlier points when they're directly relevant to the current conversation
-- Maintain conversational continuity by connecting to related past themes
-- Avoid repeating information already covered in similar discussions
-- Connect new responses to ongoing themes that are semantically related
-- When asked about "what people are talking about", focus on discussions within ${clientName} that are similar to this query
-
-CONVERSATIONAL TOPOLOGY ASSESSMENT:
-Before responding, consider if there are multiple genuinely different conversation territories this prompt could lead to. Present multiple responses when:
-- Different paths lead to fundamentally different conversation territories
-- The alternatives represent substantially different approaches to understanding or solving
-- The unstated possibilities might be more valuable than the obvious response
-
-Present single response when:
-- Multiple paths exist but converge toward similar insights
-- The alternatives are minor variations rather than true alternatives
-
-When responding, output valid EDN/ClojureScript data structures.
-
-IMPORTANT: ALL strings MUST be double-quoted. This includes strings in vectors/lists.
-
-SINGLE RESPONSE (most cases):
-{:response-type :text
- :content "Your response here"}
-
-MULTIPLE RESPONSES (when genuine alternatives exist):
-{:response-type :response-set
- :alternatives [{:id "implementation"
-                 :summary "Direct implementation approach"
-                 :response-type :text
-                 :content "Here's how to implement..."}
-                {:id "exploration"
-                 :summary "Research and analysis approach"
-                 :response-type :list
-                 :items ["First examine..." "Then investigate..." "Finally implement..."]}
-                {:id "clarification"
-                 :summary "Clarifying questions approach"
-                 :response-type :text
-                 :content "Before proceeding, I need to understand..."}]}
-
-Other available response types: :list, :spreadsheet, :diagram, :email
-Remember: Every string value must be wrapped in double quotes!
-
-${conversationContext}
-
-Current user prompt: "${content}"
-
-${context && context.responding_to_alternative ? 
-  `CONTEXT: User is responding to alternative "${context.responding_to_alternative.alternative_summary}" (${context.responding_to_alternative.alternative_id}) from a previous response set.` : 
-  ''}
-
-Assess whether multiple conversation territories exist, then respond appropriately. Use the conversation context to inform your response and maintain continuity with previous discussions.
-
-CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory text before or after the data structure.`;
+        const prompt = buildConversationalPrompt(clientName, conversationContext, content, context);
 
         const message = await req.anthropic.messages.create({
           model: "claude-3-haiku-20240307",
@@ -106,23 +56,7 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
           messages: [{ role: "user", content: prompt }]
         });
         
-        let responseText = message.content[0].text;
-        
-        // Extract EDN data structure from response
-        if (responseText.includes(':response-type')) {
-          // Find the EDN data structure (starts with { and ends with })
-          const startIdx = responseText.indexOf('{');
-          const endIdx = responseText.lastIndexOf('}');
-          
-          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-            llmResponse = responseText.substring(startIdx, endIdx + 1).trim();
-          } else {
-            // Fallback if we can't extract properly
-            llmResponse = responseText.trim();
-          }
-        } else {
-          llmResponse = `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
-        }
+        llmResponse = processLLMResponse(message.content[0].text);
         
       } else {
         llmResponse = `{:response-type :text :content "Claude not available - check ANTHROPIC_API_KEY"}`;
@@ -144,7 +78,7 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
           content: llmResponse,
           source_type: 'conversational-repl-llm',
           source_turn_id: userTurn.turn_id,
-          meeting_id: meeting_id,  // Associate turn with meeting if provided
+          meeting_id: meeting_id,
           metadata: { 
             user_turn_id: userTurn.turn_id,
             response_type: 'response-set',
@@ -159,7 +93,7 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
           content: llmResponse,
           source_type: 'conversational-repl-llm',
           source_turn_id: userTurn.turn_id,
-          meeting_id: meeting_id,  // Associate turn with meeting if provided
+          meeting_id: meeting_id,
           metadata: { 
             user_turn_id: userTurn.turn_id,
             response_type: 'clojure-data'
@@ -173,7 +107,7 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
         content: llmResponse,
         source_type: 'conversational-repl-llm',
         source_turn_id: userTurn.turn_id,
-        meeting_id: meeting_id,  // Associate turn with meeting if provided
+        meeting_id: meeting_id,
         metadata: { 
           user_turn_id: userTurn.turn_id,
           response_type: 'clojure-data'
