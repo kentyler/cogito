@@ -3,7 +3,6 @@
 (def default-db
   {:user nil
    :authenticated? false
-   :conversation-id nil
    :turns []
    :current-prompt ""
    :loading? false

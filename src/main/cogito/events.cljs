@@ -2,7 +2,8 @@
   (:require [re-frame.core :as rf]
             [cogito.db :as db]
             [ajax.core :as ajax]
-            [day8.re-frame.http-fx]))
+            [day8.re-frame.http-fx]
+            [cogito.edn-parser :as parser]))
 
 (rf/reg-event-db
  :initialize-db
@@ -31,19 +32,17 @@
                                                          :alternative-summary (:summary selected-alt)}}))]
      {:db (assoc db :loading? true)
       :fetch-response {:prompt prompt
-                       :conversation-id (:conversation-id db)
                        :meeting-id (get-in db [:active-meeting :meeting_id])
                        :context response-context}})))
 
 (rf/reg-fx
  :fetch-response
- (fn [{:keys [prompt conversation-id meeting-id context]}]
+ (fn [{:keys [prompt meeting-id context]}]
    (-> (js/fetch "/api/conversational-turn"
                  (clj->js {:method "POST"
                            :headers {"Content-Type" "application/json"}
                            :credentials "include"
                            :body (js/JSON.stringify (clj->js {:content prompt
-                                                             :conversation_id conversation-id
                                                              :meeting_id meeting-id
                                                              :context context}))}))
        (.then #(.json %))
@@ -53,17 +52,12 @@
 (rf/reg-event-db
  :handle-llm-response
  (fn [db [_ response]]
-   (let [parsed-response (try
-                          ;; Try to parse the ClojureScript response
-                          (js/eval (str "(" (:response response) ")"))
-                          (catch js/Error e
-                            {:response-type :text
-                             :content (str "Parse error: " (:response response))}))]
+   (js/console.log "Events: Received response from server:" response)
+   (let [parsed-response (parser/parse-cljs-response (:response response))]
+     (js/console.log "Events: Parsed response:" parsed-response)
      (-> db
          (assoc :loading? false
-                :current-prompt ""
-                :conversation-id (or (:conversation-id response) 
-                                    (:conversation-id db)))
+                :current-prompt "")
          (update :turns conj {:id (:id response)
                              :prompt (:prompt response)
                              :response parsed-response})))))
@@ -236,7 +230,6 @@
                                                          :alternative-summary (:summary selected-alt)}}))]
      {:db (assoc db :loading? true)
       :fetch-response {:prompt prompt
-                       :conversation-id (:conversation-id db)
                        :meeting-id meeting-id
                        :context response-context}})))
 
@@ -441,3 +434,341 @@
        (update :stuck-meetings/completing dissoc meeting-id)
        (assoc :bot-creation/message {:type :error
                                      :text "Failed to complete meeting"}))))
+
+;; Daily Summary Events
+(rf/reg-event-db
+ :daily-summary/set-selected-date
+ (fn [db [_ date]]
+   (assoc-in db [:daily-summary :selected-date] date)))
+
+(rf/reg-event-fx
+ :daily-summary/set-selected-year
+ (fn [{:keys [db]} [_ year]]
+   (let [current-date (js/Date. (get-in db [:daily-summary :selected-date]))
+         new-date (js/Date. year (.getMonth current-date) (.getDate current-date))]
+     {:db (assoc-in db [:daily-summary :selected-date] (.toISOString new-date))
+      :dispatch [:daily-summary/load-day]})))
+
+(rf/reg-event-fx
+ :daily-summary/set-selected-month
+ (fn [{:keys [db]} [_ month]]
+   (let [current-date (js/Date. (get-in db [:daily-summary :selected-date]))
+         new-date (js/Date. (.getFullYear current-date) month (.getDate current-date))]
+     {:db (assoc-in db [:daily-summary :selected-date] (.toISOString new-date))
+      :dispatch [:daily-summary/load-day]})))
+
+(rf/reg-event-db
+ :daily-summary/set-loading
+ (fn [db [_ loading?]]
+   (assoc-in db [:daily-summary :loading?] loading?)))
+
+(rf/reg-event-db
+ :daily-summary/set-data
+ (fn [db [_ data]]
+   (assoc-in db [:daily-summary :data] data)))
+
+(rf/reg-event-fx
+ :daily-summary/load-day
+ (fn [{:keys [db]} _]
+   (let [selected-date (get-in db [:daily-summary :selected-date] 
+                              (let [today (js/Date.)]
+                                (.setHours today 0 0 0 0)
+                                (.toISOString today)))]
+     {:db (assoc-in db [:daily-summary :loading?] true)
+      :http-xhrio {:method :get
+                   :uri (str "/api/daily-summary/" (.substring selected-date 0 10))
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :on-success [:daily-summary/load-success]
+                   :on-failure [:daily-summary/load-failure]}})))
+
+(rf/reg-event-db
+ :daily-summary/load-success
+ (fn [db [_ response]]
+   (-> db
+       (assoc-in [:daily-summary :loading?] false)
+       (assoc-in [:daily-summary :data] response))))
+
+(rf/reg-event-db
+ :daily-summary/load-failure
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:daily-summary :loading?] false)
+       (assoc-in [:daily-summary :data] nil))))
+
+(rf/reg-event-fx
+ :daily-summary/previous-day
+ (fn [{:keys [db]} _]
+   (let [current-date (js/Date. (get-in db [:daily-summary :selected-date]))
+         previous-date (js/Date. (.setDate current-date (dec (.getDate current-date))))]
+     {:db (assoc-in db [:daily-summary :selected-date] (.toISOString previous-date))
+      :dispatch [:daily-summary/load-day]})))
+
+(rf/reg-event-fx
+ :daily-summary/next-day
+ (fn [{:keys [db]} _]
+   (let [current-date (js/Date. (get-in db [:daily-summary :selected-date]))
+         next-date (js/Date. (.setDate current-date (inc (.getDate current-date))))]
+     {:db (assoc-in db [:daily-summary :selected-date] (.toISOString next-date))
+      :dispatch [:daily-summary/load-day]})))
+
+(rf/reg-event-fx
+ :daily-summary/generate-summary
+ (fn [{:keys [db]} _]
+   (let [selected-date (get-in db [:daily-summary :selected-date])]
+     {:db (assoc-in db [:daily-summary :summary :generating?] true)
+      :http-xhrio {:method :post
+                   :uri "/api/generate-daily-summary"
+                   :params {:date (.substring selected-date 0 10)}
+                   :format (ajax/json-request-format)
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :on-success [:daily-summary/summary-success]
+                   :on-failure [:daily-summary/summary-failure]}})))
+
+(rf/reg-event-db
+ :daily-summary/summary-success
+ (fn [db [_ response]]
+   (-> db
+       (assoc-in [:daily-summary :summary :generating?] false)
+       (assoc-in [:daily-summary :summary :content] (:summary response)))))
+
+(rf/reg-event-db
+ :daily-summary/summary-failure
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:daily-summary :summary :generating?] false)
+       (assoc-in [:daily-summary :summary :content] "Failed to generate summary. Please try again."))))
+
+;; Monthly summary generation
+(rf/reg-event-fx
+ :daily-summary/generate-monthly-summaries
+ (fn [{:keys [db]} [_ year month]]
+   (let [target-year (or year (.getFullYear (js/Date.)))
+         target-month (or month (.getMonth (js/Date.)))]
+     {:db (assoc-in db [:daily-summary :monthly-summaries :generating?] true)
+      :http-xhrio {:method :post
+                   :uri "/api/generate-monthly-summaries"
+                   :params {:year target-year :month target-month}
+                   :format (ajax/json-request-format)
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :on-success [:daily-summary/monthly-summaries-success]
+                   :on-failure [:daily-summary/monthly-summaries-failure]}})))
+
+(rf/reg-event-db
+ :daily-summary/monthly-summaries-success
+ (fn [db [_ response]]
+   (-> db
+       (assoc-in [:daily-summary :monthly-summaries :generating?] false)
+       (assoc-in [:daily-summary :monthly-summaries :data] (:summaries response))
+       (assoc-in [:daily-summary :monthly-summaries :year] (:year response))
+       (assoc-in [:daily-summary :monthly-summaries :month] (:month response)))))
+
+(rf/reg-event-db
+ :daily-summary/monthly-summaries-failure
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:daily-summary :monthly-summaries :generating?] false)
+       (assoc-in [:daily-summary :monthly-summaries :data] nil))))
+
+;; Monthly Summary Events (yearly summaries)
+(rf/reg-event-fx
+ :monthly-summary/generate-yearly-summaries
+ (fn [{:keys [db]} [_ year]]
+   (let [target-year (or year (.getFullYear (js/Date.)))]
+     {:db (assoc-in db [:monthly-summary :yearly-summaries :generating?] true)
+      :http-xhrio {:method :post
+                   :uri "/api/generate-yearly-summaries"
+                   :params {:year target-year}
+                   :format (ajax/json-request-format)
+                   :response-format (ajax/json-response-format {:keywords? true})
+                   :on-success [:monthly-summary/yearly-summaries-success]
+                   :on-failure [:monthly-summary/yearly-summaries-failure]}})))
+
+(rf/reg-event-db
+ :monthly-summary/yearly-summaries-success
+ (fn [db [_ response]]
+   (-> db
+       (assoc-in [:monthly-summary :yearly-summaries :generating?] false)
+       (assoc-in [:monthly-summary :yearly-summaries :data] (:summaries response))
+       (assoc-in [:monthly-summary :yearly-summaries :year] (:year response)))))
+
+(rf/reg-event-db
+ :monthly-summary/yearly-summaries-failure
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:monthly-summary :yearly-summaries :generating?] false)
+       (assoc-in [:monthly-summary :yearly-summaries :data] nil))))
+
+;; Upload Files Events
+(rf/reg-event-fx
+ :upload-files/handle-files
+ (fn [{:keys [db]} [_ file-list]]
+   (let [files (array-seq file-list)]
+     {:db (assoc-in db [:upload-files :uploading?] true)
+      :upload-files-to-server {:files files}})))
+
+(rf/reg-fx
+ :upload-files-to-server
+ (fn [{:keys [files]}]
+   (doseq [file files]
+     (let [form-data (js/FormData.)]
+       (.append form-data "file" file)
+       (-> (js/fetch "/api/upload-files/upload"
+                     (clj->js {:method "POST"
+                               :credentials "include"
+                               :body form-data}))
+           (.then #(.json %))
+           (.then #(rf/dispatch [:upload-files/file-uploaded (js->clj % :keywordize-keys true)]))
+           (.catch #(rf/dispatch [:upload-files/upload-failed (.-message %)])))))))
+
+(rf/reg-event-fx
+ :upload-files/file-uploaded
+ (fn [{:keys [db]} [_ file-data]]
+   {:db (assoc-in db [:upload-files :uploading?] false)
+    :dispatch [:upload-files/load-files]}))
+
+(rf/reg-event-db
+ :upload-files/upload-failed
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:upload-files :uploading?] false)
+       (assoc-in [:upload-files :error] error))))
+
+(rf/reg-event-fx
+ :upload-files/load-files
+ (fn [{:keys [db]} _]
+   {:http-xhrio {:method :get
+                 :uri "/api/upload-files/files"
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:upload-files/files-loaded]
+                 :on-failure [:upload-files/files-load-failed]}}))
+
+(rf/reg-event-db
+ :upload-files/files-loaded
+ (fn [db [_ files]]
+   (assoc-in db [:upload-files :files] files)))
+
+(rf/reg-event-db
+ :upload-files/files-load-failed
+ (fn [db [_ error]]
+   (assoc-in db [:upload-files :error] "Failed to load files")))
+
+(rf/reg-event-fx
+ :upload-files/select-file
+ (fn [{:keys [db]} [_ file]]
+   {:db (assoc-in db [:upload-files :selected-file] file)
+    :http-xhrio {:method :get
+                 :uri (str "/api/upload-files/files/" (:id file))
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:upload-files/file-content-loaded]
+                 :on-failure [:upload-files/file-content-failed]}}))
+
+(rf/reg-event-db
+ :upload-files/file-content-loaded
+ (fn [db [_ file-with-content]]
+   (assoc-in db [:upload-files :selected-file] file-with-content)))
+
+(rf/reg-event-db
+ :upload-files/file-content-failed
+ (fn [db [_ error]]
+   (assoc-in db [:upload-files :content-error] "Failed to load file content")))
+
+(rf/reg-event-fx
+ :upload-files/delete-file
+ (fn [{:keys [db]} [_ file-id]]
+   {:db (assoc-in db [:upload-files :deleting file-id] true)
+    :http-xhrio {:method :delete
+                 :uri (str "/api/upload-files/files/" file-id)
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:upload-files/file-deleted file-id]
+                 :on-failure [:upload-files/delete-failed file-id]}}))
+
+(rf/reg-event-fx
+ :upload-files/file-deleted
+ (fn [{:keys [db]} [_ file-id]]
+   {:db (update-in db [:upload-files :deleting] dissoc file-id)
+    :dispatch [:upload-files/load-files]}))
+
+(rf/reg-event-db
+ :upload-files/delete-failed
+ (fn [db [_ file-id error]]
+   (-> db
+       (update-in [:upload-files :deleting] dissoc file-id)
+       (assoc-in [:upload-files :error] "Failed to delete file"))))
+
+;; Create text file event
+(rf/reg-event-fx
+ :upload-files/create-text-file
+ (fn [{:keys [db]} [_ {:keys [title content]}]]
+   {:db (assoc-in db [:upload-files :uploading?] true)
+    :http-xhrio {:method :post
+                 :uri "/api/upload-files/create-text"
+                 :params {:title title :content content}
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:upload-files/text-file-created]
+                 :on-failure [:upload-files/text-file-failed]}}))
+
+(rf/reg-event-fx
+ :upload-files/text-file-created
+ (fn [{:keys [db]} [_ file-data]]
+   {:db (assoc-in db [:upload-files :uploading?] false)
+    :dispatch [:upload-files/load-files]}))
+
+(rf/reg-event-db
+ :upload-files/text-file-failed
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:upload-files :uploading?] false)
+       (assoc-in [:upload-files :error] "Failed to create text file"))))
+
+;; Transcripts Events
+(rf/reg-event-fx
+ :transcripts/load-available-dates
+ (fn [{:keys [db]} _]
+   {:db (assoc-in db [:transcripts :loading-dates?] true)
+    :http-xhrio {:method :get
+                 :uri "/api/transcripts/dates"
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:transcripts/dates-loaded]
+                 :on-failure [:transcripts/dates-load-failed]}}))
+
+(rf/reg-event-db
+ :transcripts/dates-loaded
+ (fn [db [_ dates]]
+   (-> db
+       (assoc-in [:transcripts :loading-dates?] false)
+       (assoc-in [:transcripts :available-dates] dates))))
+
+(rf/reg-event-db
+ :transcripts/dates-load-failed
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:transcripts :loading-dates?] false)
+       (assoc-in [:transcripts :error] "Failed to load transcript dates"))))
+
+(rf/reg-event-fx
+ :transcripts/select-date
+ (fn [{:keys [db]} [_ date]]
+   {:db (-> db
+            (assoc-in [:transcripts :selected-date] date)
+            (assoc-in [:transcripts :loading-transcript?] true))
+    :http-xhrio {:method :get
+                 :uri (str "/api/transcripts/date/" date)
+                 :response-format (ajax/json-response-format {:keywords? true})
+                 :on-success [:transcripts/transcript-loaded]
+                 :on-failure [:transcripts/transcript-load-failed]}}))
+
+(rf/reg-event-db
+ :transcripts/transcript-loaded
+ (fn [db [_ transcript-data]]
+   (-> db
+       (assoc-in [:transcripts :loading-transcript?] false)
+       (assoc-in [:transcripts :transcript-data] transcript-data))))
+
+(rf/reg-event-db
+ :transcripts/transcript-load-failed
+ (fn [db [_ error]]
+   (-> db
+       (assoc-in [:transcripts :loading-transcript?] false)
+       (assoc-in [:transcripts :error] "Failed to load transcript data"))))
