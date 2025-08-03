@@ -59,6 +59,28 @@ Previous sessions may contain:
 - **Learning over apps**: Build systems that understand how thinking happens rather than just doing tasks
 - **Conversational participants**: Transform tools into thinking partners that participate rather than serve
 
+## Session Meeting Architecture
+**CRITICAL**: All turns must belong to meetings. Web conversation sessions automatically create meetings:
+
+### Implementation
+- **Meeting Creation**: Happens after successful login/client selection (not during initial login)
+- **Session Storage**: `meeting_id` stored in `req.session.meeting_id` for automatic turn association
+- **Meeting Type**: `'cogito_web'` for web conversation sessions
+- **Turn Association**: All conversational turns automatically reference the session meeting
+
+### Code Locations
+- **Meeting Creation**: `server/lib/session-meeting.js` - `createSessionMeeting()`
+- **Login Integration**: `server/routes/auth.js` - Creates meeting for single-client auto-selection
+- **Client Selection**: `server/routes/client-management.js` - Creates meeting after client selection/switching
+- **Turn Creation**: `server/routes/conversations.js` - Uses `req.session.meeting_id` instead of request body
+- **Frontend**: `src/main/cogito/events.cljs` - No longer sends meeting_id in API calls
+
+### Key Principles
+- **Data Integrity**: No orphaned turns - every turn belongs to a meeting
+- **Session Isolation**: Each user session gets its own meeting
+- **Client Separation**: Switching clients creates a new meeting
+- **Automatic Association**: No manual meeting_id handling in frontend
+
 ## Architecture and Design Reference
 **IMPORTANT**: See `intentions.edn` for comprehensive architectural documentation including:
 - Core purpose and design principles

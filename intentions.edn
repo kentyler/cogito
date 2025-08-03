@@ -80,6 +80,27 @@
                    "Turn embedding and storage"
                    "Claude Code conversation capture"]}
    
+   :web-session-meetings
+   {:intent "Automatic meeting creation for web conversation sessions"
+    :problem-solved "Orphaned turns without proper meeting association in web interface"
+    :status "✅ COMPLETED - All web turns now properly associated with meetings"
+    :locations {:session-helper "server/lib/session-meeting.js"
+                :auth-integration "server/routes/auth.js (single client auto-selection)"
+                :client-selection "server/routes/client-management.js (multi-client selection/switching)"
+                :turn-creation "server/routes/conversations.js (uses session meeting_id)"
+                :llm-prompt "server/lib/llm-prompt-builder.js (extracted for maintainability)"
+                :frontend "src/main/cogito/events.cljs (no longer sends meeting_id)"}
+    :architecture {:meeting-creation "After successful client selection (not during initial login)"
+                   :session-storage "meeting_id stored in req.session.meeting_id"
+                   :meeting-type "'cogito_web' for web conversation sessions"
+                   :turn-association "All turns automatically reference session meeting"
+                   :data-integrity "No orphaned turns - every turn belongs to a meeting"}
+    :key-principles ["Session isolation - each user session gets own meeting"
+                     "Client separation - switching clients creates new meeting"
+                     "Automatic association - no manual meeting_id handling in frontend"
+                     "Data integrity - all turns must belong to meetings"]
+    :implementation-notes "Meeting creation happens at the completion of authentication flow, ensuring proper client_id and user_id association"}
+   
    :meeting-transcripts
    {:intent "Transform meeting recordings into searchable, analyzable data"
     :current-challenge "Large transcripts can't be embedded as single units"
@@ -127,7 +148,13 @@
    :client_id-on-users {:status "refactored 2025-01-25"
                        :replaced-by "user_clients junction table"
                        :migration "031_remove_client_id_from_users.sql"
-                       :note "Enables multi-tenant user access"}}
+                       :note "Enables multi-tenant user access"}
+   
+   :conversation_id-concept {:status "removed 2025-08-03"
+                           :replaced-by "meeting_id session association"
+                           :rationale "conversation_id was unused dead code - all turns should belong to meetings"
+                           :changes ["Removed from API request/response" "Removed from frontend state" "Meeting_id now sourced from session"]
+                           :locations ["server/routes/conversations.js" "src/main/cogito/events.cljs" "src/main/cogito/db.cljs"]}}
   
   :active-explorations
   {:meetings-as-first-class-entities
