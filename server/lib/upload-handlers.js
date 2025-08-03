@@ -1,4 +1,5 @@
 import { processFileContent } from './file-processor.js';
+import { extractTextFromPDF, isPDF } from './pdf-processor.js';
 
 // Create text file handler
 export async function createTextFile(req, res) {
@@ -55,7 +56,9 @@ export async function createTextFile(req, res) {
         filename: file.filename,
         size: file.file_size,
         chunks: chunkCount,
-        uploaded_at: file.created_at
+        uploaded_at: file.created_at,
+        content: content,
+        source_type: 'text-input'
       });
       
     } catch (error) {
@@ -79,7 +82,28 @@ export async function uploadFile(req, res) {
     }
     
     const { originalname, buffer, size, mimetype } = req.file;
-    const content = buffer.toString('utf-8');
+    
+    // Extract text content based on file type
+    let content;
+    let extractedMetadata = {};
+    
+    if (isPDF(originalname, mimetype)) {
+      // Extract text from PDF
+      try {
+        const pdfData = await extractTextFromPDF(buffer);
+        content = pdfData.text;
+        extractedMetadata = {
+          pdf_info: pdfData.info,
+          pdf_pages: pdfData.pages,
+          pdf_version: pdfData.version
+        };
+      } catch (pdfError) {
+        return res.status(400).json({ error: `PDF processing failed: ${pdfError.message}` });
+      }
+    } else {
+      // For text files, just convert buffer to string
+      content = buffer.toString('utf-8');
+    }
     
     const client_id = req.session?.user?.client_id;
     if (!client_id) {
@@ -105,7 +129,8 @@ export async function uploadFile(req, res) {
         client_id,
         JSON.stringify({
           uploaded_by: req.session?.user?.email || 'anonymous',
-          uploaded_at: new Date().toISOString()
+          uploaded_at: new Date().toISOString(),
+          ...extractedMetadata
         })
       ]);
       

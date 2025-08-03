@@ -154,3 +154,125 @@
  :available-clients-error
  (fn [db]
    (get db :available-clients-error)))
+
+;; Daily Summary subscriptions
+(rf/reg-sub
+ :daily-summary/selected-date
+ (fn [db]
+   (get-in db [:daily-summary :selected-date] 
+           (let [today (js/Date.)]
+             (.setHours today 0 0 0 0)
+             (.toISOString today)))))
+
+(rf/reg-sub
+ :daily-summary/selected-year
+ (fn [db]
+   (let [date-str (get-in db [:daily-summary :selected-date] 
+                         (let [today (js/Date.)]
+                           (.setHours today 0 0 0 0)
+                           (.toISOString today)))]
+     (.getFullYear (js/Date. date-str)))))
+
+(rf/reg-sub
+ :daily-summary/selected-month
+ (fn [db]
+   (let [date-str (get-in db [:daily-summary :selected-date] 
+                         (let [today (js/Date.)]
+                           (.setHours today 0 0 0 0)
+                           (.toISOString today)))]
+     (.getMonth (js/Date. date-str)))))
+
+(rf/reg-sub
+ :daily-summary/data
+ (fn [db]
+   (get-in db [:daily-summary :data])))
+
+(rf/reg-sub
+ :daily-summary/loading?
+ (fn [db]
+   (get-in db [:daily-summary :loading?] false)))
+
+(rf/reg-sub
+ :daily-summary/summary
+ (fn [db]
+   (get-in db [:daily-summary :summary])))
+
+;; Monthly summaries subscriptions
+(rf/reg-sub
+ :daily-summary/monthly-summaries
+ (fn [db]
+   (get-in db [:daily-summary :monthly-summaries :data])))
+
+(rf/reg-sub
+ :daily-summary/monthly-summaries-generating?
+ (fn [db]
+   (get-in db [:daily-summary :monthly-summaries :generating?] false)))
+
+(rf/reg-sub
+ :daily-summary/current-day-summary
+ (fn [db]
+   (let [selected-date (get-in db [:daily-summary :selected-date]
+                              (let [today (js/Date.)]
+                                (.setHours today 0 0 0 0)
+                                (.toISOString today)))
+         date-key (.substring selected-date 0 10)
+         monthly-summaries (get-in db [:daily-summary :monthly-summaries :data])]
+     (get monthly-summaries date-key))))
+
+;; Monthly Summary subscriptions (yearly summaries)
+(rf/reg-sub
+ :monthly-summary/yearly-summaries
+ (fn [db]
+   (get-in db [:monthly-summary :yearly-summaries :data])))
+
+(rf/reg-sub
+ :monthly-summary/yearly-summaries-generating?
+ (fn [db]
+   (get-in db [:monthly-summary :yearly-summaries :generating?] false)))
+
+;; Upload Files subscriptions
+(rf/reg-sub
+ :upload-files/files
+ (fn [db]
+   (get-in db [:upload-files :files] [])))
+
+(rf/reg-sub
+ :upload-files/selected-file
+ (fn [db]
+   (get-in db [:upload-files :selected-file])))
+
+(rf/reg-sub
+ :upload-files/uploading?
+ (fn [db]
+   (get-in db [:upload-files :uploading?] false)))
+
+(rf/reg-sub
+ :upload-files/show-text-creator?
+ (fn [db]
+   (get-in db [:upload-files :show-text-creator?] false)))
+
+;; Transcripts subscriptions
+(rf/reg-sub
+ :transcripts/available-dates
+ (fn [db]
+   (get-in db [:transcripts :available-dates] [])))
+
+(rf/reg-sub
+ :transcripts/selected-date
+ (fn [db]
+   (get-in db [:transcripts :selected-date])))
+
+(rf/reg-sub
+ :transcripts/transcript-data
+ (fn [db]
+   (get-in db [:transcripts :transcript-data] [])))
+
+(rf/reg-sub
+ :transcripts/loading-dates?
+ (fn [db]
+   (get-in db [:transcripts :loading-dates?] false)))
+
+(rf/reg-sub
+ :transcripts/loading-transcript?
+ (fn [db]
+   (get-in db [:transcripts :loading-transcript?] false)))
