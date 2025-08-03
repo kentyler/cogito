@@ -709,7 +709,10 @@
 (rf/reg-event-fx
  :upload-files/text-file-created
  (fn [{:keys [db]} [_ file-data]]
-   {:db (assoc-in db [:upload-files :uploading?] false)
+   {:db (-> db
+            (assoc-in [:upload-files :uploading?] false)
+            (assoc-in [:upload-files :show-text-creator?] false)
+            (assoc-in [:upload-files :selected-file] file-data))
     :dispatch [:upload-files/load-files]}))
 
 (rf/reg-event-db
@@ -718,6 +721,17 @@
    (-> db
        (assoc-in [:upload-files :uploading?] false)
        (assoc-in [:upload-files :error] "Failed to create text file"))))
+
+;; Text creator form events
+(rf/reg-event-db
+ :upload-files/show-text-creator
+ (fn [db [_]]
+   (assoc-in db [:upload-files :show-text-creator?] true)))
+
+(rf/reg-event-db
+ :upload-files/hide-text-creator
+ (fn [db [_]]
+   (assoc-in db [:upload-files :show-text-creator?] false)))
 
 ;; Transcripts Events
 (rf/reg-event-fx

@@ -87,9 +87,12 @@
     (when (empty? @uploaded-files)
       (rf/dispatch [:upload-files/load-files]))
     (fn []
-      [:div.upload-files-tab.h-full.flex
-       [upload-left/upload-files-left-pane]
-       [upload-right/upload-files-right-pane]])))
+      [:table.upload-files-tab.h-full.w-full
+       [:tr
+        [:td {:style {:width "33%" :vertical-align "top"} :class "border-r border-gray-200 p-4"}
+         [upload-left/upload-files-left-pane]]
+        [:td {:style {:width "67%" :vertical-align "top"} :class "p-4"}
+         [upload-right/upload-files-right-pane]]]])))
 
 (defn panel []
   (let [active-tab (rf/subscribe [:workbench/active-tab])]

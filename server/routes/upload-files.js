@@ -9,13 +9,13 @@ const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
   fileFilter: (req, file, cb) => {
-    // Only allow .txt and .md files
-    const allowedTypes = ['.txt', '.md'];
+    // Only allow .txt, .md and .pdf files
+    const allowedTypes = ['.txt', '.md', '.pdf'];
     const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
     if (allowedTypes.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only .txt and .md files are allowed'));
+      cb(new Error('Only .txt, .md and .pdf files are allowed'));
     }
   },
   limits: {
@@ -48,7 +48,7 @@ router.get('/files', async (req, res) => {
         COUNT(c.id) as chunk_count
       FROM context.files f
       LEFT JOIN context.chunks c ON c.file_id = f.id
-      WHERE f.source_type IN ('upload', 'text-input') 
+      WHERE f.source_type IN ('upload', 'text-input', 'snippet') 
         AND f.client_id = $1
       GROUP BY f.id
       ORDER BY f.created_at DESC
