@@ -36,23 +36,20 @@ async function createTurnWithPool(pool, turnData) {
   } = turnData;
   
   const result = await pool.query(`
-    INSERT INTO conversation.turns 
-    (user_id, prompt, response, source_type, metadata, conversation_id, created_at)
+    INSERT INTO meetings.turns 
+    (user_id, content, source_type, source_turn_id, metadata, meeting_id, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, NOW())
-    RETURNING *
+    RETURNING turn_id, created_at, metadata
   `, [
     user_id,
-    source_type.includes('user') ? content : null,
-    source_type.includes('llm') ? content : null,
+    content,
     source_type,
-    JSON.stringify(metadata),
-    metadata.conversation_id || null
+    source_turn_id,
+    metadata,
+    meeting_id
   ]);
   
-  return {
-    turn_id: result.rows[0].id,
-    ...result.rows[0]
-  };
+  return result.rows[0];
 }
 
 export function findSimilarTurns(req, turnId, limit, threshold) {
