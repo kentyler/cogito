@@ -12,11 +12,12 @@ router.get('/dates', async (req, res) => {
 
     const result = await req.pool.query(`
       SELECT 
-        DATE(created_at) as date,
+        DATE(t.created_at) as date,
         COUNT(*) as turn_count
-      FROM conversation.turns 
-      WHERE client_id = $1
-      GROUP BY DATE(created_at)
+      FROM meetings.turns t
+      JOIN meetings.meetings m ON t.meeting_id = m.id
+      WHERE m.client_id = $1
+      GROUP BY DATE(t.created_at)
       ORDER BY date DESC
       LIMIT 30
     `, [client_id]);
@@ -46,15 +47,17 @@ router.get('/date/:date', async (req, res) => {
 
     const result = await req.pool.query(`
       SELECT 
-        id,
-        prompt,
-        response,
-        created_at,
-        conversation_id
-      FROM conversation.turns 
-      WHERE client_id = $1 
-        AND DATE(created_at) = $2
-      ORDER BY created_at ASC
+        t.id,
+        t.prompt,
+        t.response,
+        t.created_at,
+        t.meeting_id,
+        m.name as meeting_name
+      FROM meetings.turns t
+      JOIN meetings.meetings m ON t.meeting_id = m.id
+      WHERE m.client_id = $1 
+        AND DATE(t.created_at) = $2
+      ORDER BY t.created_at ASC
     `, [client_id, date]);
 
     // Parse the response JSON for each turn

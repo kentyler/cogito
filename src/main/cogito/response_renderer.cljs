@@ -1,6 +1,7 @@
 (ns cogito.response-renderer
   (:require [reagent.core :as r]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [clojure.string :as str]))
 
 ;; The response from LLM should be a ClojureScript data structure like:
 ;; {:response-type :text
@@ -17,17 +18,23 @@
 
 (defmulti render-component :response-type)
 
-;; Default text rendering
+;; Default text rendering with proper formatting
 (defmethod render-component :text [response]
-  [:div.text-response (:content response)])
+  [:div.text-response.space-y-3
+   (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
+     (when-not (str/blank? paragraph)
+       ^{:key idx}
+       [:p.text-gray-700.leading-relaxed paragraph]))])
 
 ;; List rendering
 (defmethod render-component :list [response]
-  [:ul.list-response
+  [:ul.list-response.space-y-2.pl-5.list-disc
    (for [[idx item] (map-indexed vector (:items response))]
      ^{:key idx}
-     [:li 
-      {:on-click (when-let [handler (get-in response [:interactions :on-click])]
+     [:li.text-gray-700.leading-relaxed
+      {:class (when (get-in response [:interactions :on-click])
+                "cursor-pointer hover:text-blue-600 transition-colors")
+       :on-click (when-let [handler (get-in response [:interactions :on-click])]
                    #(handler item))}
       item])])
 
@@ -81,45 +88,51 @@
       (let [alt (current-alt)
             total-count (count alternatives)
             index (or @current-index 0)]
-        [:div.response-set
+        [:div.response-set.border.border-gray-200.rounded-lg.p-4.space-y-4
+         ;; Header with alternative summary
+         [:div.bg-gray-50.rounded-md.p-3
+          [:h3.text-sm.font-semibold.text-gray-700.mb-1 
+           (str "Response " (inc index) " of " total-count)]
+          [:p.text-sm.text-gray-600 (:summary alt)]]
+         
          ;; Current alternative display
-         [:div.alternative-content
+         [:div.alternative-content.pl-4.border-l-4.border-blue-400
           [render-component alt]]
          
          ;; Navigation controls
-         [:div.navigation-controls
-          [:div.nav-buttons
+         [:div.navigation-controls.flex.items-center.justify-between.pt-3.border-t.border-gray-200
+          [:div.nav-buttons.flex.gap-2
            ;; First button |<
-           [:button.nav-btn
+           [:button.nav-btn.px-3.py-1.bg-gray-100.hover:bg-gray-200.rounded.disabled:opacity-50.disabled:cursor-not-allowed.transition-colors
             {:disabled (= index 0)
              :on-click #(set-index! 0)}
             "|<"]
            
            ;; Previous button <<
-           [:button.nav-btn
+           [:button.nav-btn.px-3.py-1.bg-gray-100.hover:bg-gray-200.rounded.disabled:opacity-50.disabled:cursor-not-allowed.transition-colors
             {:disabled (= index 0)
              :on-click #(set-index! (dec index))}
             "<<"]
            
            ;; Next button >>
-           [:button.nav-btn
+           [:button.nav-btn.px-3.py-1.bg-gray-100.hover:bg-gray-200.rounded.disabled:opacity-50.disabled:cursor-not-allowed.transition-colors
             {:disabled (= index (dec total-count))
              :on-click #(set-index! (inc index))}
             ">>"]
            
            ;; Last button >|
-           [:button.nav-btn
+           [:button.nav-btn.px-3.py-1.bg-gray-100.hover:bg-gray-200.rounded.disabled:opacity-50.disabled:cursor-not-allowed.transition-colors
             {:disabled (= index (dec total-count))
              :on-click #(set-index! (dec total-count))}
             ">|"]]
           
-          ;; Counter display
-          [:div.nav-counter
-           (str (inc index) " of " total-count)]
-          
-          ;; Alternative summary
-          [:div.alternative-summary
-           (:summary alt)]]]))))
+          ;; Alternative pills
+          [:div.flex.gap-1
+           (for [i (range total-count)]
+             ^{:key i}
+             [:button.w-2.h-2.rounded-full.transition-colors
+              {:class (if (= i index) "bg-blue-500" "bg-gray-300 hover:bg-gray-400")
+               :on-click #(set-index! i)}])]]]))))
 
 ;; Default fallback
 (defmethod render-component :default [response]
