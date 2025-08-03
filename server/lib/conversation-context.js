@@ -49,16 +49,25 @@ export async function getClientInfo(req, user_id) {
   let clientName = 'your organization';
   
   try {
-    if (req.session && req.session.user && req.session.user.client_id) {
+    if (req.session && req.session.user) {
       clientId = req.session.user.client_id;
-      
-      const clientResult = await req.pool.query(
-        'SELECT client_name FROM clients WHERE client_id = $1',
-        [clientId]
-      );
-      
-      if (clientResult.rows.length > 0) {
-        clientName = clientResult.rows[0].client_name;
+      clientName = req.session.user.client_name || clientName;
+    }
+    
+    // If we have a pool/db but no client name, try to fetch it
+    const pool = req.pool || req.db;
+    if (clientId && pool && !req.session?.user?.client_name) {
+      try {
+        const clientResult = await pool.query(
+          'SELECT name as client_name FROM client_mgmt.clients WHERE id = $1',
+          [clientId]
+        );
+        
+        if (clientResult.rows.length > 0) {
+          clientName = clientResult.rows[0].client_name;
+        }
+      } catch (e) {
+        console.log('Could not fetch client name:', e.message);
       }
     }
   } catch (error) {
