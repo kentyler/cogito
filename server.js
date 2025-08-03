@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 
@@ -26,6 +27,9 @@ import botsCreateRoutes from './server/routes/bots-create.js';
 import botsManagementRoutes from './server/routes/bots-management.js';
 import webhookChatRoutes from './server/routes/webhook-chat.js';
 import extensionApiRoutes from './server/routes/extension-api.js';
+import dailySummaryRoutes from './server/routes/daily-summary.js';
+import uploadFilesRoutes from './server/routes/upload-files.js';
+import transcriptsRoutes from './server/routes/transcripts.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -54,6 +58,12 @@ async function startServer() {
     const { anthropic, getEmailTransporter } = await initializeEmail();
     const fileUploadService = new FileUploadService(pool);
     
+    // Initialize processing services
+    turnProcessor = await createTurnProcessor(pool, {
+      generateEmbeddings: true
+    });
+    console.log('✅ Turn processor initialized with embedding support');
+    
     // Configure middleware and inject dependencies
     setupMiddleware(app, pool);
     app.use(databaseMiddleware);
@@ -61,15 +71,10 @@ async function startServer() {
       req.pool = pool;
       req.anthropic = anthropic;
       req.fileUploadService = fileUploadService;
+      req.turnProcessor = turnProcessor;
       req.appendToConversation = (...args) => meetingService.appendToConversation(...args);
       next();
     });
-    
-    // Initialize processing services
-    turnProcessor = await createTurnProcessor(pool, {
-      generateEmbeddings: true
-    });
-    console.log('✅ Turn processor initialized with embedding support');
     
     // Import and initialize transcript processing agents
     const { TranscriptBufferAgent: TBA } = await import('./lib/transcript-buffer-agent.js');
@@ -111,6 +116,9 @@ async function startServer() {
     app.use('/api', botsManagementRoutes);
     app.use(webhookChatRoutes);
     app.use('/api', extensionApiRoutes);
+    app.use('/api', dailySummaryRoutes);
+    app.use('/api/upload-files', uploadFilesRoutes);
+    app.use('/api/transcripts', transcriptsRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);
