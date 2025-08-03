@@ -1,4 +1,5 @@
 import express from 'express';
+import { createSessionMeeting } from '../lib/session-meeting.js';
 
 const router = express.Router();
 
@@ -36,30 +37,39 @@ router.post('/select-client', async (req, res) => {
     
     const client = clientResult.rows[0];
     
-    // Set up full session
-    req.session.user = {
-      user_id: user_id,
-      email: email,
-      client_id: client.client_id,
-      client_name: client.client_name,
-      role: client.role
-    };
-    
-    // Clear pending user
-    delete req.session.pendingUser;
-    
-    req.session.save((err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Session creation failed' });
-      }
-      res.json({ 
-        success: true, 
-        user: { 
-          email: email,
-          client: client.client_name
+    // Create session meeting
+    try {
+      const meeting_id = await createSessionMeeting(req.db, user_id, client.client_id);
+      
+      // Set up full session
+      req.session.user = {
+        user_id: user_id,
+        email: email,
+        client_id: client.client_id,
+        client_name: client.client_name,
+        role: client.role
+      };
+      req.session.meeting_id = meeting_id;
+      
+      // Clear pending user
+      delete req.session.pendingUser;
+      
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Session creation failed' });
         }
+        res.json({ 
+          success: true, 
+          user: { 
+            email: email,
+            client: client.client_name
+          }
+        });
       });
-    });
+    } catch (meetingError) {
+      console.error('Failed to create session meeting:', meetingError);
+      return res.status(500).json({ error: 'Failed to initialize session' });
+    }
     
   } catch (error) {
     console.error('Client selection error:', error);
@@ -134,28 +144,37 @@ router.post('/switch-client', async (req, res) => {
     
     const client = clientResult.rows[0];
     
-    // Update session with new client
-    req.session.user = {
-      user_id: user_id,
-      email: email,
-      client_id: client.client_id,
-      client_name: client.client_name,
-      role: client.role
-    };
-    
-    req.session.save((err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Session update failed' });
-      }
-      res.json({ 
-        success: true, 
-        user: { 
-          email: email,
-          client: client.client_name,
-          role: client.role
+    // Create new session meeting for the new client
+    try {
+      const meeting_id = await createSessionMeeting(req.db, user_id, client.client_id);
+      
+      // Update session with new client
+      req.session.user = {
+        user_id: user_id,
+        email: email,
+        client_id: client.client_id,
+        client_name: client.client_name,
+        role: client.role
+      };
+      req.session.meeting_id = meeting_id;
+      
+      req.session.save((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Session update failed' });
         }
+        res.json({ 
+          success: true, 
+          user: { 
+            email: email,
+            client: client.client_name,
+            role: client.role
+          }
+        });
       });
-    });
+    } catch (meetingError) {
+      console.error('Failed to create session meeting for client switch:', meetingError);
+      return res.status(500).json({ error: 'Failed to switch client' });
+    }
     
   } catch (error) {
     console.error('Client switch error:', error);

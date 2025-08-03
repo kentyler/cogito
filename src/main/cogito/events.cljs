@@ -32,18 +32,16 @@
                                                          :alternative-summary (:summary selected-alt)}}))]
      {:db (assoc db :loading? true)
       :fetch-response {:prompt prompt
-                       :meeting-id (get-in db [:active-meeting :meeting_id])
                        :context response-context}})))
 
 (rf/reg-fx
  :fetch-response
- (fn [{:keys [prompt meeting-id context]}]
+ (fn [{:keys [prompt context]}]
    (-> (js/fetch "/api/conversational-turn"
                  (clj->js {:method "POST"
                            :headers {"Content-Type" "application/json"}
                            :credentials "include"
                            :body (js/JSON.stringify (clj->js {:content prompt
-                                                             :meeting_id meeting-id
                                                              :context context}))}))
        (.then #(.json %))
        (.then #(rf/dispatch [:handle-llm-response (js->clj % :keywordize-keys true)]))
@@ -230,7 +228,6 @@
                                                          :alternative-summary (:summary selected-alt)}}))]
      {:db (assoc db :loading? true)
       :fetch-response {:prompt prompt
-                       :meeting-id meeting-id
                        :context response-context}})))
 
 ;; Alternative index tracking for response sets

@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
+import { createSessionMeeting } from '../lib/session-meeting.js';
 
 const router = express.Router();
 
@@ -91,27 +92,35 @@ router.post('/login', async (req, res) => {
     }
     
     if (clients.length === 1) {
-      // Auto-select the only client
-      req.session.user = {
-        user_id: authenticatedUser.id,
-        email: authenticatedUser.email,
-        client_id: clients[0].client_id,
-        client_name: clients[0].client_name,
-        role: clients[0].role
-      };
-      
-      req.session.save((err) => {
-        if (err) {
-          return res.status(500).json({ error: 'Session creation failed' });
-        }
-        res.json({ 
-          success: true, 
-          user: { 
-            email: authenticatedUser.email,
-            client: clients[0].client_name
+      // Auto-select the only client and create session meeting
+      try {
+        const meeting_id = await createSessionMeeting(req.db, authenticatedUser.id, clients[0].client_id);
+        
+        req.session.user = {
+          user_id: authenticatedUser.id,
+          email: authenticatedUser.email,
+          client_id: clients[0].client_id,
+          client_name: clients[0].client_name,
+          role: clients[0].role
+        };
+        req.session.meeting_id = meeting_id;
+        
+        req.session.save((err) => {
+          if (err) {
+            return res.status(500).json({ error: 'Session creation failed' });
           }
+          res.json({ 
+            success: true, 
+            user: { 
+              email: authenticatedUser.email,
+              client: clients[0].client_name
+            }
+          });
         });
-      });
+      } catch (meetingError) {
+        console.error('Failed to create session meeting:', meetingError);
+        return res.status(500).json({ error: 'Failed to initialize session' });
+      }
     } else {
       // Multiple clients - need selection
       req.session.pendingUser = {
