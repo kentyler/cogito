@@ -68,19 +68,23 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
  * Processes LLM response to extract EDN data structure
  */
 export function processLLMResponse(responseText) {
-  // Extract EDN data structure from response
-  if (responseText.includes(':response-type')) {
-    // Find the EDN data structure (starts with { and ends with })
-    const startIdx = responseText.indexOf('{');
-    const endIdx = responseText.lastIndexOf('}');
+  // Try to extract EDN data structure from response
+  const startIdx = responseText.indexOf('{');
+  const endIdx = responseText.lastIndexOf('}');
+  
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    const ednStr = responseText.substring(startIdx, endIdx + 1).trim();
     
-    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-      return responseText.substring(startIdx, endIdx + 1).trim();
+    // Check if it's a valid response structure with :response-type
+    if (ednStr.includes(':response-type')) {
+      return ednStr;
     } else {
-      // Fallback if we can't extract properly
-      return responseText.trim();
+      // It's EDN but missing :response-type, wrap the entire structure
+      // This handles cases like {:date "..." :summary "..."}
+      return `{:response-type :text :content ${ednStr}}`;
     }
-  } else {
-    return `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
   }
+  
+  // No EDN structure found, wrap as plain text
+  return `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
 }

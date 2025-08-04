@@ -134,10 +134,33 @@
               {:class (if (= i index) "bg-blue-500" "bg-gray-300 hover:bg-gray-400")
                :on-click #(set-index! i)}])]]]))))
 
-;; Default fallback
+;; Default fallback - extract displayable content
 (defmethod render-component :default [response]
-  [:div.unknown-response
-   [:pre (pr-str response)]])
+  (let [;; Try to extract meaningful content from various possible keys
+        content (or (:content response)
+                    (:summary response)
+                    (:text response)
+                    (:body response)
+                    (:message response)
+                    ;; If it has :items, render as a list
+                    (when-let [items (:items response)]
+                      (str/join "\n" items))
+                    ;; If it has :data, try to render it meaningfully
+                    (when-let [data (:data response)]
+                      (if (sequential? data)
+                        (str/join "\n" (map str data))
+                        (str data))))]
+    (if content
+      ;; If we found content, render it as plain text
+      [:div.text-response.space-y-3
+       (for [[idx paragraph] (map-indexed vector (str/split-lines (str content)))]
+         (when-not (str/blank? paragraph)
+           ^{:key idx}
+           [:p.text-gray-700.leading-relaxed paragraph]))]
+      ;; Only show raw EDN if we couldn't extract any content
+      [:div.unknown-response.text-gray-500.text-sm
+       [:p.mb-2 "Unknown response format:"]
+       [:pre.bg-gray-100.p-2.rounded.text-xs (pr-str response)]])))
 
 (defn render-response [response]
   ;; Handle both string responses and structured responses
