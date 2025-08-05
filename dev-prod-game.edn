@@ -1,0 +1,66 @@
+{:game "dev-prod-separation"
+ :created "2025-08-05"
+ :status :active
+ :phase :opening
+ 
+ :context
+ {:situation "Cogito needs to evolve rapidly while maintaining stability"
+  :constraint "Single maintainer, limited resources"
+  :opportunity "Users willing to test experimental features"}
+ 
+ :first-stone
+ {:move "Enable separate dev and prod versions"
+  :timestamp "2025-08-05"
+  :rationale "Creates space for experimentation without risking stability"}
+ 
+ :considered-alternatives
+ [{:approach "Separate repositories"
+   :rejected-because "Code drift, difficult merging, maintenance overhead"}
+  {:approach "Long-lived feature branches"
+   :rejected-because "Merge conflicts accumulate, branches diverge"}
+  {:approach "Microservices split"
+   :rejected-because "Too complex for single maintainer"}
+  {:approach "Multiple deployments, same code"
+   :rejected-because "Cannot experiment with schema changes"}
+  {:approach "Pure feature flags"
+   :rejected-because "Cannot make breaking changes, flag complexity"}
+  {:approach "Traditional staging environment"
+   :rejected-because "Staging doesn't reflect real usage patterns"}]
+ 
+ :chosen-path
+ {:architecture "Single codebase with build-time separation"
+  :database "PostgreSQL with branch isolation"
+  :routing "User-controlled via query parameter or session"
+  :benefits ["Real data testing"
+             "Schema evolution freedom"
+             "User-controlled risk exposure"
+             "Clean codebase without divergence"]}
+ 
+ :influence-map
+ {:build-system "Must support multiple ClojureScript builds"
+  :database-connections "Need separate DATABASE_URLs for branches"
+  :user-interface "Add dev/prod mode switcher"
+  :deployment "Can still deploy single codebase"
+  :experimentation "Dev can have breaking changes"
+  :user-trust "Users choose their experience"}
+ 
+ :moves-made
+ [{:move "Choose manual database branching"
+   :timestamp "2025-08-05"
+   :rationale "Simple, fits single-maintainer model, clear mental model"
+   :influence "Creates natural refresh points, enables wild experimentation"}]
+ 
+ :next-moves
+ [{:priority 1 :move "Require automated testing for all features"
+   :rationale "Each feature must add tests that protect it from future breakage"}
+  {:priority 2 :move "Configure shadow-cljs for dual builds"}
+  {:priority 3 :move "Set up manual database branching on Render"}
+  {:priority 4 :move "Implement build selection logic"}
+  {:priority 5 :move "Create initial test suite for existing features"}
+  {:priority 6 :move "Deploy first experimental feature to dev"}]
+ 
+ :success-indicators
+ ["Users actively choosing dev mode"
+  "Features graduating from dev to prod"
+  "No production incidents from experiments"
+  "Faster feature iteration cycle"]}
