@@ -112,7 +112,7 @@ export class WebSocketService {
   async processTranscriptText(meeting, speakerName, text) {
     // Append directly to conversation timeline (legacy approach)
     const conversationEntry = `[${speakerName}] ${text}\n`;
-    const success = await this.appendToConversation(meeting.meeting_id, conversationEntry);
+    const success = await this.appendToConversation(meeting.id, conversationEntry);
     
     if (success) {
       console.log(`📝 Appended transcript from ${speakerName}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);

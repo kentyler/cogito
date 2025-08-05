@@ -74,7 +74,7 @@ export class EmailService {
   // Send transcript email to meeting organizer
   async sendTranscriptEmail(meetingId, meeting) {
     try {
-      console.log(`📧 Preparing to send transcript email for meeting_id: ${meetingId}`);
+      console.log(`📧 Preparing to send transcript email for id: ${meetingId}`);
       
       if (!meeting.transcript_email) {
         console.error('❌ No email address configured for this meeting');
@@ -113,7 +113,7 @@ export class EmailService {
       await this.pool.query(`
         UPDATE meetings 
         SET email_sent = TRUE 
-        WHERE meeting_id = $1
+        WHERE id = $1
       `, [meetingId]);
       
       console.log('✅ Database updated: email_sent = TRUE');
