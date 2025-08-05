@@ -1,7 +1,8 @@
 (ns cogito.invitations
   (:require [re-frame.core :as rf]
             [reagent.core :as r]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [ajax.core :as ajax]))
 
 ;; Events
 (rf/reg-event-fx
@@ -12,8 +13,8 @@
     :http-xhrio {:method :post
                  :uri "/api/invitations/send"
                  :params {:email email}
-                 :format :json
-                 :response-format :json
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
                  :on-success [:invitations/send-success]
                  :on-failure [:invitations/send-failure]}}))
 
@@ -38,8 +39,8 @@
    {:db (assoc db :invitations/loading true)
     :http-xhrio {:method :get
                  :uri "/api/invitations/pending"
-                 :format :json
-                 :response-format :json
+                 :format (ajax/json-request-format)
+                 :response-format (ajax/json-response-format {:keywords? true})
                  :on-success [:invitations/load-success]
                  :on-failure [:invitations/load-failure]}}))
 
