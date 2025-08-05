@@ -27,7 +27,7 @@ router.post('/conversational-turn', async (req, res) => {
     }
 
     // Get meeting_id from session (created during login/client selection)
-    const meeting_id = req.session?.meeting_id;
+    const meeting_id = req.session?.id;
     if (!meeting_id) {
       return res.status(400).json({ error: 'No active session meeting found' });
     }
@@ -77,10 +77,10 @@ router.post('/conversational-turn', async (req, res) => {
           user_id: user_id,
           content: llmResponse,
           source_type: 'conversational-repl-llm',
-          source_turn_id: userTurn.turn_id,
+          source_id: userTurn.id,
           meeting_id: meeting_id,
           metadata: { 
-            user_turn_id: userTurn.turn_id,
+            user_turn_id: userTurn.id,
             response_type: 'response-set',
             has_alternatives: true
           }
@@ -92,10 +92,10 @@ router.post('/conversational-turn', async (req, res) => {
           user_id: user_id,
           content: llmResponse,
           source_type: 'conversational-repl-llm',
-          source_turn_id: userTurn.turn_id,
+          source_id: userTurn.id,
           meeting_id: meeting_id,
           metadata: { 
-            user_turn_id: userTurn.turn_id,
+            user_turn_id: userTurn.id,
             response_type: 'clojure-data'
           }
         });
@@ -106,18 +106,18 @@ router.post('/conversational-turn', async (req, res) => {
         user_id: user_id,
         content: llmResponse,
         source_type: 'conversational-repl-llm',
-        source_turn_id: userTurn.turn_id,
+        source_id: userTurn.id,
         meeting_id: meeting_id,
         metadata: { 
-          user_turn_id: userTurn.turn_id,
+          user_turn_id: userTurn.id,
           response_type: 'clojure-data'
         }
       });
     }
     
     res.json({
-      id: llmTurn.turn_id,
-      user_turn_id: userTurn.turn_id,
+      id: llmTurn.id,
+      user_turn_id: userTurn.id,
       prompt: content,
       response: llmResponse,
       created_at: llmTurn.created_at

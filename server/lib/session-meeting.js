@@ -30,5 +30,5 @@ export async function createSessionMeeting(pool, user_id, client_id) {
     ]
   );
   
-  return result.rows[0].meeting_id;
+  return result.rows[0].id;
 }

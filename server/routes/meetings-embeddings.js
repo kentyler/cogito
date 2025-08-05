@@ -12,7 +12,7 @@ router.get('/meetings/:meetingId/embeddings', async (req, res) => {
     // Get embeddings and use proper similarity-based clustering
     const query = `
       SELECT 
-        t.turn_id,
+        t.id,
         t.content,
         t.participant_id,
         t.created_at,
@@ -21,7 +21,7 @@ router.get('/meetings/:meetingId/embeddings', async (req, res) => {
         t.content_embedding
       FROM meetings.turns t
       LEFT JOIN participants p ON t.participant_id = p.id
-      WHERE t.meeting_id = $1
+      WHERE t.id = $1
         AND t.content_embedding IS NOT NULL
       ORDER BY t.created_at
     `;
@@ -63,7 +63,7 @@ router.get('/meetings/:meetingId/embeddings', async (req, res) => {
       }
       
       return {
-        turn_id: row.turn_id,
+        turn_id: row.id,
         content: row.content,
         participant_id: row.participant_id,
         participant_name: row.participant_name,
@@ -107,7 +107,7 @@ router.get('/meetings/:meetingId/embeddings', async (req, res) => {
       y = Math.max(50, Math.min(550, y));
       
       return {
-        turn_id: turn.turn_id,
+        turn_id: turn.id,
         content: turn.content,
         participant_id: turn.participant_id,
         participant_name: turn.participant_name,
