@@ -24,7 +24,6 @@
                         (rf/dispatch [:select-client (:client_id @selected-client)])))}
         
         [:div.space-y-3.mb-6
-         [:div "Debug: " (str @available-clients)]
          (for [client @available-clients]
            ^{:key (:client_id client)}
            [:label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50
