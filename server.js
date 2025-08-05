@@ -99,6 +99,7 @@ async function startServer() {
     });
     meetingService.setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, SpeakerProfileAgent, embeddingAgent);
     
+
     // Health check endpoint
     app.get('/health', (req, res) => {
       res.json({ status: 'healthy', service: 'conversational-repl' });
