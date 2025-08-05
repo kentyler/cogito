@@ -1314,9 +1314,9 @@ cogito$daily_summary$daily_summary_tab:xy
 cogito$daily_summary$get_month_year_options:NA
 cogito$db$default_db:Gy
 cogito$file_list$file_list:wC
-cogito$invitations$invitation_form:lD
+cogito$invitations$form$invitation_form:os
 cogito$invitations$invitations_panel:nD
-cogito$invitations$pending_invitations:mD
+cogito$invitations$list$pending_invitations:lD
 cogito$login$login_form:Ey
 cogito$logout_button$logout_button:HC
 cogito$meetings$format_date:qy
