@@ -28,7 +28,7 @@ router.post('/capture-browser-conversation', async (req, res) => {
 
     // Check if we already have a meeting for this session
     let meetingResult = await req.db.query(
-      'SELECT meeting_id FROM meetings.meetings WHERE name = $1 AND meeting_type = $2',
+      'SELECT id FROM meetings.meetings WHERE name = $1 AND meeting_type = $2',
       [`${platform} Session ${sessionId}`, 'browser_conversation']
     );
 

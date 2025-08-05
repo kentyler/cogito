@@ -16,7 +16,7 @@ router.post('/webhook/chat', async (req, res) => {
     
     // Find the meeting for this bot
     const meeting = await webhookService.findMeetingByBot(botId);
-    const meetingId = meeting.meeting_id;
+    const meetingId = meeting.id;
     
     // Check if message is from Cogito (prevent loops)
     const commandCheck = webhookService.isCommandMessage(messageText, senderName);
@@ -74,7 +74,7 @@ router.post('/webhook/chat', async (req, res) => {
 
 // Generate AI response based on message type
 async function generateResponse(webhookService, meeting, messageText, commandCheck, anthropic) {
-  const { hasContent, conversationText } = await webhookService.getConversationContext(meeting.meeting_id);
+  const { hasContent, conversationText } = await webhookService.getConversationContext(meeting.id);
   
   if (!hasContent) {
     return commandCheck.isQuestion 
@@ -110,7 +110,7 @@ async function generateDirectedResponse(webhookService, meeting, messageText, co
   
   // Get relevant file content
   const clientId = meeting.client_id || 6; // Default to cogito client
-  const relevantFileContent = await webhookService.getRelevantFileContent(meeting.meeting_id, question, clientId);
+  const relevantFileContent = await webhookService.getRelevantFileContent(meeting.id, question, clientId);
   
   const prompt = `You are Cogito, an AI meeting assistant listening to a live meeting. You have access to the conversation transcript and any relevant uploaded documents.
 
@@ -133,7 +133,7 @@ Please provide a helpful, contextual response based on the meeting content and a
 // Generate summary response for '?' command
 async function generateSummaryResponse(webhookService, meeting, conversationText, anthropic) {
   // Get uploaded files context
-  const uploadedFilesContext = await webhookService.getUploadedFilesContext(meeting.meeting_id);
+  const uploadedFilesContext = await webhookService.getUploadedFilesContext(meeting.id);
   
   const prompt = `You are Cogito, an AI meeting assistant. Provide a brief status update about this live meeting.
 
