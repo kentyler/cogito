@@ -31,7 +31,7 @@ export class MeetingCleanupService {
       
       // End transcript processing first
       if (this.transcriptService) {
-        await this.transcriptService.endMeetingTranscriptProcessing(meeting.meeting_id);
+        await this.transcriptService.endMeetingTranscriptProcessing(meeting.id);
       }
       
       // Update meeting status to completed
@@ -51,8 +51,8 @@ export class MeetingCleanupService {
         
         // Get updated meeting data with full transcript
         const updatedMeetingResult = await this.pool.query(
-          'SELECT * FROM meetings WHERE meeting_id = $1',
-          [meeting.meeting_id]
+          'SELECT * FROM meetings WHERE id = $1',
+          [meeting.id]
         );
         
         if (updatedMeetingResult.rows.length > 0) {
@@ -61,7 +61,7 @@ export class MeetingCleanupService {
           
           // Send email via webhook service (if available)
           if (global.webhookService && typeof global.webhookService.sendTranscriptEmail === 'function') {
-            await global.webhookService.sendTranscriptEmail(meeting.meeting_id, updatedMeeting);
+            await global.webhookService.sendTranscriptEmail(meeting.id, updatedMeeting);
           } else {
             console.log('ℹ️ No webhook service available for email sending');
           }
@@ -143,11 +143,11 @@ export class MeetingCleanupService {
       for (const meeting of activeMeetings.rows) {
         // Get meeting_id for active meetings
         const meetingDetails = await this.pool.query(
-          'SELECT meeting_id FROM meetings WHERE recall_bot_id = $1',
+          'SELECT id FROM meetings WHERE recall_bot_id = $1',
           [meeting.recall_bot_id]
         );
         if (meetingDetails.rows.length > 0) {
-          activeMeetingIds.add(meetingDetails.rows[0].meeting_id);
+          activeMeetingIds.add(meetingDetails.rows[0].id);
         }
       }
       

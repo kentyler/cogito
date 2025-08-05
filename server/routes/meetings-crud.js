@@ -8,7 +8,7 @@ router.get('/meetings', requireAuth, async (req, res) => {
   try {
     const query = `
       SELECT 
-        m.meeting_id as block_id,  -- Keep legacy field name for frontend compatibility
+        m.id as block_id,  -- Keep legacy field name for frontend compatibility
         m.name as block_name,       -- Keep legacy field name for frontend compatibility
         m.created_at,
         m.metadata,
@@ -16,18 +16,18 @@ router.get('/meetings', requireAuth, async (req, res) => {
         m.started_at as meeting_start_time,
         m.ended_at as meeting_end_time,
         m.status,
-        COUNT(t.turn_id)::integer as turn_count,
+        COUNT(t.id)::integer as turn_count,
         COUNT(CASE WHEN t.content_embedding IS NOT NULL THEN 1 END)::integer as embedded_count,
         COUNT(DISTINCT t.user_id) FILTER (WHERE t.user_id IS NOT NULL)::integer as participant_count,
         array_agg(DISTINCT u.email) FILTER (WHERE u.email IS NOT NULL) as participant_names,
         MIN(t.created_at) as first_turn_time,
         MAX(t.created_at) as last_turn_time
       FROM meetings.meetings m
-      LEFT JOIN meetings.turns t ON m.meeting_id = t.meeting_id
+      LEFT JOIN meetings.turns t ON m.id = t.id
       LEFT JOIN client_mgmt.users u ON t.user_id = u.id
       WHERE m.meeting_type != 'system'  -- Exclude migration tracking records
         AND m.client_id = $1  -- Filter by current user's client
-      GROUP BY m.meeting_id, m.name, m.created_at, m.metadata, m.meeting_url, m.started_at, m.ended_at, m.status
+      GROUP BY m.id, m.name, m.created_at, m.metadata, m.meeting_url, m.started_at, m.ended_at, m.status
       ORDER BY m.created_at DESC
     `;
     
@@ -58,12 +58,12 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
       
       // Get all turn IDs associated with this meeting for deletion
       const turnsResult = await client.query(`
-        SELECT turn_id 
+        SELECT id 
         FROM meetings.turns
-        WHERE meeting_id = $1
+        WHERE id = $1
       `, [meetingId]);
       
-      const turnIds = turnsResult.rows.map(row => row.turn_id);
+      const turnIds = turnsResult.rows.map(row => row.id);
       
       // Delete in the correct order to avoid foreign key constraint violations
       
@@ -77,7 +77,7 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
       // 2. Delete the meeting record
       const deleteMeetingResult = await client.query(`
         DELETE FROM meetings.meetings 
-        WHERE meeting_id = $1
+        WHERE id = $1
       `, [meetingId]);
       
       if (deleteMeetingResult.rowCount === 0) {

@@ -62,7 +62,7 @@ router.post('/meetings/create', async (req, res) => {
     
     // Return the meeting info
     res.json({
-      meeting_id: meeting.meeting_id,
+      meeting_id: meeting.id,
       name: meeting.name,
       created_at: meeting.created_at,
       status: 'active'

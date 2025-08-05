@@ -22,7 +22,7 @@ export class TranscriptService {
 
   // Process individual transcript chunks from WebSocket
   async processTranscriptChunk(meeting, speakerName, text) {
-    const meetingId = meeting.meeting_id;
+    const meetingId = meeting.id;
     
     // Get or create speaker profile agent for this meeting
     let speakerAgent = this.meetingSpeakerAgents.get(meetingId);
@@ -57,7 +57,7 @@ export class TranscriptService {
       
       // Initialize buffer for this meeting
       buffer.startNewBlock({
-        meetingId: meeting.meeting_id,
+        meetingId: meeting.id,
         clientId: meeting.client_id || 6 // Default to cogito client
       });
       
