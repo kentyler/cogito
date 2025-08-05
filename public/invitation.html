@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Your Password - Cogito</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #111827;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #2563eb;
+        }
+        
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .error {
+            color: #dc2626;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .success {
+            color: #059669;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 24px;
+            color: #6b7280;
+        }
+        
+        .login-link a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            Validating invitation...
+        </div>
+        
+        <div id="invalid" class="hidden">
+            <h1>Invalid Invitation</h1>
+            <p class="subtitle">This invitation link is invalid or has expired.</p>
+            <div class="login-link">
+                <a href="/">Return to login</a>
+            </div>
+        </div>
+        
+        <div id="form-container" class="hidden">
+            <h1>Set Your Password</h1>
+            <p class="subtitle" id="email-display"></p>
+            
+            <form id="password-form">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required minlength="8" placeholder="At least 8 characters">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required placeholder="Re-enter password">
+                </div>
+                
+                <button type="submit" id="submit-btn">Set Password</button>
+                
+                <div id="error-message" class="error hidden"></div>
+                <div id="success-message" class="success hidden"></div>
+            </form>
+        </div>
+        
+        <div id="success" class="hidden">
+            <h1>Password Set Successfully!</h1>
+            <p class="subtitle">Your password has been set. You can now log in to Cogito.</p>
+            <div class="login-link">
+                <a href="/">Go to login</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const token = window.location.pathname.split('/').pop();
+        const loading = document.getElementById('loading');
+        const invalid = document.getElementById('invalid');
+        const formContainer = document.getElementById('form-container');
+        const success = document.getElementById('success');
+        const form = document.getElementById('password-form');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const submitBtn = document.getElementById('submit-btn');
+        const emailDisplay = document.getElementById('email-display');
+        
+        // Validate token on page load
+        async function validateToken() {
+            loading.classList.remove('hidden');
+            
+            try {
+                const response = await fetch(`/api/invitations/validate/${token}`);
+                const data = await response.json();
+                
+                loading.classList.add('hidden');
+                
+                if (response.ok && data.valid) {
+                    emailDisplay.textContent = `Setting password for ${data.email}`;
+                    formContainer.classList.remove('hidden');
+                } else {
+                    invalid.classList.remove('hidden');
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                invalid.classList.remove('hidden');
+            }
+        }
+        
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            // Clear previous messages
+            errorMessage.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            
+            // Submit form
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span>Setting password...';
+            
+            try {
+                const response = await fetch('/api/invitations/accept', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    formContainer.classList.add('hidden');
+                    success.classList.remove('hidden');
+                } else {
+                    errorMessage.textContent = data.error || 'Failed to set password';
+                    errorMessage.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Set Password';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Network error. Please try again.';
+                errorMessage.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Set Password';
+            }
+        });
+        
+        // Start validation
+        validateToken();
+    </script>
+</body>
+</html>

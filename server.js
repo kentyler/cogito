@@ -30,6 +30,8 @@ import extensionApiRoutes from './server/routes/extension-api.js';
 import dailySummaryRoutes from './server/routes/daily-summary.js';
 import uploadFilesRoutes from './server/routes/upload-files.js';
 import transcriptsRoutes from './server/routes/transcripts.js';
+import invitationsRoutes from './server/routes/invitations.js';
+import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -102,6 +104,9 @@ async function startServer() {
       res.json({ status: 'healthy', service: 'conversational-repl' });
     });
     
+    // Public routes (no auth required)
+    app.use(invitationGatewayRoutes);
+    
     // Mount route handlers with /api prefix for auth routes
     app.use('/api', authRoutes);
     app.use('/api', authExtendedRoutes);
@@ -119,6 +124,7 @@ async function startServer() {
     app.use('/api', dailySummaryRoutes);
     app.use('/api/upload-files', uploadFilesRoutes);
     app.use('/api/transcripts', transcriptsRoutes);
+    app.use('/api/invitations', invitationsRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);

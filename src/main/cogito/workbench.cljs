@@ -11,6 +11,7 @@
             [cogito.upload-files-left-pane :as upload-left]
             [cogito.upload-files-right-pane :as upload-right]
             [cogito.transcripts-tab :as transcripts]
+            [cogito.invitations :as invitations]
             [cogito.tab-buttons :as tab-buttons]
             [cogito.client-selector :as client-selector]
             [cogito.logout-button :as logout-button]))
@@ -108,4 +109,5 @@
          :daily-summary [daily-summary/daily-summary-tab]
          :monthly-summary [monthly-summary/monthly-summary-tab]
          :transcripts [transcripts/transcripts-tab]
+         :invitations [invitations/invitations-panel]
          [conversation-tab])])))
