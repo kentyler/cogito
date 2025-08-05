@@ -15,7 +15,7 @@ router.get('/dates', async (req, res) => {
         DATE(t.created_at) as date,
         COUNT(*) as turn_count
       FROM meetings.turns t
-      JOIN meetings.meetings m ON t.meeting_id = m.id
+      JOIN meetings.meetings m ON t.meeting_id = m.meeting_id
       WHERE m.client_id = $1
       GROUP BY DATE(t.created_at)
       ORDER BY date DESC
@@ -54,7 +54,7 @@ router.get('/date/:date', async (req, res) => {
         t.meeting_id,
         m.name as meeting_name
       FROM meetings.turns t
-      JOIN meetings.meetings m ON t.meeting_id = m.id
+      JOIN meetings.meetings m ON t.meeting_id = m.meeting_id
       WHERE m.client_id = $1 
         AND DATE(t.created_at) = $2
       ORDER BY t.created_at ASC
