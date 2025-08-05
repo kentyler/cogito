@@ -15,29 +15,29 @@ return re_frame.core.dispatch(new cljs.core.PersistentVector(null, 2, 5, cljs.co
 } else {
 return null;
 }
-})], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.space-y-3.mb-6","div.space-y-3.mb-6",590448287),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"Debug: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.deref(available_clients))], null),(function (){var iter__5480__auto__ = (function cogito$client_selection$client_selection_form_$_iter__11415(s__11416){
+})], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.space-y-3.mb-6","div.space-y-3.mb-6",590448287),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),"Debug: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(cljs.core.deref(available_clients))], null),(function (){var iter__5480__auto__ = (function cogito$client_selection$client_selection_form_$_iter__11610(s__11611){
 return (new cljs.core.LazySeq(null,(function (){
-var s__11416__$1 = s__11416;
+var s__11611__$1 = s__11611;
 while(true){
-var temp__5804__auto__ = cljs.core.seq(s__11416__$1);
+var temp__5804__auto__ = cljs.core.seq(s__11611__$1);
 if(temp__5804__auto__){
-var s__11416__$2 = temp__5804__auto__;
-if(cljs.core.chunked_seq_QMARK_(s__11416__$2)){
-var c__5478__auto__ = cljs.core.chunk_first(s__11416__$2);
+var s__11611__$2 = temp__5804__auto__;
+if(cljs.core.chunked_seq_QMARK_(s__11611__$2)){
+var c__5478__auto__ = cljs.core.chunk_first(s__11611__$2);
 var size__5479__auto__ = cljs.core.count(c__5478__auto__);
-var b__11418 = cljs.core.chunk_buffer(size__5479__auto__);
-if((function (){var i__11417 = (0);
+var b__11613 = cljs.core.chunk_buffer(size__5479__auto__);
+if((function (){var i__11612 = (0);
 while(true){
-if((i__11417 < size__5479__auto__)){
-var client = cljs.core._nth(c__5478__auto__,i__11417);
-cljs.core.chunk_append(b__11418,cljs.core.with_meta(new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50","label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50",-678075869),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),((cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)))?"border-blue-500 bg-blue-50":"border-gray-300")], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"input.mr-3","input.mr-3",100966768),new cljs.core.PersistentArrayMap(null, 5, [new cljs.core.Keyword(null,"type","type",1174270348),"radio",new cljs.core.Keyword(null,"name","name",1843675177),"client",new cljs.core.Keyword(null,"value","value",305978217),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client),new cljs.core.Keyword(null,"checked","checked",-50955819),cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)),new cljs.core.Keyword(null,"on-change","on-change",-732046149),((function (i__11417,client,c__5478__auto__,size__5479__auto__,b__11418,s__11416__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client){
+if((i__11612 < size__5479__auto__)){
+var client = cljs.core._nth(c__5478__auto__,i__11612);
+cljs.core.chunk_append(b__11613,cljs.core.with_meta(new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50","label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50",-678075869),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),((cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)))?"border-blue-500 bg-blue-50":"border-gray-300")], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"input.mr-3","input.mr-3",100966768),new cljs.core.PersistentArrayMap(null, 5, [new cljs.core.Keyword(null,"type","type",1174270348),"radio",new cljs.core.Keyword(null,"name","name",1843675177),"client",new cljs.core.Keyword(null,"value","value",305978217),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client),new cljs.core.Keyword(null,"checked","checked",-50955819),cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)),new cljs.core.Keyword(null,"on-change","on-change",-732046149),((function (i__11612,client,c__5478__auto__,size__5479__auto__,b__11613,s__11611__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client){
 return (function (){
 return cljs.core.reset_BANG_(selected_client,client);
-});})(i__11417,client,c__5478__auto__,size__5479__auto__,b__11418,s__11416__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client))
+});})(i__11612,client,c__5478__auto__,size__5479__auto__,b__11613,s__11611__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client))
 ], null)], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.font-medium","div.font-medium",-70133240),new cljs.core.Keyword(null,"client_name","client_name",1164448310).cljs$core$IFn$_invoke$arity$1(client)], null),(cljs.core.truth_(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))?new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.text-sm.text-gray-600","div.text-sm.text-gray-600",103560118),["Role: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))].join('')], null):null)], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client)], null)));
 
-var G__11441 = (i__11417 + (1));
-i__11417 = G__11441;
+var G__11618 = (i__11612 + (1));
+i__11612 = G__11618;
 continue;
 } else {
 return true;
@@ -45,17 +45,17 @@ return true;
 break;
 }
 })()){
-return cljs.core.chunk_cons(cljs.core.chunk(b__11418),cogito$client_selection$client_selection_form_$_iter__11415(cljs.core.chunk_rest(s__11416__$2)));
+return cljs.core.chunk_cons(cljs.core.chunk(b__11613),cogito$client_selection$client_selection_form_$_iter__11610(cljs.core.chunk_rest(s__11611__$2)));
 } else {
-return cljs.core.chunk_cons(cljs.core.chunk(b__11418),null);
+return cljs.core.chunk_cons(cljs.core.chunk(b__11613),null);
 }
 } else {
-var client = cljs.core.first(s__11416__$2);
-return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50","label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50",-678075869),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),((cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)))?"border-blue-500 bg-blue-50":"border-gray-300")], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"input.mr-3","input.mr-3",100966768),new cljs.core.PersistentArrayMap(null, 5, [new cljs.core.Keyword(null,"type","type",1174270348),"radio",new cljs.core.Keyword(null,"name","name",1843675177),"client",new cljs.core.Keyword(null,"value","value",305978217),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client),new cljs.core.Keyword(null,"checked","checked",-50955819),cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)),new cljs.core.Keyword(null,"on-change","on-change",-732046149),((function (client,s__11416__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client){
+var client = cljs.core.first(s__11611__$2);
+return cljs.core.cons(cljs.core.with_meta(new cljs.core.PersistentVector(null, 4, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50","label.flex.items-center.p-3.border.rounded.cursor-pointer.hover:bg-gray-50",-678075869),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"class","class",-2030961996),((cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)))?"border-blue-500 bg-blue-50":"border-gray-300")], null),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"input.mr-3","input.mr-3",100966768),new cljs.core.PersistentArrayMap(null, 5, [new cljs.core.Keyword(null,"type","type",1174270348),"radio",new cljs.core.Keyword(null,"name","name",1843675177),"client",new cljs.core.Keyword(null,"value","value",305978217),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client),new cljs.core.Keyword(null,"checked","checked",-50955819),cljs.core._EQ_.cljs$core$IFn$_invoke$arity$2(client,cljs.core.deref(selected_client)),new cljs.core.Keyword(null,"on-change","on-change",-732046149),((function (client,s__11611__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client){
 return (function (){
 return cljs.core.reset_BANG_(selected_client,client);
-});})(client,s__11416__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client))
-], null)], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.font-medium","div.font-medium",-70133240),new cljs.core.Keyword(null,"client_name","client_name",1164448310).cljs$core$IFn$_invoke$arity$1(client)], null),(cljs.core.truth_(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))?new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.text-sm.text-gray-600","div.text-sm.text-gray-600",103560118),["Role: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))].join('')], null):null)], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client)], null)),cogito$client_selection$client_selection_form_$_iter__11415(cljs.core.rest(s__11416__$2)));
+});})(client,s__11611__$2,temp__5804__auto__,available_clients,selecting_QMARK_,error,selected_client))
+], null)], null),new cljs.core.PersistentVector(null, 3, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div","div",1057191632),new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.font-medium","div.font-medium",-70133240),new cljs.core.Keyword(null,"client_name","client_name",1164448310).cljs$core$IFn$_invoke$arity$1(client)], null),(cljs.core.truth_(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))?new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [new cljs.core.Keyword(null,"div.text-sm.text-gray-600","div.text-sm.text-gray-600",103560118),["Role: ",cljs.core.str.cljs$core$IFn$_invoke$arity$1(new cljs.core.Keyword(null,"role","role",-736691072).cljs$core$IFn$_invoke$arity$1(client))].join('')], null):null)], null)], null),new cljs.core.PersistentArrayMap(null, 1, [new cljs.core.Keyword(null,"key","key",-1516042587),new cljs.core.Keyword(null,"client_id","client_id",48809273).cljs$core$IFn$_invoke$arity$1(client)], null)),cogito$client_selection$client_selection_form_$_iter__11610(cljs.core.rest(s__11611__$2)));
 }
 } else {
 return null;
