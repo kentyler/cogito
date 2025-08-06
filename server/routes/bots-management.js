@@ -10,7 +10,7 @@ router.get('/bots', requireAuth, async (req, res) => {
     
     const result = await req.db.query(`
       SELECT 
-        meeting_id as id,
+        id,
         recall_bot_id as bot_id,
         meeting_url,
         name as meeting_name,
@@ -35,7 +35,7 @@ router.get('/stuck-meetings', requireAuth, async (req, res) => {
     console.log('Fetching stuck meetings...');
     const result = await req.db.query(`
       SELECT 
-        meeting_id as id,
+        id,
         recall_bot_id as meeting_id,
         meeting_url,
         name as meeting_name,
