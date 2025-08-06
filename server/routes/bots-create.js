@@ -1,5 +1,6 @@
 import express from 'express';
 import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from './auth.js';
 
 const router = express.Router();
@@ -105,11 +106,15 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     
     console.log('Creating meeting record for bot:', botData.id);
     
+    // Generate UUID for the meeting
+    const meetingId = uuidv4();
+    
     // Create a meeting with proper user and client IDs
     const meetingResult = await req.db.query(
-      `INSERT INTO meetings.meetings (name, description, meeting_type, created_by_user_id, client_id, metadata, meeting_url, recall_bot_id, status) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO meetings.meetings (id, name, description, meeting_type, created_by_user_id, client_id, metadata, meeting_url, recall_bot_id, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
       [
+        meetingId,   // Generated UUID for meeting
         meeting_name || `Meeting ${new Date().toISOString()}`,
         `Meeting from ${meeting_url}`,
         'meeting',
