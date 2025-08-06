@@ -12,8 +12,8 @@ export async function createSessionMeeting(pool, user_id, client_id) {
   const sessionTime = new Date().toISOString();
   
   const result = await pool.query(
-    `INSERT INTO meetings.meetings (meeting_id, name, description, meeting_type, created_by_user_id, client_id, metadata, status) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING meeting_id`,
+    `INSERT INTO meetings.meetings (id, name, description, meeting_type, created_by_user_id, client_id, metadata, status) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
     [
       meeting_id,
       `Web Session ${sessionTime}`,
