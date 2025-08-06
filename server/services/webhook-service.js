@@ -89,7 +89,7 @@ export class WebhookService {
       // First check if there are any files associated with this meeting
       const meetingFileIds = await this.db.query(`
         SELECT file_upload_id FROM meeting_files 
-        WHERE id = $1
+        WHERE meeting_id = $1
       `, [meetingId]);
       
       // Only search files if there are files associated with this meeting
