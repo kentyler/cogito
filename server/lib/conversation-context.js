@@ -3,6 +3,12 @@ import { findSimilarTurns } from './turn-compatibility.js';
 // Find similar file chunks using embedding similarity
 async function findSimilarChunks(pool, embeddingService, content, clientId, limit = 5, minSimilarity = 0.6) {
   try {
+    // Validate content before generating embedding
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      console.warn('Empty or invalid content for embedding generation:', content);
+      return [];
+    }
+    
     // Generate embedding for the user's content
     const queryEmbedding = await embeddingService.generateEmbedding(content);
     const embeddingString = embeddingService.formatForDatabase(queryEmbedding);
@@ -36,24 +42,33 @@ export async function buildConversationContext(req, userTurn, clientId) {
   
   try {
     // Use embedding similarity to find relevant past discussions
-    const similarTurns = await findSimilarTurns(
-      req,
-      userTurn.turn_id, 
-      10, // limit to 10 most similar turns
-      0.7 // minimum similarity threshold
-    );
+    let similarTurns = [];
+    try {
+      similarTurns = await findSimilarTurns(
+        req,
+        userTurn.turn_id, 
+        10, // limit to 10 most similar turns
+        0.7 // minimum similarity threshold
+      );
+    } catch (error) {
+      console.warn('Error finding similar turns:', error.message);
+    }
     
     // Also find relevant file chunks if we have access to embedding service
     let similarChunks = [];
     if (req.turnProcessor && req.turnProcessor.embeddingService && clientId) {
-      similarChunks = await findSimilarChunks(
-        req.pool, 
-        req.turnProcessor.embeddingService, 
-        userTurn.content, 
-        clientId,
-        5, // limit to 5 most similar chunks
-        0.6 // minimum similarity threshold
-      );
+      try {
+        similarChunks = await findSimilarChunks(
+          req.pool, 
+          req.turnProcessor.embeddingService, 
+          userTurn.content, 
+          clientId,
+          5, // limit to 5 most similar chunks
+          0.6 // minimum similarity threshold
+        );
+      } catch (error) {
+        console.warn('Error finding similar chunks:', error.message);
+      }
     }
     
     // Build context from past discussions
