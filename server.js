@@ -4,6 +4,19 @@ import 'dotenv/config';
 import express from 'express';
 import http from 'http';
 
+// Global error handlers to catch crashes
+process.on('uncaughtException', (error) => {
+  console.error('🚨 UNCAUGHT EXCEPTION - Server will exit:', error);
+  console.error('Stack trace:', error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 UNHANDLED PROMISE REJECTION:', reason);
+  console.error('Promise:', promise);
+  console.error('Stack trace:', reason?.stack || 'No stack trace available');
+});
+
 // Import configuration
 import { initializeDatabase, databaseMiddleware } from './server/config/database.js';
 import { initializeEmail } from './server/config/email.js';

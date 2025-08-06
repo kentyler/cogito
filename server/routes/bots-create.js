@@ -122,7 +122,7 @@ router.post('/create-bot', requireAuth, async (req, res) => {
       ]
     );
     const meeting = meetingResult.rows[0];
-    console.log('Meeting created:', meeting.meeting_id);
+    console.log('Meeting created:', meeting.id);
     
     // Update meeting with transcript email
     const userEmail = req.session.user.email;
@@ -130,10 +130,10 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     await req.db.query(
       `UPDATE meetings.meetings 
        SET transcript_email = $1, invited_by_user_id = $2
-       WHERE meeting_id = $3`,
-      [userEmail, user_id, meeting.meeting_id]
+       WHERE id = $3`,
+      [userEmail, user_id, meeting.id]
     );
-    console.log('Meeting record updated with email:', meeting.meeting_id);
+    console.log('Meeting record updated with email:', meeting.id);
     
     // Process uploaded files if any
     let uploadedFiles = [];
@@ -153,7 +153,7 @@ router.post('/create-bot', requireAuth, async (req, res) => {
           await req.db.query(
             `INSERT INTO meetings.meeting_files (meeting_id, file_upload_id, created_by_user_id) 
              VALUES ($1, $2, $3)`,
-            [meeting.meeting_id, fileUpload.id, user_id]
+            [meeting.id, fileUpload.id, user_id]
           );
           
           uploadedFiles.push({

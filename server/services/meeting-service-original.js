@@ -27,7 +27,7 @@ export class MeetingService {
     try {
       // Get current transcript
       const currentResult = await this.pool.query(
-        'SELECT full_transcript FROM meetings WHERE meeting_id = $1',
+        'SELECT full_transcript FROM meetings WHERE id = $1',
         [meetingId]
       );
       
@@ -51,7 +51,7 @@ export class MeetingService {
       
       // Update with the new transcript array
       const result = await this.pool.query(
-        'UPDATE meetings SET full_transcript = $1 WHERE meeting_id = $2 RETURNING *',
+        'UPDATE meetings SET full_transcript = $1 WHERE id = $2 RETURNING *',
         [JSON.stringify(transcript), meetingId]
       );
       
@@ -64,7 +64,7 @@ export class MeetingService {
 
   // Transcript processing helper functions
   async processTranscriptChunk(meeting, speakerName, text) {
-    const meetingId = meeting.meeting_id;
+    const meetingId = meeting.id;
     
     // Get or create speaker profile agent for this meeting
     let speakerAgent = this.meetingSpeakerAgents.get(meetingId);
@@ -99,7 +99,7 @@ export class MeetingService {
       
       // Initialize buffer for this meeting
       buffer.startNewBlock({
-        meetingId: meeting.meeting_id,
+        meetingId: meeting.id,
         clientId: meeting.client_id || 6 // Default to cogito client
       });
       
@@ -154,7 +154,7 @@ export class MeetingService {
       const meeting = meetingResult.rows[0];
       
       // End transcript processing for this meeting
-      await this.endMeetingTranscriptProcessing(meeting.meeting_id);
+      await this.endMeetingTranscriptProcessing(meeting.id);
       
       // Update meeting status 
       await this.pool.query(
@@ -165,7 +165,7 @@ export class MeetingService {
       );
       
       // Append completion info to transcript
-      await this.appendToConversation(meeting.meeting_id, `[System] Meeting ended: ${reason}`);
+      await this.appendToConversation(meeting.id, `[System] Meeting ended: ${reason}`);
       
       console.log(`✅ Meeting ${botId} completed due to ${reason}`);
       
@@ -175,7 +175,7 @@ export class MeetingService {
       // Send email transcript
       if (meeting.transcript_email && meeting.full_transcript) {
         try {
-          await this.sendTranscriptEmail(meeting.meeting_id, meeting);
+          await this.sendTranscriptEmail(meeting.id, meeting);
           console.log(`✅ Transcript email sent to: ${meeting.transcript_email}`);
         } catch (error) {
           console.error(`❌ Failed to send transcript email:`, error);
@@ -369,7 +369,7 @@ ${transcriptText}
       await this.pool.query(`
         UPDATE meetings 
         SET email_sent = TRUE 
-        WHERE meeting_id = $1
+        WHERE id = $1
       `, [meetingId]);
       
       console.log('✅ Database updated: email_sent = TRUE');
@@ -440,11 +440,11 @@ ${transcriptText}
       for (const meeting of activeMeetings.rows) {
         // Get meeting_id for active meetings
         const meetingDetails = await this.pool.query(
-          'SELECT meeting_id FROM meetings WHERE recall_bot_id = $1',
+          'SELECT id FROM meetings WHERE recall_bot_id = $1',
           [meeting.recall_bot_id]
         );
         if (meetingDetails.rows.length > 0) {
-          activeMeetingIds.add(meetingDetails.rows[0].meeting_id);
+          activeMeetingIds.add(meetingDetails.rows[0].id);
         }
       }
       

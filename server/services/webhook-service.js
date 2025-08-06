@@ -66,7 +66,7 @@ export class WebhookService {
   // Get conversation context from meeting
   async getConversationContext(meetingId) {
     const conversationResult = await this.db.query(
-      'SELECT full_transcript FROM meetings WHERE meeting_id = $1',
+      'SELECT full_transcript FROM meetings WHERE id = $1',
       [meetingId]
     );
     
@@ -89,7 +89,7 @@ export class WebhookService {
       // First check if there are any files associated with this meeting
       const meetingFileIds = await this.db.query(`
         SELECT file_upload_id FROM meeting_files 
-        WHERE meeting_id = $1
+        WHERE id = $1
       `, [meetingId]);
       
       // Only search files if there are files associated with this meeting
