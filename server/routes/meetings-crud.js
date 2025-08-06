@@ -61,7 +61,7 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
       const turnsResult = await client.query(`
         SELECT id 
         FROM meetings.turns
-        WHERE id = $1
+        WHERE meeting_id = $1
       `, [meetingId]);
       
       const turnIds = turnsResult.rows.map(row => row.id);
@@ -71,7 +71,7 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
       // 1. Delete turns (now they belong directly to the meeting)
       if (turnIds.length > 0) {
         const turnIdsList = turnIds.map((_, i) => `$${i + 1}`).join(',');
-        await client.query(`DELETE FROM meetings.turns WHERE turn_id IN (${turnIdsList})`, turnIds);
+        await client.query(`DELETE FROM meetings.turns WHERE id IN (${turnIdsList})`, turnIds);
         console.log(`🗑️  Deleted ${turnIds.length} turns from meeting ${meetingId}`);
       }
       
