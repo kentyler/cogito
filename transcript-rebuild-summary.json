@@ -1,0 +1,219 @@
+{
+  "timestamp": "2025-08-05T21:01:45.423Z",
+  "total_meetings": 35,
+  "success_count": 35,
+  "error_count": 0,
+  "errors": [],
+  "meetings_processed": [
+    {
+      "id": "1ff9fdf1-32ad-489f-a54f-85810f0ea81d",
+      "name": "07012025b-session-notes.txt",
+      "turn_count": "398",
+      "type": "conversation"
+    },
+    {
+      "id": "f3730dc1-550c-4886-ad9c-ace1aa07edca",
+      "name": "Google Meet",
+      "turn_count": "216",
+      "type": "meeting"
+    },
+    {
+      "id": "5a00bc20-4fd7-48c9-8c45-e98a3a89f00d",
+      "name": "Session: claude-code-cogito-2025-06-23-085253",
+      "turn_count": "216",
+      "type": "session"
+    },
+    {
+      "id": "dd410787-1cae-48b6-8e1e-4a00f21d56f1",
+      "name": "Conflict Club 7/16",
+      "turn_count": "194",
+      "type": "meeting"
+    },
+    {
+      "id": "5a72c5ff-62c8-42e6-91fe-100395e2ec46",
+      "name": "Session: claude-code-cogito-2025-06-21-123257",
+      "turn_count": "87",
+      "type": "session"
+    },
+    {
+      "id": "5e3fde54-4a15-476e-9ef8-b0747f400a19",
+      "name": "Session: claude-code-cogito-2025-06-22-083233",
+      "turn_count": "58",
+      "type": "session"
+    },
+    {
+      "id": "67da5529-ba7e-4357-99a1-516439c266d8",
+      "name": "Session: claude-code-cogito-2025-06-22-080956",
+      "turn_count": "49",
+      "type": "session"
+    },
+    {
+      "id": "58b9a1de-ef82-46a4-a7da-a914aa49edec",
+      "name": "Session: claude-code-pattern-cognition-2025-06-23-211812",
+      "turn_count": "43",
+      "type": "session"
+    },
+    {
+      "id": "62e1188c-66b4-4767-9b40-485951de6159",
+      "name": "Possibility Space Navigation Discussion",
+      "turn_count": "42",
+      "type": "imported-conversation"
+    },
+    {
+      "id": "716a4c69-0f9f-4d80-a272-ed3d31fd0860",
+      "name": "Web Session 2025-08-04T16:35:23.722Z",
+      "turn_count": "40",
+      "type": "cogito_web"
+    },
+    {
+      "id": "4ff1d253-2ac0-4354-b36e-e3ff18a23bac",
+      "name": "Session: claude-code-pattern-cognition-2025-06-23-211840",
+      "turn_count": "36",
+      "type": "session"
+    },
+    {
+      "id": "5d4e3cad-f404-4796-82ef-875f54613dd6",
+      "name": "Session: claude-code-cogito-2025-06-21-121859",
+      "turn_count": "30",
+      "type": "session"
+    },
+    {
+      "id": "af1e689e-56a8-45bc-85e1-8bc07fa418a5",
+      "name": "Zoom Meeting",
+      "turn_count": "19",
+      "type": "meeting"
+    },
+    {
+      "id": "14a1f127-0970-4d68-9d55-9caccc2733bd",
+      "name": "Zoom Meeting",
+      "turn_count": "18",
+      "type": "meeting"
+    },
+    {
+      "id": "24537971-cbd5-45c1-9042-2235fd8f1fd1",
+      "name": "Session: claude-code-backstage-2025-06-21-121743",
+      "turn_count": "18",
+      "type": "session"
+    },
+    {
+      "id": "78f1f336-39d6-4723-9fda-43d7ee9b9fec",
+      "name": "Session: claude-code-backstage-2025-06-21-121729",
+      "turn_count": "18",
+      "type": "session"
+    },
+    {
+      "id": "20c22157-cb2f-44e2-ae09-da75a09f0a93",
+      "name": "Session: claude-code-backstage-2025-06-22-222237",
+      "turn_count": "8",
+      "type": "session"
+    },
+    {
+      "id": "2802a832-7565-4e8b-8a9f-b8347bc5a4c1",
+      "name": "Session: claude-code-cogito-2025-06-20-145842",
+      "turn_count": "6",
+      "type": "session"
+    },
+    {
+      "id": "d1ad0e51-285b-45bc-9081-dd38a71b14cc",
+      "name": "Web Session 2025-08-03T21:13:49.319Z",
+      "turn_count": "6",
+      "type": "cogito_web"
+    },
+    {
+      "id": "592090dc-1190-4b48-91db-557c72543aa5",
+      "name": "Session: claude-code-liminal-explorer-2025-06-20-150511",
+      "turn_count": "5",
+      "type": "session"
+    },
+    {
+      "id": "7ae9d3e4-617d-43ee-9f40-1f4dcee72953",
+      "name": "Session: claude-code-cogito-2025-06-26-144834",
+      "turn_count": "5",
+      "type": "session"
+    },
+    {
+      "id": "60fd69a0-6cfc-4d76-b572-3444e22b8c98",
+      "name": "Google Meet",
+      "turn_count": "5",
+      "type": "meeting"
+    },
+    {
+      "id": "9f3233c2-cabc-453d-a78c-4ab19ab89750",
+      "name": "Web Session 2025-08-03T15:18:21.068Z",
+      "turn_count": "4",
+      "type": "cogito_web"
+    },
+    {
+      "id": "27ed8054-7a38-4f64-8de0-ab1b992ecbf4",
+      "name": "Session: claude-code-pattern-cognition-2025-06-23-212320",
+      "turn_count": "4",
+      "type": "session"
+    },
+    {
+      "id": "6b6fef8b-574c-4fcb-9a89-e3a833706af5",
+      "name": "Session: claude-code-backstage-2025-06-22-222528",
+      "turn_count": "4",
+      "type": "session"
+    },
+    {
+      "id": "5c331281-015d-4437-9505-5e68cfef4c1f",
+      "name": "Session: claude-code-backstage-2025-06-22-222320",
+      "turn_count": "4",
+      "type": "session"
+    },
+    {
+      "id": "41d92414-7bb9-47e3-9ac2-ade2433d9397",
+      "name": "Session: claude-code-backstage-2025-06-20-150510",
+      "turn_count": "3",
+      "type": "session"
+    },
+    {
+      "id": "6413adaa-944d-40f4-8bc5-8a82130997a0",
+      "name": "Session: claude-code-backstage-2025-06-22-222721",
+      "turn_count": "2",
+      "type": "session"
+    },
+    {
+      "id": "ba9e13cd-18d9-4c4f-9f2c-e355857aca75",
+      "name": "Web Session 2025-08-04T21:56:16.993Z",
+      "turn_count": "2",
+      "type": "cogito_web"
+    },
+    {
+      "id": "2a295826-57be-421f-9dd2-def54835aa7a",
+      "name": "Session: claude-code-backstage-2025-06-21-121750",
+      "turn_count": "2",
+      "type": "session"
+    },
+    {
+      "id": "ddb00eea-2773-417f-a977-63a177bea472",
+      "name": "Claude Session test-session-123",
+      "turn_count": "2",
+      "type": "claude_conversation"
+    },
+    {
+      "id": "49720c53-e254-40d3-9c50-135261326af9",
+      "name": "Claude Code Session: claude-code-cogito-2025-07-02-105745",
+      "turn_count": "1",
+      "type": "claude_code_session"
+    },
+    {
+      "id": "76d99916-9f01-4e57-87b8-2c41e061f2c4",
+      "name": "Claude Code Session: claude-code-cogito-2025-07-02-101004",
+      "turn_count": "1",
+      "type": "claude_code_session"
+    },
+    {
+      "id": "5c1cccb1-cde0-47c6-b957-974fe3e7c505",
+      "name": "Session: test-session-1750524556553",
+      "turn_count": "1",
+      "type": "session"
+    },
+    {
+      "id": "1d85cdd5-5776-47d0-96a3-6c96505fbba9",
+      "name": "Session: claude-code-pattern-cognition-2025-06-23-212004",
+      "turn_count": "1",
+      "type": "session"
+    }
+  ]
+}

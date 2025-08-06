@@ -138,7 +138,7 @@
 (defn simple-meeting-item [meeting selected?]
   [:div {:class (str "bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer "
                      (when selected? "border-blue-500 bg-blue-50"))}
-   [:div {:class "flex justify-between items-center"}
+   [:div {:class "flex justify-between items-start"}
     [:div {:class "flex-1"
            :on-click #(rf/dispatch [::set-selected-meeting (:block_id meeting)])}
      [:h3 {:class (str "text-lg font-medium " (if selected? "text-blue-900" "text-gray-900"))}
@@ -147,7 +147,12 @@
       (format-date (:created_at meeting))]
      [:p {:class "text-sm text-gray-600 mt-1"}
       (str (or (:turn_count meeting) 0) " turns, " 
-           (or (:participant_count meeting) 0) " participants")]]
+           (or (:participant_count meeting) 0) " participants")]
+     
+     ;; Add transcript summary if available
+     (when (:transcript_summary meeting)
+       [:p {:class "text-sm text-gray-700 mt-2 italic bg-gray-50 p-2 rounded"}
+        (:transcript_summary meeting)])]
     
     [:div {:class "flex gap-2"}
      [:button {:class "px-3 py-1 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors duration-200"

@@ -16,6 +16,7 @@ router.get('/meetings', requireAuth, async (req, res) => {
         m.started_at as meeting_start_time,
         m.ended_at as meeting_end_time,
         m.status,
+        m.transcript_summary,
         COUNT(t.id)::integer as turn_count,
         COUNT(CASE WHEN t.content_embedding IS NOT NULL THEN 1 END)::integer as embedded_count,
         COUNT(DISTINCT t.user_id) FILTER (WHERE t.user_id IS NOT NULL)::integer as participant_count,
@@ -23,11 +24,11 @@ router.get('/meetings', requireAuth, async (req, res) => {
         MIN(t.created_at) as first_turn_time,
         MAX(t.created_at) as last_turn_time
       FROM meetings.meetings m
-      LEFT JOIN meetings.turns t ON m.id = t.id
+      LEFT JOIN meetings.turns t ON m.id = t.meeting_id
       LEFT JOIN client_mgmt.users u ON t.user_id = u.id
       WHERE m.meeting_type != 'system'  -- Exclude migration tracking records
         AND m.client_id = $1  -- Filter by current user's client
-      GROUP BY m.id, m.name, m.created_at, m.metadata, m.meeting_url, m.started_at, m.ended_at, m.status
+      GROUP BY m.id, m.name, m.created_at, m.metadata, m.meeting_url, m.started_at, m.ended_at, m.status, m.transcript_summary
       ORDER BY m.created_at DESC
     `;
     
