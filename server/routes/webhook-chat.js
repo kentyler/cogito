@@ -1,5 +1,6 @@
 import express from 'express';
 import { WebhookService } from '../services/webhook-service.js';
+import { extractRequestContext } from '../lib/event-logger.js';
 
 const router = express.Router();
 
@@ -60,6 +61,10 @@ router.post('/webhook/chat', async (req, res) => {
     
   } catch (error) {
     console.error('❌ Error processing chat webhook:', error);
+    
+    // Log error to database
+    const context = extractRequestContext(req);
+    req.logger?.logError('webhook_chat_error', error, context);
     
     if (error.message.includes('No data') || error.message.includes('Missing message')) {
       return res.status(400).json({ error: error.message });
@@ -122,7 +127,7 @@ PARTICIPANT'S QUESTION: "${question}"
 Please provide a helpful, contextual response based on the meeting content and any relevant documents. Be concise (2-3 sentences max) and specific to what's been discussed. If the question asks about people, refer to the transcript for context about who they are and what they've said.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
+    model: "claude-3-5-sonnet-20241022",
     max_tokens: 300,
     messages: [{ role: "user", content: prompt }]
   });
@@ -148,7 +153,7 @@ Please provide a concise 2-3 sentence summary that includes:
 Keep it brief and focused on what's happening right now in the meeting.`;
 
   const message = await anthropic.messages.create({
-    model: "claude-3-haiku-20240307",
+    model: "claude-3-5-sonnet-20241022",
     max_tokens: 200,
     messages: [{ role: "user", content: prompt }]
   });

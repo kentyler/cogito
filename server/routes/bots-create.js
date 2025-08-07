@@ -1,7 +1,9 @@
 import express from 'express';
-import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import { requireAuth } from './auth.js';
+import { extractRequestContext } from '../lib/event-logger.js';
+import { createRecallBot, getWebsocketUrls } from '../lib/bot-creation/recall-api.js';
+import { createMeetingRecord, updateMeetingWithEmail } from '../lib/bot-creation/meeting-handler.js';
+import { processMeetingFiles } from '../lib/bot-creation/file-processor.js';
 
 const router = express.Router();
 
@@ -20,166 +22,59 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     if (!client_id) {
       console.log(`Client ID missing from session for user ${user_id}, using default client_id = 1`);
       client_id = 1; // Default to client 1 for now
-      
-      // TODO: Add client_id column to client_mgmt.users table and proper lookup
     }
     
     console.log(`Creating bot for user ${user_id}, client ${client_id}, meeting: ${meeting_url}`);
     
-    // Get the external URL for WebSocket connection
-    let websocketUrl;
-    let webhookUrl;
-    if (process.env.RENDER_EXTERNAL_URL) {
-      // Remove protocol if present
-      const cleanUrl = process.env.RENDER_EXTERNAL_URL.replace(/^https?:\/\//, '');
-      websocketUrl = `wss://${cleanUrl}/transcript`;
-      webhookUrl = `https://${cleanUrl}/webhook/chat`;
-    } else {
-      websocketUrl = `ws://localhost:${process.env.PORT || 3000}/transcript`;
-      webhookUrl = `http://localhost:${process.env.PORT || 3000}/webhook/chat`;
-    }
+    // Get WebSocket URLs
+    const { websocketUrl, webhookUrl } = getWebsocketUrls();
     
-    console.log('WebSocket URL for real-time transcription:', websocketUrl);
-    console.log('Webhook URL for chat messages:', webhookUrl);
-    
-    // Check if API key is available
-    if (!process.env.RECALL_API_KEY) {
-      console.error('RECALL_API_KEY not found in environment variables');
-      return res.status(500).json({ error: 'Recall.ai API key not configured' });
-    }
-
-    console.log('Using Recall.ai API key:', process.env.RECALL_API_KEY.substring(0, 8) + '...');
-
     // Create bot with Recall.ai
-    const recallResponse = await fetch('https://us-west-2.recall.ai/api/v1/bot/', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${process.env.RECALL_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        meeting_url: meeting_url,
-        bot_name: 'Cogito',
-        recording_config: {
-          transcript: {
-            provider: {
-              meeting_captions: {}
-            }
-          },
-          realtime_endpoints: [
-            {
-              type: "websocket",
-              url: websocketUrl,
-              events: [
-                "transcript.data", 
-                "transcript.partial_data"
-              ]
-            },
-            {
-              type: "webhook",
-              url: webhookUrl,
-              events: ["participant_events.chat_message"]
-            }
-          ]
-        },
-        chat: {
-          on_bot_join: {
-            send_to: "everyone",
-            message: "🤖 Cogito has joined the meeting! Type ? for my thoughts on the conversation, or @cc for specific questions."
-          }
-        },
-        webhook_url: webhookUrl
-      })
-    });
-    
-    if (!recallResponse.ok) {
-      const error = await recallResponse.text();
-      console.error('Recall.ai error:', error);
-      return res.status(recallResponse.status).json({ 
+    let botData;
+    try {
+      botData = await createRecallBot(meeting_url, websocketUrl, webhookUrl);
+    } catch (error) {
+      console.error('Failed to create Recall bot:', error);
+      return res.status(500).json({ 
         error: 'Failed to create bot', 
-        details: error 
+        details: error.message 
       });
     }
     
-    const botData = await recallResponse.json();
-    console.log('Bot created:', botData);
-    
     console.log('Creating meeting record for bot:', botData.id);
     
-    // Generate UUID for the meeting
-    const meetingId = uuidv4();
+    // Create meeting record
+    const meeting = await createMeetingRecord(req.db, {
+      meetingUrl: meeting_url,
+      meetingName: meeting_name,
+      userId: user_id,
+      clientId: client_id,
+      botId: botData.id
+    });
     
-    // Create a meeting with proper user and client IDs
-    const meetingResult = await req.db.query(
-      `INSERT INTO meetings.meetings (id, name, description, meeting_type, created_by_user_id, client_id, metadata, meeting_url, recall_bot_id, status) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [
-        meetingId,   // Generated UUID for meeting
-        meeting_name || `Meeting ${new Date().toISOString()}`,
-        `Meeting from ${meeting_url}`,
-        'meeting',
-        user_id,     // The actual user who created it
-        client_id,   // The client that user belongs to
-        JSON.stringify({ created_by: 'recall_bot', recall_bot_id: botData.id }),
-        meeting_url,
-        botData.id,
-        'joining'
-      ]
-    );
-    const meeting = meetingResult.rows[0];
-    console.log('Meeting created:', meeting.id);
+    // Log successful meeting creation
+    const context = extractRequestContext(req);
+    req.logger?.logEvent('meeting_created', {
+      meeting_id: meeting.id,
+      meeting_url: meeting_url,
+      bot_id: botData.id,
+      client_id: client_id
+    }, context);
     
     // Update meeting with transcript email
     const userEmail = req.session.user.email;
-    
-    await req.db.query(
-      `UPDATE meetings.meetings 
-       SET transcript_email = $1, invited_by_user_id = $2
-       WHERE id = $3`,
-      [userEmail, user_id, meeting.id]
-    );
-    console.log('Meeting record updated with email:', meeting.id);
+    await updateMeetingWithEmail(req.db, meeting.id, userEmail, user_id);
     
     // Process uploaded files if any
-    let uploadedFiles = [];
-    if (req.files && req.files.length > 0) {
-      console.log(`Processing ${req.files.length} uploaded files for meeting ${meeting.id}`);
-      
-      for (const file of req.files) {
-        try {
-          // Process file using FileUploadService
-          const fileUpload = await req.fileUploadService.processFile(file, {
-            clientId: client_id,
-            description: `Meeting resource for: ${meeting_name || meeting_url}`,
-            tags: ['meeting', 'resource']
-          });
-          
-          // Link file to meeting via junction table
-          await req.db.query(
-            `INSERT INTO meetings.meeting_files (meeting_id, file_upload_id, created_by_user_id) 
-             VALUES ($1, $2, $3)`,
-            [meeting.id, fileUpload.id, user_id]
-          );
-          
-          uploadedFiles.push({
-            id: fileUpload.id,
-            filename: fileUpload.filename,
-            size: fileUpload.file_size
-          });
-          
-          console.log(`✅ Processed file: ${fileUpload.filename} (ID: ${fileUpload.id})`);
-          
-          // Clean up temp file
-          fs.unlink(file.path, (err) => {
-            if (err) console.error('Error deleting temp file:', err);
-          });
-          
-        } catch (fileError) {
-          console.error(`❌ Error processing file ${file.originalname}:`, fileError);
-          // Continue processing other files
-        }
-      }
-    }
+    const uploadedFiles = await processMeetingFiles(req.files, {
+      fileUploadService: req.fileUploadService,
+      db: req.db,
+      meetingId: meeting.id,
+      meetingName: meeting_name,
+      meetingUrl: meeting_url,
+      clientId: client_id,
+      userId: user_id
+    });
     
     res.json({
       bot: botData,
@@ -190,6 +85,11 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     console.error('Bot creation error:', error);
     console.error('Request body:', req.body);
     console.error('User session:', req.session?.user);
+    
+    // Log error to database
+    const context = extractRequestContext(req);
+    req.logger?.logError('bot_creation_error', error, context);
+    
     res.status(500).json({ error: 'Failed to create bot', details: error.message });
   }
 });

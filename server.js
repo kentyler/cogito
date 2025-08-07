@@ -49,6 +49,7 @@ import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
 import { FileUploadService } from './lib/file-upload.js';
+import { EventLogger } from './server/lib/event-logger.js';
 
 const app = express();
 
@@ -72,6 +73,7 @@ async function startServer() {
     const pool = await initializeDatabase();
     const { anthropic, getEmailTransporter } = await initializeEmail();
     const fileUploadService = new FileUploadService(pool);
+    const eventLogger = new EventLogger(pool);
     
     // Initialize processing services
     turnProcessor = await createTurnProcessor(pool, {
@@ -87,6 +89,7 @@ async function startServer() {
       req.anthropic = anthropic;
       req.fileUploadService = fileUploadService;
       req.turnProcessor = turnProcessor;
+      req.logger = eventLogger;
       req.appendToConversation = (...args) => meetingService.appendToConversation(...args);
       next();
     });
