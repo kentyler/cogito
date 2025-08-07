@@ -62,7 +62,7 @@ export async function generateAISummary(anthropic, prompt, maxTokens = 300) {
   
   try {
     const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }]
     });
