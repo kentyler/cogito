@@ -1,40 +1,10 @@
 import { findSimilarTurns } from './turn-compatibility.js';
-
-// Find similar file chunks using embedding similarity
-async function findSimilarChunks(pool, embeddingService, content, clientId, limit = 5, minSimilarity = 0.6) {
-  try {
-    // Validate content before generating embedding
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
-      console.warn('Empty or invalid content for embedding generation:', content);
-      return [];
-    }
-    
-    // Generate embedding for the user's content
-    const queryEmbedding = await embeddingService.generateEmbedding(content);
-    const embeddingString = embeddingService.formatForDatabase(queryEmbedding);
-    
-    const query = `
-      SELECT 
-        c.content,
-        f.filename,
-        f.source_type,
-        1 - (c.embedding_vector <=> $1) as similarity
-      FROM context.chunks c
-      JOIN context.files f ON c.file_id = f.id
-      WHERE c.client_id = $2
-      AND c.embedding_vector IS NOT NULL
-      AND 1 - (c.embedding_vector <=> $1) >= $3
-      ORDER BY similarity DESC
-      LIMIT $4
-    `;
-    
-    const result = await pool.query(query, [embeddingString, clientId, minSimilarity, limit]);
-    return result.rows;
-  } catch (error) {
-    console.error('Error finding similar chunks:', error);
-    return [];
-  }
-}
+import { findSimilarChunks } from './conversation-context/chunk-finder.js';
+import { 
+  formatPastDiscussions, 
+  formatFileChunks, 
+  formatSourceReferences 
+} from './conversation-context/context-formatter.js';
 
 // Build conversation context from similar turns and file chunks
 export async function buildConversationContext(req, userTurn, clientId) {
@@ -83,43 +53,22 @@ export async function buildConversationContext(req, userTurn, clientId) {
       });
     }
     
-    // Build context from past discussions
-    if (similarTurns && similarTurns.length > 0) {
-      // Filter by client_id if available
-      const clientFilteredTurns = clientId 
-        ? similarTurns.filter(turn => turn.client_id === clientId)
-        : similarTurns;
-      
-      if (clientFilteredTurns.length > 0) {
-        conversationContext = `\n\n--- Relevant past discussions ---\n`;
-        clientFilteredTurns.forEach((turn, index) => {
-          conversationContext += `${index + 1}. ${turn.content}\n`;
-          if (turn.response_content) {
-            conversationContext += `   Response: ${turn.response_content}\n`;
-          }
-        });
-        conversationContext += `--- End past discussions ---\n\n`;
-        
-        console.log(`📚 Found ${clientFilteredTurns.length} relevant past discussions for context`);
-      } else {
-        console.log(`📚 Found ${similarTurns.length} similar turns but none for client ${clientId}`);
-      }
-    } else {
-      console.log('📚 No similar past discussions found for context');
-    }
+    // Format the context with references
+    const allSources = [];
     
-    // Add context from uploaded files
-    if (similarChunks && similarChunks.length > 0) {
-      conversationContext += `--- Relevant content from uploaded files ---\n`;
-      similarChunks.forEach((chunk, index) => {
-        conversationContext += `${index + 1}. From "${chunk.filename}": ${chunk.content}\n`;
-      });
-      conversationContext += `--- End file content ---\n\n`;
-      
-      console.log(`📄 Found ${similarChunks.length} relevant file chunks for context`);
-    } else {
-      console.log('📄 No relevant file chunks found for context');
-    }
+    // Format past discussions
+    const discussionResult = formatPastDiscussions(similarTurns, clientId);
+    conversationContext += discussionResult.context;
+    allSources.push(...discussionResult.sources);
+    
+    // Format file chunks
+    const chunkResult = formatFileChunks(similarChunks, discussionResult.nextIndex);
+    conversationContext += chunkResult.context;
+    allSources.push(...chunkResult.sources);
+    
+    // Add source reference guide
+    conversationContext += formatSourceReferences(allSources);
+    
   } catch (error) {
     console.error('Error getting conversation context:', error);
   }
@@ -165,3 +114,6 @@ export async function getClientInfo(req, user_id) {
   
   return { clientId, clientName };
 }
+
+// Re-export for backward compatibility
+export { findSimilarChunks };
