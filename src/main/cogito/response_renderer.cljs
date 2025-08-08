@@ -72,39 +72,28 @@
 
 ;; Function to parse and render text with clickable references
 (defn parse-text-with-references [text sources]
-  (try
-    (if (and text sources (seq sources))
-      (let [ref-pattern #"\[REF-(\d+)\]"
-            parts (str/split text ref-pattern)]
-        (if (= (count parts) 1)
-          ;; No references found
-          text
-          ;; Interleave text parts with clickable references
-          (into [:span]
-                (let [matches (re-seq ref-pattern text)]
-                  (loop [result []
-                         text-parts parts
-                         ref-matches matches]
-                    (if (empty? text-parts)
-                      result
-                      (if (empty? ref-matches)
-                        (conj result (first text-parts))
-                        (let [[full-match ref-num] (first ref-matches)
-                              ref-id (js/parseInt ref-num)]
-                          (recur
-                           (-> result
-                               (conj (first text-parts))
-                               (conj [:span.inline-block.px-1.py-0.5.bg-blue-100.text-blue-800.text-xs.font-medium.rounded.cursor-pointer.hover:bg-blue-200.transition-colors.mx-1
-                                      {:on-click #(show-reference-popup sources ref-id)
-                                       :title "Click to view reference details"
-                                       :key (str "ref-" ref-id "-" (rand-int 10000))}
-                                      full-match]))
-                           (rest text-parts)
-                           (rest ref-matches))))))))))
-      text)
-    (catch :default e
-      (js/console.error "Error parsing references:" e)
-      text)))
+  ;; Simple approach: just return the text as-is if no sources
+  ;; This avoids all the complex parsing issues
+  (if-not (and text sources (seq sources) (string? text))
+    text
+    ;; Use JavaScript split which preserves captured groups
+    (let [parts (.split text #"(\[REF-\d+\])")]
+      (if (> (.-length parts) 1)
+        [:span
+         (map-indexed 
+          (fn [idx part]
+            (if (and part (re-matches #"\[REF-\d+\]" part))
+              (let [ref-num (second (re-find #"\[REF-(\d+)\]" part))
+                    ref-id (js/parseInt ref-num)]
+                ^{:key (str "ref-" idx)}
+                [:span.inline-block.px-1.py-0.5.bg-blue-100.text-blue-800.text-xs.font-medium.rounded.cursor-pointer.hover:bg-blue-200.transition-colors.mx-1
+                 {:on-click #(show-reference-popup sources ref-id)
+                  :title "Click to view reference details"}
+                 part])
+              ^{:key (str "text-" idx)}
+              [:span part]))
+          parts)]
+        text))))
 
 ;; Default text rendering with proper formatting and clickable references
 (defmethod render-component :text [response]
