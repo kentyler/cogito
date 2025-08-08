@@ -102,7 +102,7 @@ async function startServer() {
     TranscriptBufferAgent = TBA;
     TurnEmbeddingAgent = TEA;
     SpeakerProfileAgent = SPA;
-    embeddingAgent = new TurnEmbeddingAgent();
+    embeddingAgent = new TurnEmbeddingAgent({ pool });
     console.log('✅ Transcript processing agents initialized');
     
     // Initialize meeting service
