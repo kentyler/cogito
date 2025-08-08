@@ -39,7 +39,7 @@ export class MeetingService {
     try {
       // Get current transcript
       const currentResult = await this.pool.query(
-        'SELECT full_transcript FROM meetings WHERE id = $1',
+        'SELECT full_transcript FROM meetings.meetings WHERE id = $1',
         [meetingId]
       );
       
@@ -63,7 +63,7 @@ export class MeetingService {
       
       // Update the database
       await this.pool.query(
-        'UPDATE meetings SET full_transcript = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE meetings.meetings SET full_transcript = $1, updated_at = NOW() WHERE id = $2',
         [JSON.stringify(transcript), meetingId]
       );
       
