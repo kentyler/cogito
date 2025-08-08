@@ -74,7 +74,7 @@ export class WebSocketService {
     // Get meeting info
     const meetingResult = await this.pool.query(`
       SELECT * 
-      FROM meetings
+      FROM meetings.meetings
       WHERE recall_bot_id = $1 AND meeting_type != 'system'
     `, [botId]);
     
