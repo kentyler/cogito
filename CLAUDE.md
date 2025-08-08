@@ -114,6 +114,30 @@ This promotes:
 - Collaborative problem refinement
 - Emergence of deeper insights through dialogue
 
+## Schema Change Protocol
+**CRITICAL**: Database schema changes require systematic, comprehensive updates to prevent silent failures.
+
+### When Schema Changes Occur:
+1. **NEVER be selective** - Update ALL references, not just "core" functions
+2. **Always use comprehensive search**: `grep -r "old_table_name" .` across entire codebase
+3. **Update everything atomically** in a single commit, not piecemeal
+4. **Test immediately** with end-to-end functionality after changes
+
+### AI Behavior Requirements:
+- **When user says "review everything"** → Actually review everything, don't make selective judgments
+- **When user repeats requests** → They mean it literally, not approximately
+- **Schema changes trigger mandatory comprehensive search** regardless of perceived importance
+- **Prefer loud failures** over silent failures that hide problems
+
+### Lesson Learned:
+Schema change from `meetings` → `meetings.meetings` caused 3 days of debugging because:
+- AI chose to update only "core" functions despite user requests for comprehensive review
+- Multiple user attempts to get full codebase review were ignored
+- Silent database errors in scattered services (WebSocket, Meeting, Webhook services)
+- Turn recording pipeline broke due to dual database connections + schema mismatches
+
+**Remember**: User requests for comprehensive review should be taken literally, not filtered through AI assumptions about importance.
+
 ## File Size Enforcement
 **CRITICAL**: File size limits are enforced to maintain optimal AI assistance:
 
