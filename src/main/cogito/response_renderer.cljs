@@ -155,7 +155,9 @@
        [:tr
         (for [[col-idx cell] (map-indexed vector row)]
           ^{:key col-idx}
-          [:td cell])])]]])
+          [:td cell])])]]
+   ;; Reference footnotes
+   [render-reference-footnotes (:sources response)]])
 
 ;; Diagram rendering (simplified for now)
 (defmethod render-component :diagram [response]
@@ -163,7 +165,9 @@
    [:h3 (:title response)]
    [:div.diagram-placeholder
     "Diagram visualization would render here"
-    [:pre (pr-str (:nodes response))]]])
+    [:pre (pr-str (:nodes response))]]
+   ;; Reference footnotes
+   [render-reference-footnotes (:sources response)]])
 
 ;; Email draft rendering
 (defmethod render-component :email [response]
@@ -175,7 +179,9 @@
     {:contentEditable true
      :on-blur (when-let [handler (get-in response [:interactions :on-edit])]
                 #(handler (-> % .-target .-innerText)))}
-    (:body response)]])
+    (:body response)]
+   ;; Reference footnotes
+   [render-reference-footnotes (:sources response)]])
 
 ;; Response set rendering with navigation
 (defmethod render-component :response-set [response]
@@ -251,17 +257,20 @@
                       (if (sequential? data)
                         (str/join "\n" (map str data))
                         (str data))))]
-    (if content
-      ;; If we found content, render it as plain text
-      [:div.text-response.space-y-3
-       (for [[idx paragraph] (map-indexed vector (str/split-lines (str content)))]
-         (when-not (str/blank? paragraph)
-           ^{:key idx}
-           [:p.text-gray-700.leading-relaxed paragraph]))]
-      ;; Only show raw EDN if we couldn't extract any content
-      [:div.unknown-response.text-gray-500.text-sm
-       [:p.mb-2 "Unknown response format:"]
-       [:pre.bg-gray-100.p-2.rounded.text-xs (pr-str response)]])))
+    [:div
+     (if content
+       ;; If we found content, render it as plain text
+       [:div.text-response.space-y-3
+        (for [[idx paragraph] (map-indexed vector (str/split-lines (str content)))]
+          (when-not (str/blank? paragraph)
+            ^{:key idx}
+            [:p.text-gray-700.leading-relaxed paragraph]))]
+       ;; Only show raw EDN if we couldn't extract any content
+       [:div.unknown-response.text-gray-500.text-sm
+        [:p.mb-2 "Unknown response format:"]
+        [:pre.bg-gray-100.p-2.rounded.text-xs (pr-str response)]])
+     ;; Reference footnotes
+     [render-reference-footnotes (:sources response)]]))
 
 (defn render-response [response]
   ;; Handle both string responses and structured responses
