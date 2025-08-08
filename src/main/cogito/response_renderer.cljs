@@ -70,25 +70,74 @@
 
 (defmulti render-component :response-type)
 
-;; Default text rendering - keep it simple for now
-(defmethod render-component :text [response]
-  [:div.text-response.space-y-3
-   (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
-     (when-not (str/blank? paragraph)
-       ^{:key idx}
-       [:p.text-gray-700.leading-relaxed paragraph]))])
+;; Component to render reference footnotes
+(defn render-reference-footnotes [sources]
+  (when (and sources (seq sources))
+    [:div.mt-6.pt-4.border-t.border-gray-200
+     [:h4.text-sm.font-semibold.text-gray-600.mb-3 "References"]
+     [:div.space-y-2
+      (for [source sources]
+        ^{:key (str "ref-" (:id source))}
+        [:div.text-sm.bg-gray-50.p-3.rounded
+         [:div.flex.items-start
+          [:span.font-medium.text-blue-600.mr-2 (str "[REF-" (:id source) "]")]
+          [:div.flex-1
+           (case (:type source)
+             "discussion"
+             [:div
+              [:span.text-gray-600 "Past discussion"]
+              (when (:timestamp source)
+                [:span.text-gray-500.ml-2 
+                 (str "(" (.toLocaleDateString (js/Date. (:timestamp source))) ")")])
+              (when (:similarity source)
+                [:span.text-gray-400.ml-2.text-xs 
+                 (str "Relevance: " (:similarity source))])
+              (when (:content source)
+                [:div.mt-1.text-gray-700.line-clamp-2
+                 (subs (:content source) 0 (min 200 (count (:content source)))) "..."])]
+             
+             "file"
+             [:div
+              [:span.text-gray-600 (str "File: " (:filename source))]
+              (when (:uploadDate source)
+                [:span.text-gray-500.ml-2
+                 (str "(" (.toLocaleDateString (js/Date. (:uploadDate source))) ")")])
+              (when (:similarity source)
+                [:span.text-gray-400.ml-2.text-xs
+                 (str "Relevance: " (:similarity source))])
+              (when (:content source)
+                [:div.mt-1.text-gray-700.line-clamp-2
+                 (subs (:content source) 0 (min 200 (count (:content source)))) "..."])]
+             
+             ;; Default case
+             [:div.text-gray-600 "Reference source"])]]])]]))
 
-;; List rendering
+;; Default text rendering with footnote references
+(defmethod render-component :text [response]
+  [:div.text-response
+   ;; Main content
+   [:div.space-y-3
+    (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
+      (when-not (str/blank? paragraph)
+        ^{:key idx}
+        [:p.text-gray-700.leading-relaxed paragraph]))]
+   ;; Reference footnotes
+   [render-reference-footnotes (:sources response)]])
+
+;; List rendering with footnote references
 (defmethod render-component :list [response]
-  [:ul.list-response.space-y-2.pl-5.list-disc
-   (for [[idx item] (map-indexed vector (:items response))]
-     ^{:key idx}
-     [:li.text-gray-700.leading-relaxed
-      {:class (when (get-in response [:interactions :on-click])
-                "cursor-pointer hover:text-blue-600 transition-colors")
-       :on-click (when-let [handler (get-in response [:interactions :on-click])]
-                   #(handler item))}
-      item])])
+  [:div.list-response
+   [:ul.space-y-2.pl-5.list-disc
+    (for [[idx item] (map-indexed vector (:items response))]
+      ^{:key idx}
+      [:li.text-gray-700.leading-relaxed
+       {:class (when (get-in response [:interactions :on-click])
+                 "cursor-pointer hover:text-blue-600 transition-colors")
+        :on-click (when-let [handler (get-in response [:interactions :on-click])]
+                    #(handler item))}
+       item])]
+   ;; Reference footnotes
+   [render-reference-footnotes (:sources response)]])
 
 ;; Spreadsheet/table rendering
 (defmethod render-component :spreadsheet [response]
