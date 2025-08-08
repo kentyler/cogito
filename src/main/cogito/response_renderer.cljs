@@ -70,55 +70,25 @@
 
 (defmulti render-component :response-type)
 
-;; Function to parse and render text with clickable references
-(defn parse-text-with-references [text sources]
-  ;; Simple approach: just return the text as-is if no sources
-  ;; This avoids all the complex parsing issues
-  (if-not (and text sources (seq sources) (string? text))
-    text
-    ;; Use JavaScript split which preserves captured groups
-    (let [parts (.split text #"(\[REF-\d+\])")]
-      (if (> (.-length parts) 1)
-        [:span
-         (map-indexed 
-          (fn [idx part]
-            (if (and part (re-matches #"\[REF-\d+\]" part))
-              (let [ref-num (second (re-find #"\[REF-(\d+)\]" part))
-                    ref-id (js/parseInt ref-num)]
-                ^{:key (str "ref-" idx)}
-                [:span.inline-block.px-1.py-0.5.bg-blue-100.text-blue-800.text-xs.font-medium.rounded.cursor-pointer.hover:bg-blue-200.transition-colors.mx-1
-                 {:on-click #(show-reference-popup sources ref-id)
-                  :title "Click to view reference details"}
-                 part])
-              ^{:key (str "text-" idx)}
-              [:span part]))
-          parts)]
-        text))))
-
-;; Default text rendering with proper formatting and clickable references
+;; Default text rendering - keep it simple for now
 (defmethod render-component :text [response]
-  (let [sources (:sources response)]
-    [:div.text-response.space-y-3
-     (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
-       (when-not (str/blank? paragraph)
-         ^{:key idx}
-         [:p.text-gray-700.leading-relaxed
-          (if (and sources (seq sources))
-            (parse-text-with-references paragraph sources)
-            paragraph)]))]))
+  [:div.text-response.space-y-3
+   (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
+     (when-not (str/blank? paragraph)
+       ^{:key idx}
+       [:p.text-gray-700.leading-relaxed paragraph]))])
 
 ;; List rendering
 (defmethod render-component :list [response]
-  (let [sources (:sources response)]
-    [:ul.list-response.space-y-2.pl-5.list-disc
-     (for [[idx item] (map-indexed vector (:items response))]
-       ^{:key idx}
-       [:li.text-gray-700.leading-relaxed
-        {:class (when (get-in response [:interactions :on-click])
-                  "cursor-pointer hover:text-blue-600 transition-colors")
-         :on-click (when-let [handler (get-in response [:interactions :on-click])]
-                     #(handler item))}
-        (parse-text-with-references item sources)])]))
+  [:ul.list-response.space-y-2.pl-5.list-disc
+   (for [[idx item] (map-indexed vector (:items response))]
+     ^{:key idx}
+     [:li.text-gray-700.leading-relaxed
+      {:class (when (get-in response [:interactions :on-click])
+                "cursor-pointer hover:text-blue-600 transition-colors")
+       :on-click (when-let [handler (get-in response [:interactions :on-click])]
+                   #(handler item))}
+      item])])
 
 ;; Spreadsheet/table rendering
 (defmethod render-component :spreadsheet [response]
