@@ -17,7 +17,7 @@ export class MeetingCleanupService {
       
       // Get meeting info
       const meetingResult = await this.pool.query(
-        'SELECT * FROM meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
+        'SELECT * FROM meetings.meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
         [botId, 'completed', 'inactive']
       );
       
@@ -36,7 +36,7 @@ export class MeetingCleanupService {
       
       // Update meeting status to completed
       await this.pool.query(`
-        UPDATE meetings 
+        UPDATE meetings.meetings 
         SET status = 'completed',
             ended_at = NOW(),
             updated_at = NOW()
@@ -51,7 +51,7 @@ export class MeetingCleanupService {
         
         // Get updated meeting data with full transcript
         const updatedMeetingResult = await this.pool.query(
-          'SELECT * FROM meetings WHERE id = $1',
+          'SELECT * FROM meetings.meetings WHERE id = $1',
           [meeting.id]
         );
         
@@ -97,12 +97,14 @@ export class MeetingCleanupService {
       }
       
       // Check database for meetings that are stuck in joining/active status for too long
+      // Only check meetings with recall_bot_id (bot meetings need cleanup, web sessions don't)
       const stuckMeetingsResult = await this.pool.query(`
-        SELECT recall_bot_id, name as meeting_name, created_at, status
-        FROM meetings
+        SELECT id, recall_bot_id, name as meeting_name, created_at, status
+        FROM meetings.meetings
         WHERE status IN ('joining', 'active') 
           AND created_at < NOW() - INTERVAL '4 hours'
           AND meeting_type != 'system'
+          AND recall_bot_id IS NOT NULL
       `);
       
       for (const meeting of stuckMeetingsResult.rows) {
@@ -143,7 +145,7 @@ export class MeetingCleanupService {
       for (const meeting of activeMeetings.rows) {
         // Get meeting_id for active meetings
         const meetingDetails = await this.pool.query(
-          'SELECT id FROM meetings WHERE recall_bot_id = $1',
+          'SELECT id FROM meetings.meetings WHERE recall_bot_id = $1',
           [meeting.recall_bot_id]
         );
         if (meetingDetails.rows.length > 0) {
