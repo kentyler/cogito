@@ -51,8 +51,11 @@ router.post('/conversational-turn', async (req, res) => {
     
     // Build conversation context
     console.log('🔍 STEP 7: Building conversation context');
-    const conversationContext = await buildConversationContext(req, userTurn, clientId);
+    const contextResult = await buildConversationContext(req, userTurn, clientId);
+    const conversationContext = contextResult.context || contextResult; // Handle both old and new formats
+    const sources = contextResult.sources || [];
     console.log('🔍 STEP 7a: Conversation context built, length:', conversationContext?.length || 0);
+    console.log('🔍 STEP 7b: Sources found:', sources.length);
     
     // Generate LLM response
     const llmResponse = await generateLLMResponse(req, {
@@ -75,6 +78,7 @@ router.post('/conversational-turn', async (req, res) => {
       user_turn_id: userTurn.id,
       prompt: content,
       response: llmResponse,
+      sources: sources,
       created_at: llmTurn.created_at
     });
   } catch (error) {

@@ -3,6 +3,58 @@
             [re-frame.core :as rf]
             [clojure.string :as str]))
 
+;; Reference popup state
+(defonce popup-state (r/atom {:visible false :content nil :position nil}))
+
+;; Reference popup component
+(defn reference-popup []
+  (when (:visible @popup-state)
+    [:div.fixed.inset-0.z-50.flex.items-center.justify-center
+     {:on-click #(swap! popup-state assoc :visible false)}
+     [:div.absolute.inset-0.bg-black.bg-opacity-50]
+     [:div.relative.bg-white.rounded-lg.shadow-xl.max-w-2xl.max-h-96.p-6.overflow-auto
+      {:on-click #(.stopPropagation %)}
+      [:div.flex.justify-between.items-start.mb-4
+       [:h3.text-lg.font-semibold.text-gray-900 
+        (str "Reference " (:id (:content @popup-state)))]
+       [:button.text-gray-400.hover:text-gray-600.text-2xl.leading-none
+        {:on-click #(swap! popup-state assoc :visible false)}
+        "×"]]
+      [:div.space-y-3
+       (let [content (:content @popup-state)]
+         (case (:type content)
+           "discussion" 
+           [:div
+            [:div.text-sm.text-gray-500.mb-2
+             (str "Past Discussion • " 
+                  (when (:timestamp content)
+                    (str (.toLocaleDateString (js/Date. (:timestamp content))) " • "))
+                  "Similarity: " (:similarity content))]
+            [:div.text-gray-800.whitespace-pre-wrap (:content content)]]
+           
+           "file"
+           [:div
+            [:div.text-sm.text-gray-500.mb-2
+             (str "File: " (:filename content) " • " 
+                  (when (:uploadDate content)
+                    (str "Uploaded: " (.toLocaleDateString (js/Date. (:uploadDate content))) " • "))
+                  "Similarity: " (:similarity content))]
+            [:div.text-gray-800.whitespace-pre-wrap (:content content)]]
+           
+           [:div.text-gray-800.whitespace-pre-wrap 
+            (or (:content content) "No content available")]))]
+      [:div.mt-4.flex.justify-end
+       [:button.px-4.py-2.bg-gray-100.hover:bg-gray-200.text-gray-800.rounded.transition-colors
+        {:on-click #(swap! popup-state assoc :visible false)}
+        "Close"]]]]))
+
+;; Function to show reference popup
+(defn show-reference-popup [sources ref-id]
+  (when-let [source (first (filter #(= (:id %) ref-id) sources))]
+    (swap! popup-state assoc 
+           :visible true 
+           :content source)))
+
 ;; The response from LLM should be a ClojureScript data structure like:
 ;; {:response-type :text
 ;;  :content "Hello world"}
@@ -18,25 +70,55 @@
 
 (defmulti render-component :response-type)
 
-;; Default text rendering with proper formatting
+;; Function to parse and render text with clickable references
+(defn parse-text-with-references [text sources]
+  (if (and text sources (seq sources))
+    (let [ref-pattern #"\[REF-(\d+)\]"
+          parts (str/split text ref-pattern)
+          matches (re-seq ref-pattern text)]
+      (loop [result []
+             parts parts
+             matches matches]
+        (cond
+          (empty? parts) result
+          (empty? matches) (conj result (first parts))
+          :else
+          (let [text-part (first parts)
+                [full-match ref-num] (first matches)
+                ref-id (js/parseInt ref-num)]
+            (recur 
+             (-> result
+                 (conj text-part)
+                 (conj [:span.inline-block.px-1.py-0.5.bg-blue-100.text-blue-800.text-xs.font-medium.rounded.cursor-pointer.hover:bg-blue-200.transition-colors
+                        {:on-click #(show-reference-popup sources ref-id)
+                         :title "Click to view reference details"}
+                        full-match]))
+             (rest parts)
+             (rest matches))))))
+    [text]))
+
+;; Default text rendering with proper formatting and clickable references
 (defmethod render-component :text [response]
-  [:div.text-response.space-y-3
-   (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
-     (when-not (str/blank? paragraph)
-       ^{:key idx}
-       [:p.text-gray-700.leading-relaxed paragraph]))])
+  (let [sources (:sources response)]
+    [:div.text-response.space-y-3
+     (for [[idx paragraph] (map-indexed vector (str/split-lines (:content response)))]
+       (when-not (str/blank? paragraph)
+         ^{:key idx}
+         [:p.text-gray-700.leading-relaxed
+          (parse-text-with-references paragraph sources)]))]))
 
 ;; List rendering
 (defmethod render-component :list [response]
-  [:ul.list-response.space-y-2.pl-5.list-disc
-   (for [[idx item] (map-indexed vector (:items response))]
-     ^{:key idx}
-     [:li.text-gray-700.leading-relaxed
-      {:class (when (get-in response [:interactions :on-click])
-                "cursor-pointer hover:text-blue-600 transition-colors")
-       :on-click (when-let [handler (get-in response [:interactions :on-click])]
-                   #(handler item))}
-      item])])
+  (let [sources (:sources response)]
+    [:ul.list-response.space-y-2.pl-5.list-disc
+     (for [[idx item] (map-indexed vector (:items response))]
+       ^{:key idx}
+       [:li.text-gray-700.leading-relaxed
+        {:class (when (get-in response [:interactions :on-click])
+                  "cursor-pointer hover:text-blue-600 transition-colors")
+         :on-click (when-let [handler (get-in response [:interactions :on-click])]
+                     #(handler item))}
+        (parse-text-with-references item sources)])]))
 
 ;; Spreadsheet/table rendering
 (defmethod render-component :spreadsheet [response]
@@ -164,6 +246,10 @@
 
 (defn render-response [response]
   ;; Handle both string responses and structured responses
-  (if (string? response)
-    [:div.text-response response]
-    [render-component response]))
+  [:div.relative
+   ;; Include the popup component
+   [reference-popup]
+   ;; Render the main response
+   (if (string? response)
+     [:div.text-response response]
+     [render-component response])])

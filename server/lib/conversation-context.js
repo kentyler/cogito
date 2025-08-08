@@ -9,6 +9,7 @@ import {
 // Build conversation context from similar turns and file chunks
 export async function buildConversationContext(req, userTurn, clientId) {
   let conversationContext = '';
+  const allSources = [];
   
   console.log('🔍 Building conversation context for turn:', userTurn.id, 'client:', clientId);
   
@@ -53,9 +54,6 @@ export async function buildConversationContext(req, userTurn, clientId) {
       });
     }
     
-    // Format the context with references
-    const allSources = [];
-    
     // Format past discussions
     const discussionResult = formatPastDiscussions(similarTurns, clientId);
     conversationContext += discussionResult.context;
@@ -74,11 +72,12 @@ export async function buildConversationContext(req, userTurn, clientId) {
   }
   
   console.log('🔍 Final conversation context length:', conversationContext.length, 'characters');
+  console.log('🔍 Total sources found:', allSources.length);
   if (conversationContext.length > 0) {
     console.log('🔍 Context preview:', conversationContext.substring(0, 200) + '...');
   }
   
-  return conversationContext;
+  return { context: conversationContext, sources: allSources };
 }
 
 // Get client information for context
