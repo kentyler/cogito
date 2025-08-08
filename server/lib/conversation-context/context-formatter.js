@@ -21,6 +21,7 @@ export function formatPastDiscussions(similarTurns, clientId) {
       sources.push({
         id: sourceIndex,
         type: 'discussion',
+        content: turn.content,
         timestamp: turn.timestamp,
         similarity: turn.similarity?.toFixed(2)
       });
@@ -55,6 +56,7 @@ export function formatFileChunks(similarChunks, startIndex = 1) {
       sources.push({
         id: sourceIndex,
         type: 'file',
+        content: chunk.content,
         filename: chunk.filename,
         uploadDate: chunk.created_at,
         similarity: chunk.similarity?.toFixed(2)
@@ -74,15 +76,21 @@ export function formatFileChunks(similarChunks, startIndex = 1) {
 export function formatSourceReferences(sources) {
   if (sources.length === 0) return '';
   
-  let context = `\n=== SOURCE REFERENCES ===\n`;
+  let context = `\n=== SOURCE REFERENCE DETAILS ===\n`;
+  context += `IMPORTANT: When citing these references, explain what each one contains.\n\n`;
+  
   sources.forEach(source => {
     if (source.type === 'discussion') {
-      context += `[REF-${source.id}]: Past discussion (similarity: ${source.similarity})\n`;
+      // Extract first 100 chars of content as preview
+      const preview = source.content ? source.content.substring(0, 100) + '...' : '';
+      const timestamp = source.timestamp ? new Date(source.timestamp).toLocaleDateString() : 'unknown date';
+      context += `[REF-${source.id}]: Past discussion from ${timestamp} about "${preview}" (similarity: ${source.similarity})\n`;
     } else if (source.type === 'file') {
-      context += `[REF-${source.id}]: File "${source.filename}" (similarity: ${source.similarity})\n`;
+      const preview = source.content ? source.content.substring(0, 100) + '...' : '';
+      context += `[REF-${source.id}]: File "${source.filename}" containing "${preview}" (similarity: ${source.similarity})\n`;
     }
   });
-  context += `=== END REFERENCES ===\n\n`;
+  context += `\n=== END REFERENCES ===\n\n`;
   
   return context;
 }
