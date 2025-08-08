@@ -41,8 +41,10 @@
    [:div.turn-prompt (:prompt turn)]
    [:div.turn-response
     ;; This is where the magic happens - dynamic rendering based on response type
-    ;; Pass the turn ID for response-set state management
-    [renderer/render-response (assoc (:response turn) :turn-id (:id turn))]]])
+    ;; Pass the turn ID for response-set state management and sources for references
+    [renderer/render-response (assoc (:response turn) 
+                                     :turn-id (:id turn)
+                                     :sources (:sources turn))]]])
 
 
 (defn tab-nav []

@@ -51,14 +51,17 @@
  :handle-llm-response
  (fn [db [_ response]]
    (js/console.log "Events: Received response from server:" response)
-   (let [parsed-response (parser/parse-cljs-response (:response response))]
+   (let [parsed-response (parser/parse-cljs-response (:response response))
+         sources (:sources response)]
      (js/console.log "Events: Parsed response:" parsed-response)
+     (js/console.log "Events: Sources received:" sources)
      (-> db
          (assoc :loading? false
                 :current-prompt "")
          (update :turns conj {:id (:id response)
                              :prompt (:prompt response)
-                             :response parsed-response})))))
+                             :response parsed-response
+                             :sources sources})))))
 
 (rf/reg-event-db
  :handle-error
