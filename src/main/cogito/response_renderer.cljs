@@ -183,9 +183,9 @@
            (str "Response " (inc index) " of " total-count)]
           [:p.text-sm.text-gray-600 (:summary alt)]]
          
-         ;; Current alternative display
+         ;; Current alternative display - pass sources through
          [:div.alternative-content.pl-4.border-l-4.border-blue-400
-          [render-component alt]]
+          [render-component (assoc alt :sources (:sources response))]]
          
          ;; Navigation controls
          [:div.navigation-controls.flex.items-center.justify-between.pt-3.border-t.border-gray-200
