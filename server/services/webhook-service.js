@@ -30,7 +30,7 @@ export class WebhookService {
   async findMeetingByBot(botId) {
     const meetingResult = await this.db.query(`
       SELECT * 
-      FROM meetings
+      FROM meetings.meetings
       WHERE recall_bot_id = $1 AND meeting_type != 'system'
     `, [botId]);
     
@@ -66,7 +66,7 @@ export class WebhookService {
   // Get conversation context from meeting
   async getConversationContext(meetingId) {
     const conversationResult = await this.db.query(
-      'SELECT full_transcript FROM meetings WHERE id = $1',
+      'SELECT full_transcript FROM meetings.meetings WHERE id = $1',
       [meetingId]
     );
     
