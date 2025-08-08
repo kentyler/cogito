@@ -36,7 +36,7 @@ router.get('/stuck-meetings', requireAuth, async (req, res) => {
     const result = await req.db.query(`
       SELECT 
         id,
-        recall_bot_id as meeting_id,
+        id as meeting_id,
         meeting_url,
         name as meeting_name,
         status,
@@ -45,7 +45,9 @@ router.get('/stuck-meetings', requireAuth, async (req, res) => {
         recall_bot_id as bot_id,
         0 as turn_count
       FROM meetings.meetings
-      WHERE status = 'joining' AND meeting_type != 'system'
+      WHERE status = 'joining' 
+        AND meeting_type != 'system' 
+        AND recall_bot_id IS NOT NULL
       ORDER BY created_at DESC
     `);
     
