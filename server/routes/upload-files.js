@@ -1,8 +1,12 @@
 import express from 'express';
 import multer from 'multer';
 import { createTextFile, uploadFile } from '../lib/upload-handlers.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
+
+// Initialize DatabaseAgent
+const dbAgent = new DatabaseAgent();
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -37,33 +41,15 @@ router.get('/files', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    const result = await req.pool.query(`
-      SELECT 
-        f.id, 
-        f.filename, 
-        f.file_size as size, 
-        f.created_at as uploaded_at,
-        f.metadata,
-        f.source_type,
-        COUNT(c.id) as chunk_count
-      FROM context.files f
-      LEFT JOIN context.chunks c ON c.file_id = f.id
-      WHERE f.source_type IN ('upload', 'text-input', 'snippet') 
-        AND f.client_id = $1
-      GROUP BY f.id
-      ORDER BY f.created_at DESC
-    `, [client_id]);
-    
-    // Parse metadata JSON for each file
-    const files = result.rows.map(file => ({
-      ...file,
-      metadata: file.metadata || {}
-    }));
+    await dbAgent.connect();
+    const files = await dbAgent.files.getClientFiles(client_id, ['upload', 'text-input', 'snippet']);
     
     res.json(files);
   } catch (error) {
     console.error('Error fetching files:', error);
     res.status(500).json({ error: 'Failed to fetch files' });
+  } finally {
+    await dbAgent.close();
   }
 });
 
@@ -76,40 +62,20 @@ router.get('/files/:id', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Get file record
-    const fileResult = await req.pool.query(`
-      SELECT id, filename, file_size as size, created_at as uploaded_at
-      FROM context.files 
-      WHERE id = $1 
-        AND source_type IN ('upload', 'text-input')
-        AND client_id = $2
-    `, [id, client_id]);
+    await dbAgent.connect();
+    const fileWithContent = await dbAgent.files.getFileWithContent(id, client_id);
     
-    if (fileResult.rows.length === 0) {
+    if (!fileWithContent) {
       return res.status(404).json({ error: 'File not found' });
     }
     
-    const file = fileResult.rows[0];
-    
-    // Get all chunks for reconstruction
-    const chunksResult = await req.pool.query(`
-      SELECT content 
-      FROM context.chunks 
-      WHERE file_id = $1 
-      ORDER BY chunk_index
-    `, [id]);
-    
-    // Reconstruct full content from chunks
-    const content = chunksResult.rows.map(row => row.content).join('\n');
-    
-    res.json({
-      ...file,
-      content
-    });
+    res.json(fileWithContent);
     
   } catch (error) {
     console.error('Error fetching file content:', error);
     res.status(500).json({ error: 'Failed to fetch file content' });
+  } finally {
+    await dbAgent.close();
   }
 });
 
@@ -122,41 +88,19 @@ router.delete('/files/:id', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    const client = await req.pool.connect();
+    await dbAgent.connect();
+    const deleteResult = await dbAgent.files.deleteFile(id, client_id);
     
-    try {
-      await client.query('BEGIN');
-      
-      // Delete chunks first (foreign key constraint)
-      await client.query('DELETE FROM context.chunks WHERE file_id = $1', [id]);
-      
-      // Delete file
-      const result = await client.query(`
-        DELETE FROM context.files 
-        WHERE id = $1 
-          AND source_type IN ('upload', 'text-input')
-          AND client_id = $2
-        RETURNING id
-      `, [id, client_id]);
-      
-      if (result.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'File not found' });
-      }
-      
-      await client.query('COMMIT');
-      res.json({ success: true });
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    res.json({ success: true });
     
   } catch (error) {
+    if (error.message.includes('File not found or access denied')) {
+      return res.status(404).json({ error: 'File not found' });
+    }
     console.error('Error deleting file:', error);
     res.status(500).json({ error: 'Failed to delete file' });
+  } finally {
+    await dbAgent.close();
   }
 });
 

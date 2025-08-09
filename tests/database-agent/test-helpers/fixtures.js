@@ -166,5 +166,25 @@ export const TestFixtures = {
     }
     
     return turns;
+  },
+
+  /**
+   * Create a test file
+   */
+  async createTestFile(dbAgent, clientId, overrides = {}) {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(7);
+    
+    const fileData = {
+      filename: `test_file_${timestamp}_${random}.txt`,
+      content_type: 'text/plain',
+      file_size: 50,
+      source_type: 'upload',
+      client_id: clientId,
+      metadata: { test: true },
+      ...overrides
+    };
+    
+    return await dbAgent.files.createFile(fileData);
   }
 };
