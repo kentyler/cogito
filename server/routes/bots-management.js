@@ -1,28 +1,23 @@
 import express from 'express';
 import { requireAuth } from './auth.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
+const dbAgent = new DatabaseAgent();
 
 // Get running bots endpoint
 router.get('/bots', requireAuth, async (req, res) => {
   try {
     const user_id = req.session.user.user_id || req.session.user.id;
     
-    const result = await req.db.query(`
-      SELECT 
-        id,
-        recall_bot_id as bot_id,
-        meeting_url,
-        name as meeting_name,
-        status,
-        created_at,
-        updated_at
-      FROM meetings.meetings
-      WHERE status = 'active' AND meeting_type != 'system'
-      ORDER BY created_at DESC
-    `);
+    // Ensure dbAgent is connected
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
     
-    res.json(result.rows);
+    const activeBots = await dbAgent.bots.getActiveBots();
+    
+    res.json(activeBots);
   } catch (error) {
     console.error('Error fetching bots:', error);
     res.status(500).json({ error: 'Failed to fetch bots' });
@@ -33,26 +28,16 @@ router.get('/bots', requireAuth, async (req, res) => {
 router.get('/stuck-meetings', requireAuth, async (req, res) => {
   try {
     console.log('Fetching stuck meetings...');
-    const result = await req.db.query(`
-      SELECT 
-        id,
-        id as meeting_id,
-        meeting_url,
-        name as meeting_name,
-        status,
-        created_at,
-        updated_at,
-        recall_bot_id as bot_id,
-        0 as turn_count
-      FROM meetings.meetings
-      WHERE status = 'joining' 
-        AND meeting_type != 'system' 
-        AND recall_bot_id IS NOT NULL
-      ORDER BY created_at DESC
-    `);
     
-    console.log('Found stuck meetings:', result.rows.length);
-    res.json(result.rows);
+    // Ensure dbAgent is connected
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
+    
+    const stuckMeetings = await dbAgent.bots.getStuckMeetings();
+    
+    console.log('Found stuck meetings:', stuckMeetings.length);
+    res.json(stuckMeetings);
   } catch (error) {
     console.error('Error fetching stuck meetings:', error);
     res.status(500).json({ error: 'Failed to fetch stuck meetings' });
@@ -64,24 +49,22 @@ router.post('/stuck-meetings/:meetingId/complete', requireAuth, async (req, res)
   try {
     const { meetingId } = req.params;
     
-    // Update the meeting status to completed
-    const result = await req.db.query(`
-      UPDATE meetings.meetings 
-      SET status = 'completed', updated_at = NOW()
-      WHERE recall_bot_id = $1
-      RETURNING *
-    `, [meetingId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Meeting not found' });
+    // Ensure dbAgent is connected
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
     }
     
-    // Note: Only updating meetings table since that's where the meeting status is tracked
+    // Update the meeting status to completed using BotOperations
+    const updatedMeeting = await dbAgent.bots.forceCompleteMeeting(meetingId);
+    
+    if (!updatedMeeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
     
     res.json({ 
       success: true, 
       message: 'Meeting marked as completed',
-      meeting: result.rows[0]
+      meeting: updatedMeeting
     });
   } catch (error) {
     console.error('Error completing stuck meeting:', error);
@@ -97,15 +80,15 @@ router.post('/bots/:botId/leave', requireAuth, async (req, res) => {
     
     console.log(`Shutting down bot ${botId} for user ${user_id}`);
     
-    // Update the bot status to leaving in meetings table
-    const updateResult = await req.db.query(`
-      UPDATE meetings.meetings 
-      SET status = 'leaving', updated_at = NOW()
-      WHERE recall_bot_id = $1
-      RETURNING *
-    `, [botId]);
+    // Ensure dbAgent is connected
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
     
-    if (updateResult.rows.length === 0) {
+    // Update the bot status to leaving using BotOperations
+    const updatedMeeting = await dbAgent.bots.setBotStatusLeaving(botId);
+    
+    if (!updatedMeeting) {
       console.log(`No bot found with ID ${botId}`);
       return res.status(404).json({ error: 'Bot not found' });
     }
@@ -116,11 +99,7 @@ router.post('/bots/:botId/leave', requireAuth, async (req, res) => {
     // For now, we'll just simulate it by updating the status after a delay
     setTimeout(async () => {
       try {
-        await req.db.query(`
-          UPDATE meetings.meetings 
-          SET status = 'inactive', updated_at = NOW()
-          WHERE recall_bot_id = $1
-        `, [botId]);
+        await dbAgent.bots.setBotStatusInactive(botId);
         console.log(`Bot ${botId} status updated to inactive`);
       } catch (error) {
         console.error('Error updating bot status to inactive:', error);

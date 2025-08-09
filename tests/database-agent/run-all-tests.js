@@ -6,9 +6,9 @@
 
 import { runUserOperationsTests } from './domains/user-operations.test.js';
 import { runMeetingOperationsTests } from './domains/meeting-operations.test.js';
+import { runFileOperationsTests } from './domains/file-operations.test.js';
+import { runTurnOperationsTests } from './domains/turn-operations.test.js';
 // TODO: Import other domain tests as they're created
-// import { runTurnOperationsTests } from './domains/turn-operations.test.js';
-// import { runFileOperationsTests } from './domains/file-operations.test.js';
 // import { runLocationOperationsTests } from './domains/location-operations.test.js';
 
 const DOMAINS = [
@@ -22,16 +22,16 @@ const DOMAINS = [
     testFunction: runMeetingOperationsTests,
     status: 'implemented'
   },
-  // {
-  //   name: 'Turn Operations',
-  //   testFunction: runTurnOperationsTests, 
-  //   status: 'pending'
-  // },
-  // {
-  //   name: 'File Operations',
-  //   testFunction: runFileOperationsTests,
-  //   status: 'pending' 
-  // },
+  {
+    name: 'File Operations',
+    testFunction: runFileOperationsTests,
+    status: 'implemented'
+  },
+  {
+    name: 'Turn Operations',
+    testFunction: runTurnOperationsTests, 
+    status: 'implemented'
+  },
   // {
   //   name: 'Location Operations',
   //   testFunction: runLocationOperationsTests,

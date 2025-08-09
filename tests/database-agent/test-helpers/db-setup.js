@@ -26,19 +26,45 @@ export async function cleanupTestData(dbAgent) {
   try {
     // Clean up in reverse dependency order
     
-    // 1. Remove test turns (depend on meetings)
+    // 1. Remove test chunks (depend on files) - if context schema exists
+    try {
+      await dbAgent.connector.query(`
+        DELETE FROM context.chunks 
+        WHERE metadata->>'test' = 'true'
+        OR file_id IN (
+          SELECT id FROM context.files WHERE metadata->>'test' = 'true'
+        )
+      `);
+    } catch (error) {
+      // Context schema might not exist in this environment
+      console.log('ℹ️  Context schema not available for cleanup');
+    }
+    
+    // 2. Remove test files - if context schema exists
+    try {
+      await dbAgent.connector.query(`
+        DELETE FROM context.files 
+        WHERE metadata->>'test' = 'true'
+        OR filename LIKE 'test_file_%'
+      `);
+    } catch (error) {
+      // Context schema might not exist in this environment
+      console.log('ℹ️  Context files not available for cleanup');
+    }
+    
+    // 3. Remove test turns (depend on meetings)
     await dbAgent.connector.query(`
       DELETE FROM meetings.turns 
       WHERE metadata->>'test' = 'true'
     `);
     
-    // 2. Remove test meetings (depend on users and clients)
+    // 4. Remove test meetings (depend on users and clients)
     await dbAgent.connector.query(`
       DELETE FROM meetings.meetings 
       WHERE metadata->>'test' = 'true'
     `);
     
-    // 3. Remove test user-client associations
+    // 5. Remove test user-client associations
     await dbAgent.connector.query(`
       DELETE FROM client_mgmt.user_clients 
       WHERE user_id IN (
@@ -46,13 +72,13 @@ export async function cleanupTestData(dbAgent) {
       )
     `);
     
-    // 4. Remove test users
+    // 6. Remove test users
     await dbAgent.connector.query(`
       DELETE FROM client_mgmt.users 
       WHERE email LIKE 'test_%@example.com'
     `);
     
-    // 5. Remove test clients
+    // 7. Remove test clients
     await dbAgent.connector.query(`
       DELETE FROM client_mgmt.clients 
       WHERE metadata->>'test' = 'true'
