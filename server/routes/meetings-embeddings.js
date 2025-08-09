@@ -21,7 +21,7 @@ router.get('/meetings/:meetingId/embeddings', async (req, res) => {
         t.content_embedding
       FROM meetings.turns t
       LEFT JOIN participants p ON t.participant_id = p.id
-      WHERE t.id = $1
+      WHERE t.meeting_id = $1
         AND t.content_embedding IS NOT NULL
       ORDER BY t.created_at
     `;
