@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { createSessionMeeting } from '../lib/session-meeting.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
 
@@ -46,46 +47,18 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    // Find all users with this email (could be multiple due to duplicate emails)
-    const userResult = await req.db.query(
-      'SELECT id, email, password_hash FROM client_mgmt.users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
-      [email]
-    );
+    // Initialize DatabaseAgent for this request
+    const dbAgent = new DatabaseAgent();
     
-    if (userResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    
-    // Check password against all matching users
-    let authenticatedUser = null;
-    for (const user of userResult.rows) {
-      if (!user.password_hash) continue;
-      
-      const passwordMatch = await bcrypt.compare(password, user.password_hash);
-      if (passwordMatch) {
-        authenticatedUser = user;
-        break;
-      }
-    }
+    // Authenticate user using DatabaseAgent
+    const authenticatedUser = await dbAgent.users.authenticate(email, password);
     
     if (!authenticatedUser) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Get client associations for the authenticated user
-    const clientsResult = await req.db.query(
-      `SELECT 
-        uc.client_id,
-        uc.role,
-        c.name as client_name
-      FROM client_mgmt.user_clients uc
-      JOIN client_mgmt.clients c ON uc.client_id = c.id
-      WHERE uc.user_id = $1 AND uc.is_active = true
-      ORDER BY c.name`,
-      [authenticatedUser.id]
-    );
-    
-    const clients = clientsResult.rows;
+    // Get client associations using DatabaseAgent
+    const clients = await dbAgent.users.getUserClients(authenticatedUser.id);
     
     if (clients.length === 0) {
       return res.status(403).json({ error: 'No active client access' });
