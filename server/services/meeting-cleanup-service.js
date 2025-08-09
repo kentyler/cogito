@@ -1,9 +1,12 @@
 // Meeting cleanup service for handling inactive meetings and memory management
+import { DatabaseAgent } from '../../lib/database-agent.js';
+
 export class MeetingCleanupService {
   constructor(pool, meetingLastActivity, transcriptService) {
     this.pool = pool;
     this.meetingLastActivity = meetingLastActivity;
     this.transcriptService = transcriptService;
+    this.dbAgent = new DatabaseAgent();
     
     // Configuration
     this.INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
@@ -15,18 +18,13 @@ export class MeetingCleanupService {
     try {
       console.log(`⏰ Completing meeting ${botId} due to ${reason}`);
       
-      // Get meeting info
-      const meetingResult = await this.pool.query(
-        'SELECT * FROM meetings.meetings WHERE recall_bot_id = $1 AND status NOT IN ($2, $3)',
-        [botId, 'completed', 'inactive']
-      );
+      // Get meeting info using DatabaseAgent meetings domain
+      const meeting = await this.dbAgent.meetings.getByBotId(botId);
       
-      if (meetingResult.rows.length === 0) {
+      if (!meeting) {
         console.log(`ℹ️ Meeting ${botId} not found or already completed`);
         return;
       }
-      
-      const meeting = meetingResult.rows[0];
       console.log(`📋 Found meeting: ${meeting.name} (status: ${meeting.status})`);
       
       // End transcript processing first
@@ -34,14 +32,8 @@ export class MeetingCleanupService {
         await this.transcriptService.endMeetingTranscriptProcessing(meeting.id);
       }
       
-      // Update meeting status to completed
-      await this.pool.query(`
-        UPDATE meetings.meetings 
-        SET status = 'completed',
-            ended_at = NOW(),
-            updated_at = NOW()
-        WHERE recall_bot_id = $1
-      `, [botId]);
+      // Update meeting status to completed using DatabaseAgent
+      await this.dbAgent.meetings.updateStatus(botId, 'completed');
       
       console.log(`✅ Meeting ${botId} marked as completed in database`);
       
