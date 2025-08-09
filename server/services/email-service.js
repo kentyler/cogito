@@ -111,7 +111,7 @@ export class EmailService {
       
       // Mark as sent in database
       await this.pool.query(`
-        UPDATE meetings 
+        UPDATE meetings.meetings 
         SET email_sent = TRUE 
         WHERE id = $1
       `, [meetingId]);

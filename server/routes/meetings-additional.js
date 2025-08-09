@@ -46,7 +46,7 @@ router.post('/meetings/create', async (req, res) => {
     
     // Create a meeting
     const meetingResult = await req.db.query(
-      `INSERT INTO meetings (name, description, meeting_type, created_by_user_id, client_id, metadata) 
+      `INSERT INTO meetings.meetings (name, description, meeting_type, created_by_user_id, client_id, metadata) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [
         meeting_name,

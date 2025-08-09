@@ -63,7 +63,7 @@ router.post('/query', requireAuth, async (req, res) => {
         m.title as meeting_title,
         ts_rank(to_tsvector('english', t.content), plainto_tsquery('english', $1)) as rank
       FROM meetings.turns t
-      JOIN meetings.meetings m ON t.meeting_id = m.meeting_id
+      JOIN meetings.meetings m ON t.meeting_id = m.id
       WHERE m.client_id = $2 
         AND to_tsvector('english', t.content) @@ plainto_tsquery('english', $1)
       ORDER BY rank DESC, t.timestamp DESC

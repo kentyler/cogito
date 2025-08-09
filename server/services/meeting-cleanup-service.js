@@ -126,7 +126,7 @@ export class MeetingCleanupService {
   async cleanupMemoryBuffers() {
     // Get active meetings from database
     const activeMeetings = await this.pool.query(`
-      SELECT recall_bot_id FROM meetings
+      SELECT recall_bot_id FROM meetings.meetings
       WHERE status IN ('joining', 'active') AND meeting_type != 'system'
     `);
     
