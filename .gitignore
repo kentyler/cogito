@@ -83,4 +83,4 @@ conversational-repl/.shadow-cljs/
 deprecated/
 
 # Database migrations - keep local only
-migrations/
+migrations/tests/database-agent/domains/archive/
