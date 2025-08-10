@@ -1,7 +1,22 @@
 import express from 'express';
 import { requireAuth } from './auth.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
+const dbAgent = new DatabaseAgent();
+
+// Middleware to ensure DatabaseAgent connection
+router.use(async (req, res, next) => {
+  try {
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection error in meetings-crud:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Get meeting list with detailed information
 router.get('/meetings', requireAuth, async (req, res) => {
@@ -53,62 +68,47 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     
-    // Start a transaction to ensure all deletions succeed or fail together
-    const client = await req.db.connect();
+    // Use DatabaseAgent transaction for proper cleanup
+    const result = await dbAgent.transaction(async (client) => {
+      // First get all turn IDs for counting
+      const turns = await dbAgent.turns.getTurnsByMeetingId(meetingId);
+      const turnCount = turns.length;
+      
+      // Delete all turns for this meeting using turns domain
+      const deletedTurnIds = await dbAgent.turns.deleteTurnsByMeetingId(meetingId);
+      
+      // Delete the meeting record using meetings domain  
+      const deletedMeeting = await dbAgent.meetings.deleteMeeting(meetingId);
+      
+      if (!deletedMeeting) {
+        throw new Error('Meeting not found');
+      }
+      
+      return {
+        meeting_id: meetingId,
+        turns_deleted: turnCount,
+        deleted_turn_ids: deletedTurnIds
+      };
+    });
     
-    try {
-      await client.query('BEGIN');
-      
-      // Get all turn IDs associated with this meeting for deletion
-      const turnsResult = await client.query(`
-        SELECT id 
-        FROM meetings.turns
-        WHERE meeting_id = $1
-      `, [meetingId]);
-      
-      const turnIds = turnsResult.rows.map(row => row.id);
-      
-      // Delete in the correct order to avoid foreign key constraint violations
-      
-      // 1. Delete turns (now they belong directly to the meeting)
-      if (turnIds.length > 0) {
-        const turnIdsList = turnIds.map((_, i) => `$${i + 1}`).join(',');
-        await client.query(`DELETE FROM meetings.turns WHERE id IN (${turnIdsList})`, turnIds);
-        console.log(`🗑️  Deleted ${turnIds.length} turns from meeting ${meetingId}`);
+    console.log(`🗑️  Deleted ${result.turns_deleted} turns from meeting ${meetingId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Meeting ${meetingId} and ${result.turns_deleted} associated turns deleted successfully`,
+      deleted: {
+        meeting_id: result.meeting_id,
+        turns_deleted: result.turns_deleted
       }
-      
-      // 2. Delete the meeting record
-      const deleteMeetingResult = await client.query(`
-        DELETE FROM meetings.meetings 
-        WHERE id = $1
-      `, [meetingId]);
-      
-      if (deleteMeetingResult.rowCount === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Meeting not found' });
-      }
-      
-      await client.query('COMMIT');
-      
-      res.json({ 
-        success: true, 
-        message: `Meeting ${meetingId} and ${turnIds.length} associated turns deleted successfully`,
-        deleted: {
-          meeting_id: meetingId,
-          turns_deleted: turnIds.length
-        }
-      });
-      
-    } catch (deleteError) {
-      await client.query('ROLLBACK');
-      throw deleteError;
-    } finally {
-      client.release();
-    }
+    });
     
   } catch (error) {
     console.error('Error deleting meeting:', error);
-    res.status(500).json({ error: 'Failed to delete meeting' });
+    if (error.message === 'Meeting not found') {
+      res.status(404).json({ error: 'Meeting not found' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete meeting' });
+    }
   }
 });
 

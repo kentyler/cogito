@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Client Management API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Client Management API Test</h1>
+    <p>This page tests the admin client management endpoints.</p>
+    
+    <div id="authStatus"></div>
+    
+    <button onclick="testGetClients()">Test Get Clients</button>
+    <button onclick="testCreateClient()">Test Create Client</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth-status');
+                const data = await response.json();
+                
+                const authDiv = document.getElementById('authStatus');
+                if (data.authenticated) {
+                    authDiv.innerHTML = `<div class="test-result success">
+                        Authenticated as: ${data.user.email} (ID: ${data.user.id})
+                        ${data.user.id === 1 ? '<br><strong>✓ Admin access available</strong>' : '<br><strong>✗ Not admin - tests will fail</strong>'}
+                    </div>`;
+                } else {
+                    authDiv.innerHTML = `<div class="test-result error">Not authenticated - please <a href="/login.html">login</a></div>`;
+                }
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `<div class="test-result error">Auth check failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testGetClients() {
+            addResult('info', 'Testing GET /api/admin/clients...');
+            
+            try {
+                const response = await fetch('/api/admin/clients');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('success', `✓ Got ${data.clients.length} clients`);
+                    addResult('info', `<pre>${JSON.stringify(data.clients.slice(0, 2), null, 2)}</pre>`);
+                } else {
+                    addResult('error', `✗ Error: ${data.error}`);
+                }
+            } catch (error) {
+                addResult('error', `✗ Request failed: ${error.message}`);
+            }
+        }
+        
+        async function testCreateClient() {
+            const testName = 'Test Client ' + Date.now();
+            addResult('info', `Testing POST /api/admin/clients with name: ${testName}`);
+            
+            try {
+                const response = await fetch('/api/admin/clients', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: testName,
+                        story: 'This is a test client created by the test page'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('success', `✓ Created client: ${data.client.name} (ID: ${data.client.id})`);
+                    addResult('info', `<pre>${JSON.stringify(data.client, null, 2)}</pre>`);
+                } else {
+                    addResult('error', `✗ Error: ${data.error}`);
+                }
+            } catch (error) {
+                addResult('error', `✗ Request failed: ${error.message}`);
+            }
+        }
+        
+        function addResult(type, message) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        // Check auth on page load
+        checkAuth();
+    </script>
+</body>
+</html>

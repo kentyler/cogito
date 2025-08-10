@@ -84,3 +84,7 @@ deprecated/
 
 # Database migrations - keep local only
 migrations/tests/database-agent/domains/archive/
+# Archive directories (files >200 lines)
+lib/database-agent/domains/archive/
+server/routes/archive/
+tests/database-agent/domains/archive/
