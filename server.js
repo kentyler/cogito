@@ -30,6 +30,7 @@ import { WebSocketService } from './server/services/websocket-service.js';
 import authRoutes from './server/routes/auth.js';
 import authExtendedRoutes from './server/routes/auth-extended.js';
 import clientManagementRoutes from './server/routes/client-management.js';
+import adminClientManagementRoutes from './server/routes/admin-client-management.js';
 import conversationRoutes from './server/routes/conversations.js';
 import searchRoutes from './server/routes/search.js';
 import meetingsCrudRoutes from './server/routes/meetings-crud.js';
@@ -128,6 +129,7 @@ async function startServer() {
     app.use('/api', authRoutes);
     app.use('/api', authExtendedRoutes);
     app.use('/api', clientManagementRoutes);
+    app.use('/api/admin', adminClientManagementRoutes);
     app.use('/api', conversationRoutes);
     app.use(searchRoutes);
     app.use('/api', meetingsCrudRoutes);
