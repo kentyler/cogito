@@ -1,0 +1,2 @@
+-- Standardize turns.turn_id to id - Step by step approach
+-- This version does the migration in smaller steps to avoid memory issues

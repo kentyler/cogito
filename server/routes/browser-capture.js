@@ -1,7 +1,22 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
+const dbAgent = new DatabaseAgent();
+
+// Middleware to ensure DatabaseAgent connection
+router.use(async (req, res, next) => {
+  try {
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection error in browser-capture:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Browser conversation capture endpoint
 router.post('/capture-browser-conversation', async (req, res) => {
@@ -27,72 +42,63 @@ router.post('/capture-browser-conversation', async (req, res) => {
     }
 
     // Check if we already have a meeting for this session
-    let meetingResult = await req.db.query(
-      'SELECT id FROM meetings.meetings WHERE name = $1 AND meeting_type = $2',
-      [`${platform} Session ${sessionId}`, 'browser_conversation']
-    );
-
+    const meetingName = `${platform} Session ${sessionId}`;
     let meetingId;
-    if (meetingResult.rows.length === 0) {
-      // Create new meeting for this browser session
-      const newMeetingId = uuidv4();
-      await req.db.query(`
-        INSERT INTO meetings.meetings (meeting_id, name, description, meeting_type, metadata, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-      `, [
-        newMeetingId,
-        `${platform} Session ${sessionId}`,
-        `Browser conversation session on ${platform} started at ${new Date().toISOString()}`,
-        'browser_conversation',
-        JSON.stringify({ 
+    
+    // Try to find existing meeting using domain operations
+    const existingMeeting = await dbAgent.meetings.getMeetingByNameAndType(meetingName, 'browser_conversation');
+    
+    if (existingMeeting) {
+      meetingId = existingMeeting.meeting_id;
+    } else {
+      // Create new meeting for this browser session using domain operations
+      const meetingData = {
+        name: meetingName,
+        description: `Browser conversation session on ${platform} started at ${new Date().toISOString()}`,
+        meeting_type: 'browser_conversation',
+        metadata: { 
           sessionId, 
           platform, 
           url, 
           ...metadata 
-        })
-      ]);
-      meetingId = newMeetingId;
+        }
+      };
+      
+      const newMeeting = await dbAgent.meetings.createMeeting(meetingData);
+      meetingId = newMeeting.meeting_id;
       console.log(`✅ Created new browser session meeting: ${meetingId}`);
-    } else {
-      meetingId = meetingResult.rows[0].meeting_id;
     }
 
-    // Create turns for user prompt and AI response
-    const userTurnId = uuidv4();
-    const aiTurnId = uuidv4();
+    // Create turns for user prompt and AI response using turns domain
+    const userTurnData = {
+      content: userPrompt,
+      source_type: 'user_input',
+      metadata: { sessionId, platform, url },
+      timestamp: timestamp || new Date().toISOString(),
+      meeting_id: meetingId
+    };
     
-    // Insert user turn
-    await req.db.query(`
-      INSERT INTO meetings.turns (turn_id, content, source_type, metadata, timestamp, meeting_id, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
-    `, [
-      userTurnId, 
-      userPrompt, 
-      'user_input', 
-      JSON.stringify({ sessionId, platform, url }),
-      timestamp || new Date().toISOString(),
-      meetingId
-    ]);
+    const userTurn = await dbAgent.turns.createTurn(userTurnData);
 
     // Insert AI turn with slightly later timestamp to ensure ordering
     const aiTimestamp = timestamp ? new Date(timestamp).getTime() + 1 : Date.now() + 1;
-    await req.db.query(`
-      INSERT INTO meetings.turns (turn_id, content, source_type, metadata, timestamp, meeting_id, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
-    `, [
-      aiTurnId, 
-      responseContent, 
-      `${platform}_response`, 
-      JSON.stringify({ sessionId, platform, url, ...metadata }),
-      new Date(aiTimestamp).toISOString(),
-      meetingId
-    ]);
+    const aiTurnData = {
+      content: responseContent,
+      source_type: `${platform}_response`,
+      metadata: { sessionId, platform, url, ...metadata },
+      timestamp: new Date(aiTimestamp).toISOString(),
+      meeting_id: meetingId
+    };
+    
+    const aiTurn = await dbAgent.turns.createTurn(aiTurnData);
 
     console.log(`✅ Captured browser conversation: ${platform} session ${sessionId}`);
     
     res.json({ 
       success: true, 
       meetingId,
+      userTurnId: userTurn.turn_id,
+      aiTurnId: aiTurn.turn_id,
       message: 'Conversation captured successfully' 
     });
 

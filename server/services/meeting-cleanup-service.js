@@ -42,13 +42,9 @@ export class MeetingCleanupService {
         console.log(`📧 Meeting has email configured: ${meeting.transcript_email}`);
         
         // Get updated meeting data with full transcript
-        const updatedMeetingResult = await this.pool.query(
-          'SELECT * FROM meetings.meetings WHERE id = $1',
-          [meeting.id]
-        );
+        const updatedMeeting = await this.dbAgent.meetings.getById(meeting.id);
         
-        if (updatedMeetingResult.rows.length > 0) {
-          const updatedMeeting = updatedMeetingResult.rows[0];
+        if (updatedMeeting) {
           console.log(`📊 Meeting transcript length: ${Array.isArray(updatedMeeting.full_transcript) ? updatedMeeting.full_transcript.length : 'not array'}`);
           
           // Send email via webhook service (if available)
@@ -116,13 +112,10 @@ export class MeetingCleanupService {
 
   // Clean up memory buffers for completed meetings
   async cleanupMemoryBuffers() {
-    // Get active meetings from database
-    const activeMeetings = await this.pool.query(`
-      SELECT recall_bot_id FROM meetings.meetings
-      WHERE status IN ('joining', 'active') AND meeting_type != 'system'
-    `);
+    // Get active meetings from database using meeting operations
+    const activeMeetings = await this.dbAgent.meetings.getActiveMeetings();
     
-    const activeBotIds = new Set(activeMeetings.rows.map(m => m.recall_bot_id));
+    const activeBotIds = new Set(activeMeetings.map(m => m.recall_bot_id));
     
     // Remove tracking data for completed meetings
     for (const botId of this.meetingLastActivity.keys()) {
@@ -134,15 +127,9 @@ export class MeetingCleanupService {
     // Clean up transcript buffers for completed meetings
     if (this.transcriptService) {
       const activeMeetingIds = new Set();
-      for (const meeting of activeMeetings.rows) {
-        // Get meeting_id for active meetings
-        const meetingDetails = await this.pool.query(
-          'SELECT id FROM meetings.meetings WHERE recall_bot_id = $1',
-          [meeting.recall_bot_id]
-        );
-        if (meetingDetails.rows.length > 0) {
-          activeMeetingIds.add(meetingDetails.rows[0].id);
-        }
+      for (const meeting of activeMeetings) {
+        // Meeting ID is already available from getActiveMeetings
+        activeMeetingIds.add(meeting.id);
       }
       
       // Remove buffers for completed meetings

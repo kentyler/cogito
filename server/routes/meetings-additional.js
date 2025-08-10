@@ -1,7 +1,22 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
+const dbAgent = new DatabaseAgent();
+
+// Middleware to ensure DatabaseAgent connection
+router.use(async (req, res, next) => {
+  try {
+    if (!dbAgent.connector.pool) {
+      await dbAgent.connect();
+    }
+    next();
+  } catch (error) {
+    console.error('Database connection error in meetings-additional:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Meeting summary endpoint
 router.get('/meeting-summary/:meetingId', async (req, res) => {
@@ -44,21 +59,17 @@ router.post('/meetings/create', async (req, res) => {
       return res.status(400).json({ error: 'Meeting name is required' });
     }
     
-    // Create a meeting
-    const meetingResult = await req.db.query(
-      `INSERT INTO meetings.meetings (name, description, meeting_type, created_by_user_id, client_id, metadata) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [
-        meeting_name,
-        `Conversation meeting created on ${new Date().toISOString()}`,
-        'conversation',
-        user_id,
-        client_id,
-        { source: 'conversational-repl' }
-      ]
-    );
+    // Create meeting using meeting operations domain
+    const meetingData = {
+      name: meeting_name,
+      description: `Conversation meeting created on ${new Date().toISOString()}`,
+      meeting_type: 'conversation',
+      created_by_user_id: user_id,
+      client_id: client_id,
+      metadata: { source: 'conversational-repl' }
+    };
     
-    const meeting = meetingResult.rows[0];
+    const meeting = await dbAgent.meetings.createMeeting(meetingData);
     
     // Return the meeting info
     res.json({
