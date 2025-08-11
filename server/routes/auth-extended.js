@@ -31,6 +31,7 @@ router.get('/auth-status', (req, res) => {
     res.json({ 
       authenticated: true, 
       user: { 
+        id: req.session.user.user_id,
         email: req.session.user.email,
         client: req.session.user.client_name,
         role: req.session.user.role

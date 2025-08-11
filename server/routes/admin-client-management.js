@@ -7,11 +7,14 @@ const router = express.Router();
 const dbAgent = new DatabaseAgent();
 const adminOps = new AdminClientOperations(dbAgent);
 
-// Middleware to check if user is admin (ken@8thfold.com, user_id = 1)
+// Middleware to check if user is admin (ken@8thfold.com = user_id 1, ianpalonis@gmail.com = user_id 7)
 const requireAdmin = (req, res, next) => {
-  if (!req.session?.user?.id || req.session.user.id !== 1) {
+  const adminUserIds = [1, 7]; // ken@8thfold.com and ianpalonis@gmail.com
+  const userId = req.session?.user?.user_id;
+  
+  if (!userId || !adminUserIds.includes(userId)) {
     return res.status(403).json({ 
-      error: 'Admin access required. This function is restricted to ken@8thfold.com.' 
+      error: 'Admin access required. This function is restricted to authorized administrators.' 
     });
   }
   next();

@@ -300,46 +300,77 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h1>Client Management</h1>
-            <p>Admin panel for ken@8thfold.com</p>
-        </div>
-
-        <div class="clients-section">
-            <div class="client-list">
-                <h2>
-                    Clients 
-                    <span class="client-count" id="clientCount">0</span>
-                </h2>
-                <div id="clientsList">
-                    <div class="loading">Loading clients...</div>
-                </div>
-            </div>
-
-            <div class="create-form">
-                <h3>Create New Client</h3>
-                <div id="formMessages"></div>
-                <form id="createClientForm">
-                    <div class="form-group">
-                        <label for="clientName">Client Name *</label>
-                        <input type="text" id="clientName" name="name" required placeholder="Enter client name">
+    <!-- Login Form (shown when not authenticated) -->
+    <div id="loginContainer" style="display: none;">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f5f5f5;">
+            <div style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 400px;">
+                <h1 style="text-align: center; margin-bottom: 30px; color: #333;">Admin Login</h1>
+                <p style="text-align: center; color: #666; margin-bottom: 20px;">Restricted to admin users</p>
+                <div id="loginError" style="display: none; background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px;"></div>
+                <form id="loginForm">
+                    <div style="margin-bottom: 20px;">
+                        <label for="email" style="display: block; margin-bottom: 5px; color: #555; font-weight: 500;">Email</label>
+                        <input type="email" id="email" name="email" required 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
+                               placeholder="ken@8thfold.com">
                     </div>
-                    <div class="form-group">
-                        <label for="clientStory">Description</label>
-                        <textarea id="clientStory" name="story" placeholder="Optional client description"></textarea>
+                    <div style="margin-bottom: 25px;">
+                        <label for="password" style="display: block; margin-bottom: 5px; color: #555; font-weight: 500;">Password</label>
+                        <input type="password" id="password" name="password" required 
+                               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;"
+                               placeholder="Enter your password">
                     </div>
-                    <button type="submit" class="btn" id="createBtn">Create Client</button>
+                    <button type="submit" style="width: 100%; background: #007acc; color: white; border: none; padding: 12px; border-radius: 4px; font-size: 16px; font-weight: 500; cursor: pointer;">
+                        Sign In
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="main-content">
-        <div id="mainContent">
-            <div class="welcome-state">
-                <h2>Welcome to Client Management</h2>
-                <p>Select a client from the sidebar to view details, or create a new client using the form.</p>
+    <!-- Main Admin Interface (shown when authenticated) -->
+    <div id="adminInterface" style="display: none;">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>Client Management</h1>
+                <p>Admin panel</p>
+            </div>
+
+            <div class="clients-section">
+                <div class="client-list">
+                    <h2>
+                        Clients 
+                        <span class="client-count" id="clientCount">0</span>
+                    </h2>
+                    <div id="clientsList">
+                        <div class="loading">Loading clients...</div>
+                    </div>
+                </div>
+
+                <div class="create-form">
+                    <h3>Create New Client</h3>
+                    <div id="formMessages"></div>
+                    <form id="createClientForm">
+                        <div class="form-group">
+                            <label for="clientName">Client Name *</label>
+                            <input type="text" id="clientName" name="name" required placeholder="Enter client name">
+                        </div>
+                        <div class="form-group">
+                            <label for="clientStory">Description</label>
+                            <textarea id="clientStory" name="story" placeholder="Optional client description"></textarea>
+                        </div>
+                        <button type="submit" class="btn" id="createBtn">Create Client</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="mainContent">
+                <div class="welcome-state">
+                    <h2>Welcome to Client Management</h2>
+                    <p>Select a client from the sidebar to view details, or create a new client using the form.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -353,9 +384,93 @@
             }
 
             async init() {
-                await this.checkAuth();
-                await this.loadClients();
-                this.setupEventListeners();
+                const isAuthenticated = await this.checkAuth();
+                if (isAuthenticated) {
+                    await this.loadClients();
+                    this.setupEventListeners();
+                }
+            }
+
+            showLoginForm() {
+                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('adminInterface').style.display = 'none';
+                
+                // Setup login form handler
+                document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.handleLogin();
+                });
+            }
+
+            showAdminInterface() {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('adminInterface').style.display = 'flex';
+            }
+
+            async handleLogin() {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const errorDiv = document.getElementById('loginError');
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        errorDiv.textContent = data.error || 'Login failed';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    // Check if need to select client
+                    if (data.requiresClientSelection) {
+                        // For admin, just select the first client or handle appropriately
+                        if (data.clients && data.clients.length > 0) {
+                            await this.selectClient(data.clients[0].client_id);
+                        }
+                    } else {
+                        // Successful login, check if admin
+                        const isAuthenticated = await this.checkAuth();
+                        if (isAuthenticated) {
+                            await this.loadClients();
+                            this.setupEventListeners();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    errorDiv.textContent = 'Login failed. Please try again.';
+                    errorDiv.style.display = 'block';
+                }
+            }
+
+            async selectClient(clientId) {
+                try {
+                    const response = await fetch('/api/select-client', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ client_id: clientId })
+                    });
+
+                    if (response.ok) {
+                        // After client selection, check auth again
+                        const isAuthenticated = await this.checkAuth();
+                        if (isAuthenticated) {
+                            await this.loadClients();
+                            this.setupEventListeners();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Client selection error:', error);
+                }
             }
 
             async checkAuth() {
@@ -364,25 +479,34 @@
                     const data = await response.json();
                     
                     if (!response.ok || !data.authenticated) {
-                        window.location.href = '/login.html';
-                        return;
+                        // Show login form
+                        this.showLoginForm();
+                        return false;
                     }
 
-                    // Check if user is admin (user_id = 1)
-                    if (data.user.id !== 1) {
+                    // Check if user is admin (user_id = 1 or 7)
+                    const adminUserIds = [1, 7]; // ken@8thfold.com and ianpalonis@gmail.com
+                    const userId = typeof data.user.id === 'string' ? parseInt(data.user.id) : data.user.id;
+                    console.log('Auth check - User ID:', data.user.id, 'Type:', typeof data.user.id, 'Parsed:', userId);
+                    if (!adminUserIds.includes(userId)) {
                         document.body.innerHTML = `
                             <div style="padding: 40px; text-align: center;">
                                 <h1>Access Denied</h1>
-                                <p>This admin panel is restricted to ken@8thfold.com.</p>
+                                <p>This admin panel is restricted to authorized administrators.</p>
                                 <p>Current user: ${data.user.email}</p>
                                 <a href="/" style="color: #007acc;">Return to Main App</a>
                             </div>
                         `;
-                        return;
+                        return false;
                     }
+                    
+                    // Show admin interface
+                    this.showAdminInterface();
+                    return true;
                 } catch (error) {
                     console.error('Auth check failed:', error);
-                    window.location.href = '/login.html';
+                    this.showLoginForm();
+                    return false;
                 }
             }
 
@@ -431,7 +555,7 @@
                     const clientItem = e.target.closest('.client-item');
                     if (clientItem && !e.target.classList.contains('delete-btn')) {
                         const clientId = parseInt(clientItem.dataset.clientId);
-                        this.selectClient(clientId);
+                        this.selectClientForViewing(clientId);
                     }
                 });
 
@@ -442,7 +566,7 @@
                 });
             }
 
-            selectClient(clientId) {
+            selectClientForViewing(clientId) {
                 this.selectedClientId = clientId;
                 this.renderClientsList();
                 this.showClientDetails(clientId);
@@ -521,7 +645,7 @@
                     this.showSuccess('Client created successfully!');
                     form.reset();
                     await this.loadClients();
-                    this.selectClient(data.client.id);
+                    this.selectClientForViewing(data.client.id);
                     
                 } catch (error) {
                     console.error('Error creating client:', error);

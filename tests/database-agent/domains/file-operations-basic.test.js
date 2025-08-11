@@ -63,7 +63,7 @@ export async function runFileOperationsBasicTests() {
       logTest('getFileById() returns correct id', file.id === testFileId);
       logTest('getFileById() includes metadata', !!file.metadata);
       
-      const notFound = await dbAgent.files.getFileById('00000000-0000-0000-0000-000000000000');
+      const notFound = await dbAgent.files.getFileById(999999);
       logTest('getFileById() returns null for non-existent', notFound === null);
       
     } catch (error) {

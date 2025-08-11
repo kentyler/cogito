@@ -8,6 +8,7 @@ import { runUserOperationsTests } from './domains/user-operations.test.js';
 import { runMeetingOperationsTests } from './domains/meeting-operations.test.js';
 import { runFileOperationsTests } from './domains/file-operations.test.js';
 import { runTurnOperationsTests } from './domains/turn-operations.test.js';
+import { runClientOperationsTests } from './domains/client-operations.test.js';
 // TODO: Import other domain tests as they're created
 // import { runLocationOperationsTests } from './domains/location-operations.test.js';
 
@@ -30,6 +31,11 @@ const DOMAINS = [
   {
     name: 'Turn Operations',
     testFunction: runTurnOperationsTests, 
+    status: 'implemented'
+  },
+  {
+    name: 'Client Operations',
+    testFunction: runClientOperationsTests,
     status: 'implemented'
   },
   // {
