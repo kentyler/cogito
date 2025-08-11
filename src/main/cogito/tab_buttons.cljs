@@ -16,9 +16,7 @@
        [tab-button active-tab :conversation "Conversation"]
        [tab-button active-tab :meetings "Meetings"]
        [tab-button active-tab :bot-creation "Create Bot"]
-       [tab-button active-tab :map "Map"]
        [tab-button active-tab :upload-files "Upload Files"]
        [tab-button active-tab :daily-summary "Daily Summary"]
        [tab-button active-tab :monthly-summary "Monthly Summary"]
-       [tab-button active-tab :transcripts "Transcripts"]
        [tab-button active-tab :invitations "Invitations"]])))

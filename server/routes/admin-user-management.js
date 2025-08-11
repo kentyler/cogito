@@ -33,6 +33,32 @@ export function createUserManagementRoutes(dbAgent) {
     }
   });
 
+  // Get meeting transcript
+  router.get('/meetings/:id/transcript', requireAdmin, async (req, res) => {
+    try {
+      const meetingId = req.params.id;
+      console.log('🔍 Transcript request for meeting ID:', meetingId);
+      
+      const transcriptData = await dbAgent.meetings.getTranscript(meetingId);
+      
+      if (!transcriptData) {
+        console.log('❌ No transcript data found for meeting:', meetingId);
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+      
+      console.log('✅ Transcript found, length:', transcriptData.full_transcript ? 
+        (typeof transcriptData.full_transcript === 'string' ? 
+          transcriptData.full_transcript.length : 
+          JSON.stringify(transcriptData.full_transcript).length
+        ) : 0);
+      
+      res.json(transcriptData);
+    } catch (error) {
+      console.error('Get meeting transcript error:', error);
+      res.status(500).json({ error: 'Failed to load meeting transcript' });
+    }
+  });
+
   // Get files for a specific client
   router.get('/clients/:id/files', requireAdmin, async (req, res) => {
     try {

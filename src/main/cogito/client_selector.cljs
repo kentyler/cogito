@@ -17,11 +17,11 @@
    (for [client @available-clients]
      ^{:key (:client_id client)}
      [:option {:value (:client_name client)} 
-      (str (:client_name client) ":" (:email @user))])])
+      (:client_name client)])])
 
 (defn multi-client-section [user available-clients switching-client?]
   [:div.flex.items-center.space-x-2
-   [:span.text-sm.text-gray-600 "Logged in as"]
+   [:span.text-sm.text-gray-600 (str "Logged in as " (:email @user) " to\u00A0")]
    (if @switching-client?
      [client-switching-spinner]
      [client-dropdown user available-clients switching-client?])])
