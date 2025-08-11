@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * Test suite for FileOperations domain - Chunk operations
- * Tests chunk creation, retrieval, and file statistics
+ * FileOperations Chunk tests - creation, retrieval, statistics
  */
 
 import { getTestDbAgent, TestFixtures, cleanupTestData } from '../test-helpers/db-setup.js';
@@ -82,8 +81,7 @@ export async function runFileOperationsChunksTests() {
       
       // Test with offset
       const offsetChunks = await dbAgent.files.getFileChunks(fileId, { offset: 1, limit: 1 });
-      logTest('getFileChunks() respects offset', 
-        offsetChunks.length === 1 && offsetChunks[0].chunk_index === 1);
+      logTest('getFileChunks() respects offset', offsetChunks.length === 1 && offsetChunks[0].chunk_index === 1);
       
     } catch (error) {
       logTest('getFileChunks()', false, error.message);
@@ -106,8 +104,15 @@ export async function runFileOperationsChunksTests() {
       
       logTest('getFileWithContent() returns file', !!retrieved);
       logTest('getFileWithContent() includes content_data', !!retrieved.content_data);
-      logTest('getFileWithContent() preserves content', 
-        retrieved.content_data === 'This is the file content data.');
+      
+      // Handle Buffer conversion for bytea column type
+      const expectedContent = 'This is the file content data.';
+      const actualContent = Buffer.isBuffer(retrieved.content_data) 
+        ? retrieved.content_data.toString('utf8')
+        : retrieved.content_data;
+      const contentMatches = actualContent === expectedContent;
+      
+      logTest('getFileWithContent() preserves content', contentMatches);
       
     } catch (error) {
       logTest('getFileWithContent()', false, error.message);

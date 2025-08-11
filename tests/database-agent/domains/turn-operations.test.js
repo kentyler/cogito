@@ -55,7 +55,9 @@ async function runTurnOperationsTests() {
     // Test turn operations
     console.log('🔄 Testing turn operations...');
     
-    const updatedTurn = await dbAgent.turns.updateEmbedding(turn.id, '[0.1, 0.2, 0.3]');
+    // Generate a proper 1536-dimension embedding for testing
+    const testEmbedding = '[' + Array(1536).fill(0).map((_, i) => (i < 3 ? (i + 1) * 0.1 : 0)).join(',') + ']';
+    const updatedTurn = await dbAgent.turns.updateEmbedding(turn.id, testEmbedding);
     logTest('updateEmbedding() works', !!updatedTurn);
     
     // Test statistics (skip vector operations due to setup complexity)
