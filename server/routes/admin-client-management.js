@@ -1,43 +1,25 @@
 import express from 'express';
 import { DatabaseAgent } from '../../lib/database-agent.js';
 import { AdminClientOperations } from '../lib/admin-client-operations.js';
+import { requireAdmin, ensureDbConnection } from '../middleware/admin-auth.js';
+import { createUserManagementRoutes } from './admin-user-management.js';
 import { extractRequestContext } from '../lib/event-logger.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();
 const adminOps = new AdminClientOperations(dbAgent);
 
-// Middleware to check if user is admin (ken@8thfold.com = user_id 1, ianpalonis@gmail.com = user_id 7)
-const requireAdmin = (req, res, next) => {
-  const adminUserIds = [1, 7]; // ken@8thfold.com and ianpalonis@gmail.com
-  const userId = req.session?.user?.user_id;
-  
-  if (!userId || !adminUserIds.includes(userId)) {
-    return res.status(403).json({ 
-      error: 'Admin access required. This function is restricted to authorized administrators.' 
-    });
-  }
-  next();
-};
+// Apply middleware
+router.use(ensureDbConnection(dbAgent));
 
-// Ensure database connection
-router.use(async (req, res, next) => {
-  try {
-    if (!dbAgent.connector.pool) {
-      await dbAgent.connect();
-    }
-    next();
-  } catch (error) {
-    console.error('Database connection error:', error);
-    res.status(500).json({ error: 'Database connection failed' });
-  }
-});
+// Mount user management routes
+router.use(createUserManagementRoutes(dbAgent));
 
 // GET /api/admin/clients - Get all clients with statistics
 router.get('/clients', requireAdmin, async (req, res) => {
   try {
     const clients = await adminOps.getAllClients();
-    res.json({ clients });
+    res.json(clients);
   } catch (error) {
     console.error('Error fetching clients:', error);
     
@@ -157,5 +139,6 @@ router.delete('/clients/:id', requireAdmin, async (req, res) => {
     res.status(500).json({ error: 'Failed to delete client' });
   }
 });
+
 
 export default router;

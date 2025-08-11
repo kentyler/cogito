@@ -138,7 +138,10 @@ export async function runClientOperationsTests() {
       logTest('deleteClient()', false, error.message);
     }
 
-    // Test 8: Validation
+    // Test 8: User Management (moved to separate test file)
+    // See client-operations-user-mgmt.test.js for user management tests
+
+    // Test 9: Validation
     console.log('\n📝 Testing validation');
     try {
       await dbAgent.clients.createClient({ name: '' });
