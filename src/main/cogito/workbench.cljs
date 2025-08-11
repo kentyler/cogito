@@ -5,12 +5,10 @@
             [cogito.story-arc :as story-arc]
             [cogito.bot-creation :as bot-creation]
             [cogito.meetings :as meetings]
-            [cogito.semantic-map-simple :as semantic-map]
             [cogito.daily-summary :as daily-summary]
             [cogito.monthly-summary :as monthly-summary]
             [cogito.upload-files-left-pane :as upload-left]
             [cogito.upload-files-right-pane :as upload-right]
-            [cogito.transcripts-tab :as transcripts]
             [cogito.invitations :as invitations]
             [cogito.tab-buttons :as tab-buttons]
             [cogito.client-selector :as client-selector]
@@ -47,7 +45,7 @@
                                      :sources (:sources turn))]]])
 
 
-(defn tab-nav []
+(defn header []
   (let [user (rf/subscribe [:user])
         available-clients (rf/subscribe [:available-clients])]
     
@@ -56,11 +54,28 @@
       (rf/dispatch [:fetch-available-clients]))
     
     (fn []
-      [:div.tab-nav.flex.border-b.border-gray-200.mb-4.justify-between
-       [tab-buttons/tab-buttons-section]
-       [:div.flex.items-center.space-x-4
+      [:div.prompt-input {:style {:display "flex"
+                                  :justify-content "space-between"
+                                  :align-items "center"}}
+       ;; Left side - Cogito: Client Name
+       [:h1 {:style {:font-size "1.25em" 
+                     :margin "0" 
+                     :color "#333"
+                     :font-weight "600"}}
+        "Cogito"]
+       
+       ;; Right side - User info and logout
+       [:div {:style {:display "flex" 
+                      :align-items "center" 
+                      :gap "16px"}}
         [client-selector/client-selector]
-        [logout-button/logout-button]]])))
+        [:button {:on-click #(rf/dispatch [:logout])}
+         "Logout"]]])))
+
+(defn tab-nav []
+  (fn []
+    [:div.tab-nav.border-b.border-gray-200.mb-4.px-6
+     [tab-buttons/tab-buttons-section]]))
 
 (defn conversation-tab []
   (let [turns (rf/subscribe [:turns])
@@ -100,16 +115,21 @@
 (defn panel []
   (let [active-tab (rf/subscribe [:workbench/active-tab])]
     (fn []
-      [:div.workbench-panel
+      [:div.workbench-panel.h-screen.flex.flex-col
+       ;; Header with Cogito branding and user info
+       [header]
+       
+       ;; Navigation tabs
        [tab-nav]
-       (case @active-tab
-         :conversation [conversation-tab]
-         :meetings [meetings/meetings-page]
-         :bot-creation [bot-creation/bot-creation-tab]
-         :map [semantic-map/semantic-map-tab]
-         :upload-files [upload-files-tab]
-         :daily-summary [daily-summary/daily-summary-tab]
-         :monthly-summary [monthly-summary/monthly-summary-tab]
-         :transcripts [transcripts/transcripts-tab]
-         :invitations [invitations/invitations-panel]
-         [conversation-tab])])))
+       
+       ;; Main content area
+       [:div.flex-1.overflow-hidden
+        (case @active-tab
+          :conversation [conversation-tab]
+          :meetings [meetings/meetings-page]
+          :bot-creation [bot-creation/bot-creation-tab]
+          :upload-files [upload-files-tab]
+          :daily-summary [daily-summary/daily-summary-tab]
+          :monthly-summary [monthly-summary/monthly-summary-tab]
+          :invitations [invitations/invitations-panel]
+          [conversation-tab])]])))
