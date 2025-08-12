@@ -6,6 +6,7 @@ yarn-error.log*
 
 # Environment variables
 .env
+.env.prod
 .env.local
 .env.*.local
 
@@ -78,6 +79,9 @@ conversational-repl/public/js/compiled/
 conversational-repl/public/js/cljs-runtime/
 conversational-repl/.shadow-cljs/
 .shadow-cljs/
+public/js/cljs-runtime/
+public/js/main.js
+public/js/manifest.edn
 
 # Deprecated folders with security vulnerabilities
 deprecated/

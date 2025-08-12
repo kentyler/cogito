@@ -1,6 +1,7 @@
 (ns cogito.meetings
   (:require [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [clojure.string]))
 
 ;; Helper functions
 (defn format-date [date-str]
@@ -180,8 +181,7 @@
      [:div {:class "border-b pb-4 mb-4"}
       [:h2 {:class "text-xl font-semibold text-gray-900"}
        (or (:block_name meeting) "Unnamed Meeting")]
-      [:p {:class "text-sm text-gray-500 mt-1"}
-       (str "Meeting conversation • " (format-date (:created_at meeting)))]]
+      [:p {:class "text-sm text-gray-500 mt-1"} "Meeting conversation"]]
      
      ;; Conversation history - scrollable list with all turns
      [:div {:class "flex-1 overflow-y-auto mb-4 space-y-6 min-h-0"}
@@ -235,7 +235,10 @@
     [:div {:class "flex-1"
            :on-click #(rf/dispatch [::set-selected-meeting (:block_id meeting)])}
      [:h3 {:class (str "text-lg font-medium " (if selected? "text-blue-900" "text-gray-900"))}
-      (or (:block_name meeting) "Unnamed Meeting")]
+      (let [name (or (:block_name meeting) "Unnamed Meeting")]
+        (if (re-find #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}" name)
+          (clojure.string/replace name #" \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.*$" "")
+          name))]
      [:p {:class "text-sm text-gray-500 mt-1"}
       (str (format-date (:created_at meeting)) 
            (when (:created_by_email meeting) 
