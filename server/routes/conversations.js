@@ -8,6 +8,7 @@ import {
 } from '../lib/conversations/session-validator.js';
 import { createUserTurn, createLLMTurn } from '../lib/conversations/turn-handler.js';
 import { generateLLMResponse } from '../lib/conversations/llm-handler.js';
+import { gameStateAgent } from '../../lib/game-state-agent.js';
 
 const router = express.Router();
 
@@ -57,12 +58,18 @@ router.post('/conversational-turn', async (req, res) => {
     console.log('🔍 STEP 7a: Conversation context built, length:', conversationContext?.length || 0);
     console.log('🔍 STEP 7b: Sources found:', sources.length);
     
+    // Check game state
+    console.log('🔍 STEP 8: Checking game state');
+    const gameStateResult = await gameStateAgent.processTurn(req.sessionID, content, clientId);
+    console.log('🔍 STEP 8a: Game state result:', gameStateResult);
+    
     // Generate LLM response
     const llmResponse = await generateLLMResponse(req, {
       clientName,
       conversationContext,
       content,
-      context
+      context,
+      gameState: gameStateResult
     });
     
     // Create LLM turn
