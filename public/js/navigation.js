@@ -14,6 +14,7 @@ window.showTab = function(tabName) {
     });
     
     // Show selected tab content
+    // Available methods: getElementById exists on document
     const contentId = tabName + '-content';
     const content = document.getElementById(contentId);
     if (content) {
@@ -32,6 +33,11 @@ window.showTab = function(tabName) {
         // Initialize bot creation component if it exists
         if (window.botCreation && window.botCreation.init) {
             window.botCreation.init();
+        }
+    } else if (tabName === 'upload-files') {
+        // Initialize upload files component if it exists
+        if (window.fileUpload && window.fileUpload.init) {
+            window.fileUpload.init();
         }
     } else if (tabName !== 'meetings') {
         console.log(`Switched to ${tabName} tab (stub)`);
