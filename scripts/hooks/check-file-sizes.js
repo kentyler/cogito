@@ -5,9 +5,9 @@
  * Enforces 200-line limit for most files, 300-line limit for tests
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
 
 const MAX_LINES_DEFAULT = 200;
 const MAX_LINES_TESTS = 300;
@@ -114,6 +114,5 @@ function main() {
   }
 }
 
-if (require.main === module) {
-  main();
-}
+// Run if this is the main module
+main();
