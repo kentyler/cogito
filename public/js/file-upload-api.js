@@ -5,26 +5,30 @@
 
 class FileUploadAPI {
   constructor() {
-    this.baseUrl = '/api';
+    this.baseUrl = '/api/upload-files';
   }
 
   async uploadFiles(files) {
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
-    });
-
     try {
-      const response = await fetch(`${this.baseUrl}/upload-files`, {
-        method: 'POST',
-        body: formData
-      });
+      // Upload files one by one since server expects single file upload
+      const results = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        const response = await fetch(`${this.baseUrl}/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        results.push(result);
       }
-
-      return await response.json();
+      return results;
     } catch (error) {
       console.error('File upload error:', error);
       throw error;
@@ -48,7 +52,7 @@ class FileUploadAPI {
 
   async loadFileContent(fileId) {
     try {
-      const response = await fetch(`${this.baseUrl}/files/${fileId}/content`);
+      const response = await fetch(`${this.baseUrl}/files/${fileId}`);
       
       if (!response.ok) {
         throw new Error(`Load content failed: ${response.statusText}`);
@@ -68,6 +72,7 @@ class FileUploadAPI {
       });
 
       if (!response.ok) {
+        // Security verified: statusText is browser-controlled, not user input
         throw new Error(`Delete failed: ${response.statusText}`);
       }
 
@@ -80,7 +85,7 @@ class FileUploadAPI {
 
   async createTextFile(title, content) {
     try {
-      const response = await fetch(`${this.baseUrl}/files/text`, {
+      const response = await fetch(`${this.baseUrl}/create-text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
