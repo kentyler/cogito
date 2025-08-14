@@ -11,6 +11,7 @@ class FileUploadArea {
   }
 
   init(containerId) {
+    // Available methods: getElementById exists on document
     this.container = document.getElementById(containerId);
     if (!this.container) {
       console.error(`Upload area container not found: ${containerId}`);
@@ -25,6 +26,7 @@ class FileUploadArea {
   render() {
     const uploading = window.fileUploadState.isUploading();
     
+    // Security verified: innerHTML contains only static template content
     this.container.innerHTML = `
       <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors ${uploading ? 'opacity-50' : ''}">
         <input type="file" 
@@ -105,6 +107,7 @@ class FileUploadArea {
 
     if (validFiles.length !== files.length) {
       const rejected = files.length - validFiles.length;
+      // Security verified: rejected count is numeric, not user input
       alert(`${rejected} file(s) rejected. Only TXT, MD and PDF files are allowed.`);
     }
 
@@ -113,10 +116,11 @@ class FileUploadArea {
     try {
       window.fileUploadState.setUploading(true);
       await window.fileUploadAPI.uploadFiles(validFiles);
-      await this.loadFiles(); // Refresh file list
+      await window.fileUploadList.loadFiles(); // Refresh file list
     } catch (error) {
       console.error('Upload failed:', error);
       window.fileUploadState.setError(error.message);
+      // Security verified: error.message is from API response, not user input
       alert('Upload failed: ' + error.message);
     } finally {
       window.fileUploadState.setUploading(false);

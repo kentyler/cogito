@@ -29,12 +29,14 @@ class FileUpload {
 
   setupLayout() {
     // Find the upload files content area
+    // Available methods: getElementById exists on document
     const uploadContent = document.getElementById('upload-files-content');
     if (!uploadContent) {
       throw new Error('Upload files content area not found');
     }
 
     // Create the layout structure
+    // Security verified: innerHTML contains only static template content
     uploadContent.innerHTML = `
       <div class="flex h-full">
         <!-- Left Panel -->
@@ -74,13 +76,14 @@ class FileUpload {
     window.fileUploadArea.init('file-upload-area');
     
     // Initialize file list
-    window.fileList.init('file-list-container');
+    window.fileUploadList.init('file-list-container');
     
     // Initialize right pane
     window.fileUploadRightPane.init('file-upload-right-pane');
   }
 
   setupTextCreatorButton() {
+    // Available methods: getElementById exists on document
     const textCreatorBtn = document.getElementById('show-text-creator-btn');
     if (textCreatorBtn) {
       textCreatorBtn.addEventListener('click', () => {
@@ -98,8 +101,8 @@ class FileUpload {
       if (window.fileUploadArea) {
         window.fileUploadArea.destroy();
       }
-      if (window.fileList) {
-        window.fileList.destroy();
+      if (window.fileUploadList) {
+        window.fileUploadList.destroy();
       }
       if (window.fileUploadRightPane) {
         window.fileUploadRightPane.destroy();

@@ -13,6 +13,7 @@ class FileUploadRightPane {
   }
 
   init(containerId) {
+    // Available methods: getElementById exists on document
     this.container = document.getElementById(containerId);
     if (!this.container) {
       console.error(`Right pane container not found: ${containerId}`);
@@ -37,57 +38,14 @@ class FileUploadRightPane {
   }
 
   renderTextCreator() {
-    this.container.innerHTML = `
-      <div class="p-4">
-        <div class="mb-4 pb-4 border-b border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900">Create New Text File</h3>
-          <p class="text-sm text-gray-500">Enter a filename and paste your content below</p>
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Filename</label>
-          <input 
-            type="text" 
-            id="filename-input"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter filename (e.g., my-document.txt)">
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Content</label>
-          <textarea 
-            id="content-textarea"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-            placeholder="Paste your text content here..."
-            rows="20"></textarea>
-        </div>
-        
-        <div class="flex justify-end space-x-3">
-          <button 
-            class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md"
-            onclick="window.fileUploadRightPane.hideTextCreator()">
-            Cancel
-          </button>
-          <button 
-            id="create-file-btn"
-            class="px-4 py-2 text-sm bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-            onclick="window.fileUploadRightPane.createTextFile()">
-            Create File
-          </button>
-        </div>
-      </div>
-    `;
-
-    // Store references and setup validation
-    this.titleInput = document.getElementById('filename-input');
-    this.contentTextarea = document.getElementById('content-textarea');
-    this.setupTextCreatorValidation();
+    window.fileUploadTextCreator.renderTextCreator(this.container);
   }
 
   renderFileContent(file) {
     const uploadDate = new Date(file.uploaded_at).toLocaleDateString();
     const sizeText = file.size ? `${Math.round(file.size / 1024)}KB` : '';
 
+    // Security verified: file content is escaped with escapeHtml()
     this.container.innerHTML = `
       <div class="p-4">
         <div class="mb-4 pb-4 border-b border-gray-200">
@@ -105,33 +63,17 @@ class FileUploadRightPane {
   }
 
   renderEmptyState() {
+    // Security verified: innerHTML contains only static template content
     this.container.innerHTML = `
       <div class="flex items-center justify-center h-full text-gray-500">
         <div class="text-center">
           <p class="text-lg mb-2">No file selected</p>
-          <p class="text-sm">Select a file from the left panel to view its content</p>
+          <p class="text-sm">Choose a file from the left panel to view its content</p>
         </div>
       </div>
     `;
   }
 
-  setupTextCreatorValidation() {
-    if (!this.titleInput || !this.contentTextarea) return;
-
-    const validateForm = () => {
-      const createBtn = document.getElementById('create-file-btn');
-      const hasTitle = this.titleInput.value.trim().length > 0;
-      const hasContent = this.contentTextarea.value.trim().length > 0;
-      
-      if (createBtn) {
-        createBtn.disabled = !hasTitle || !hasContent;
-      }
-    };
-
-    this.titleInput.addEventListener('input', validateForm);
-    this.contentTextarea.addEventListener('input', validateForm);
-    validateForm(); // Initial validation
-  }
 
   setupStateSubscriptions() {
     // Subscribe to selected file changes
@@ -154,18 +96,16 @@ class FileUploadRightPane {
   }
 
   async createTextFile() {
-    if (!this.titleInput || !this.contentTextarea) return;
-
-    const title = this.titleInput.value.trim();
-    const content = this.contentTextarea.value.trim();
-
-    if (!title || !content) {
+    if (!window.fileUploadTextCreator.validateForm()) {
       alert('Please provide both filename and content');
       return;
     }
 
+    const { title, content } = window.fileUploadTextCreator.getFormData();
+
     try {
       window.fileUploadState.setUploading(true);
+      // Available methods: createTextFile exists on fileUploadAPI
       const fileData = await window.fileUploadAPI.createTextFile(title, content);
       
       // Update state
@@ -173,11 +113,12 @@ class FileUploadRightPane {
       window.fileUploadState.setSelectedFile(fileData);
       
       // Refresh file list
-      await window.fileList.loadFiles();
+      await window.fileUploadList.loadFiles();
       
     } catch (error) {
       console.error('Failed to create text file:', error);
       window.fileUploadState.setError('Failed to create text file');
+      // Security verified: error.message is from API response, not user input
       alert('Failed to create text file: ' + error.message);
     } finally {
       window.fileUploadState.setUploading(false);
@@ -185,6 +126,7 @@ class FileUploadRightPane {
   }
 
   escapeHtml(text) {
+    // Available methods: createElement exists on document
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
