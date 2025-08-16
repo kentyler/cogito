@@ -93,3 +93,10 @@ migrations/tests/database-agent/domains/archive/
 lib/database-agent/domains/archive/
 server/routes/archive/
 tests/database-agent/domains/archive/
+
+# Database scripts with hardcoded credentials (security risk)
+scripts/compare-schemas-simple.js
+scripts/review-dev-games.js
+lib/game-state-agent.js
+lib/file-upload/vector-embedding-service.js
+lib/file-upload/file-search-service.js
