@@ -1,0 +1,4 @@
+# Security scan trigger file
+# Created to force GitHub to refresh security scan cache after git history cleanup
+# All database credentials have been removed from git history via git-filter-repo
+# Timestamp: 2025-08-16 14:23:00 UTC
