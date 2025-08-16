@@ -22,7 +22,7 @@ export async function createUserTurn(req, { userId, content, meetingId }) {
   }
 }
 
-export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetingId }) {
+export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetingId, avatarId = null }) {
   let llmTurn;
   
   // Check if this is a response-set (multiple alternatives)
@@ -35,6 +35,7 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
         source_type: 'conversational-repl-llm',
         source_id: userTurn.id,
         meeting_id: meetingId,
+        avatar_id: avatarId,
         metadata: { 
           user_turn_id: userTurn.id,
           response_type: 'response-set',
@@ -50,6 +51,7 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
         source_type: 'conversational-repl-llm',
         source_id: userTurn.id,
         meeting_id: meetingId,
+        avatar_id: avatarId,
         metadata: { 
           user_turn_id: userTurn.id,
           response_type: 'clojure-data'
@@ -64,6 +66,7 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
       source_type: 'conversational-repl-llm',
       source_id: userTurn.id,
       meeting_id: meetingId,
+      avatar_id: avatarId,
       metadata: { 
         user_turn_id: userTurn.id,
         response_type: 'clojure-data'

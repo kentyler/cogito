@@ -20,6 +20,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Import configuration
 import { initializeDatabase, databaseMiddleware } from './server/config/database.js';
 import { initializeEmail } from './server/config/email.js';
+import { initializeLLMProviders } from './server/config/llm-providers.js';
 import { setupMiddleware } from './server/config/middleware.js';
 
 // Import services
@@ -34,18 +35,17 @@ import adminClientManagementRoutes from './server/routes/admin-client-management
 import conversationRoutes from './server/routes/conversations.js';
 import searchRoutes from './server/routes/search.js';
 import meetingsCrudRoutes from './server/routes/meetings-crud.js';
-import meetingsEmbeddingsRoutes from './server/routes/meetings-embeddings.js';
 import meetingsAdditionalRoutes from './server/routes/meetings-additional.js';
 import browserCaptureRoutes from './server/routes/browser-capture.js';
 import botsCreateRoutes from './server/routes/bots-create.js';
 import botsManagementRoutes from './server/routes/bots-management.js';
 import webhookChatRoutes from './server/routes/webhook-chat.js';
 import extensionApiRoutes from './server/routes/extension-api.js';
-import dailySummaryRoutes from './server/routes/daily-summary.js';
+import summaryRoutes from './server/routes/summary-routes.js';
 import uploadFilesRoutes from './server/routes/upload-files.js';
-import transcriptsRoutes from './server/routes/transcripts.js';
 import invitationsRoutes from './server/routes/invitations.js';
 import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
+import settingsRoutes from './server/routes/settings.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -72,7 +72,8 @@ async function startServer() {
   try {
     // Initialize database and core services
     const pool = await initializeDatabase();
-    const { anthropic, getEmailTransporter } = await initializeEmail();
+    const { getEmailTransporter } = await initializeEmail();
+    const llmProviders = await initializeLLMProviders(pool);
     const fileUploadService = new FileUploadService(pool);
     const eventLogger = new EventLogger(pool);
     
@@ -87,7 +88,11 @@ async function startServer() {
     app.use(databaseMiddleware);
     app.use((req, res, next) => {
       req.pool = pool;
-      req.anthropic = anthropic;
+      // Add all LLM providers to the request object
+      req.anthropic = llmProviders.anthropic;
+      req.openai = llmProviders.openai;
+      req.google = llmProviders.google;
+      req.mistral = llmProviders.mistral;
       req.fileUploadService = fileUploadService;
       req.turnProcessor = turnProcessor;
       req.logger = eventLogger;
@@ -133,17 +138,16 @@ async function startServer() {
     app.use('/api', conversationRoutes);
     app.use(searchRoutes);
     app.use('/api', meetingsCrudRoutes);
-    app.use('/api', meetingsEmbeddingsRoutes);
     app.use('/api', meetingsAdditionalRoutes);
     app.use(browserCaptureRoutes);
     app.use('/api', botsCreateRoutes);
     app.use('/api', botsManagementRoutes);
     app.use(webhookChatRoutes);
     app.use('/api', extensionApiRoutes);
-    app.use('/api', dailySummaryRoutes);
+    app.use('/api', summaryRoutes);
     app.use('/api/upload-files', uploadFilesRoutes);
-    app.use('/api/transcripts', transcriptsRoutes);
     app.use('/api/invitations', invitationsRoutes);
+    app.use('/api', settingsRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);

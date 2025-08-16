@@ -8,7 +8,7 @@ const pool = new Pool({
 
 // Set search path for schema access
 pool.on('connect', (client) => {
-  client.query('SET search_path = public, context, meetings, client_mgmt');
+  client.query('SET search_path = public, context, meetings, client_mgmt, games');
 });
 
 // Test connection

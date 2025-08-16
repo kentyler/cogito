@@ -41,7 +41,14 @@ window.login = async function() {
             // Show main content
             document.getElementById('loginForm').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
-            document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
+            
+            // Display user info with client name if available
+            const clientName = data.user.client_name || data.user.client || '';
+            if (clientName) {
+                document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email} (${clientName})`;
+            } else {
+                document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
+            }
             
             // Auto-load meetings after login
             setMeetingsStatus('Loading meetings...', 'info');
@@ -112,6 +119,9 @@ window.showClientSelection = function(clients) {
     // Show client selection form
     document.getElementById('clientSelectionForm').classList.remove('hidden');
     
+    // Store available clients for later use in the dropdown
+    localStorage.setItem('availableClients', JSON.stringify(clients));
+    
     // Populate clients list
     const clientsList = document.getElementById('clientsList');
     clientsList.innerHTML = '';
@@ -155,9 +165,22 @@ window.selectClient = async function(client) {
         // Hide client selection form
         document.getElementById('clientSelectionForm').classList.add('hidden');
         
-        // Show main content
+        // Show main content  
         document.getElementById('mainContent').classList.remove('hidden');
-        document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email} (${client.client_name})`;
+        
+        // Update user info and setup client selector if multiple clients
+        const userInfo = document.getElementById('userInfo');
+        
+        userInfo.textContent = `Logged in as: ${data.user.email}`;
+        
+        // Store clients info for selector
+        window.availableClients = JSON.parse(localStorage.getItem('availableClients') || '[]');
+        window.currentClient = client;
+        
+        // We removed the client selector from header, just show the client name
+        if (client.client_name) {
+            userInfo.textContent += ` (${client.client_name})`;
+        }
         
         // Auto-load meetings after client selection
         setMeetingsStatus('Loading meetings...', 'info');
@@ -169,20 +192,122 @@ window.selectClient = async function(client) {
     }
 }
 
+// Switch client function for dropdown
+window.switchClient = async function(clientId) {
+    const clients = JSON.parse(localStorage.getItem('availableClients') || '[]');
+    const newClient = clients.find(c => c.client_id == clientId);
+    
+    if (!newClient || newClient.client_id == window.currentClient?.client_id) {
+        return; // No change needed
+    }
+    
+    try {
+        // Show loading state
+        document.getElementById('userInfo').textContent = 'Switching client...';
+        
+        const response = await fetch('/api/select-client', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ client_id: newClient.client_id }),
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to switch client');
+        }
+        
+        const data = await response.json();
+        
+        // Update current client
+        window.currentClient = newClient;
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Update UI
+        document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
+        
+        // Reload meetings for new client
+        window.setMeetingsStatus('Loading meetings for new client...', 'info');
+        window.loadMeetingsList();
+        
+    } catch (error) {
+        console.error('Client switch error:', error);
+        // Restore previous selection
+        document.getElementById('clientSelector').value = window.currentClient?.client_id;
+        document.getElementById('userInfo').textContent = `Logged in as: ${JSON.parse(localStorage.getItem('user')).email}`;
+        alert('Failed to switch client: ' + error.message);
+    }
+}
+
 // Check if already logged in on page load
-window.checkAuth = function() {
+window.checkAuth = async function() {
     const userStr = localStorage.getItem('user');
     if (userStr) {
         try {
             const user = JSON.parse(userStr);
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('mainContent').classList.remove('hidden');
-            document.getElementById('userInfo').textContent = `Logged in as: ${user.email}`;
-            // Auto-load meetings if logged in
-            setTimeout(() => window.loadMeetingsList(), 500);
+            
+            // Validate session with server
+            const response = await fetch('/api/auth/check', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                // Session is valid, show main content
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                
+                // Setup user info - we removed client selector from header
+                const availableClients = JSON.parse(localStorage.getItem('availableClients') || '[]');
+                
+                // Find current client from user data
+                const currentClientId = user.client_id || user.current_client_id;
+                
+                // Find and set current client
+                let currentClientName = '';
+                if (availableClients.length > 0) {
+                    availableClients.forEach(c => {
+                        if (c.client_id == currentClientId) {
+                            window.currentClient = c;
+                            currentClientName = c.client_name;
+                        }
+                    });
+                    
+                    // If no match found, use first client
+                    if (!currentClientName && availableClients[0]) {
+                        window.currentClient = availableClients[0];
+                        currentClientName = availableClients[0].client_name;
+                    }
+                } else {
+                    // Use info from user object if no clients list
+                    currentClientName = user.client_name || user.client || '';
+                }
+                
+                // Show user info with client name
+                document.getElementById('userInfo').textContent = `Logged in as: ${user.email}${currentClientName ? ` (${currentClientName})` : ''}`;
+                
+                // Auto-load meetings if logged in
+                setTimeout(() => window.loadMeetingsList(), 500);
+            } else {
+                // Session invalid, clear localStorage and show login
+                console.log('Session invalid, clearing localStorage');
+                localStorage.removeItem('user');
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+            }
         } catch (e) {
-            console.error('Invalid user data in localStorage');
+            console.error('Error checking auth:', e);
             localStorage.removeItem('user');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
         }
+    } else {
+        // No stored user, ensure login form is visible
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('mainContent').classList.add('hidden');
     }
 }

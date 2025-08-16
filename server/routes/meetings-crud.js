@@ -70,12 +70,12 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
     
     // Use DatabaseAgent transaction for proper cleanup
     const result = await dbAgent.transaction(async (client) => {
-      // First get all turn IDs for counting
-      const turns = await dbAgent.turns.getTurnsByMeetingId(meetingId);
+      // First get all turns for counting
+      const turns = await dbAgent.turns.getByMeetingId(meetingId);
       const turnCount = turns.length;
       
       // Delete all turns for this meeting using turns domain
-      const deletedTurnIds = await dbAgent.turns.deleteTurnsByMeetingId(meetingId);
+      const deletedTurns = await dbAgent.turns.deleteByMeetingId(meetingId);
       
       // Delete the meeting record using meetings domain  
       const deletedMeeting = await dbAgent.meetings.deleteMeeting(meetingId);
@@ -87,7 +87,7 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
       return {
         meeting_id: meetingId,
         turns_deleted: turnCount,
-        deleted_turn_ids: deletedTurnIds
+        deleted_turns: deletedTurns
       };
     });
     

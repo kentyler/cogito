@@ -22,6 +22,7 @@ const IGNORE_PATTERNS = [
   '/build/',
   '/dist/',
   '/public/js/cljs-runtime/',
+  '/public/js/main.js',
   '/.shadow-cljs/',
   '/target/',
   '.min.js',

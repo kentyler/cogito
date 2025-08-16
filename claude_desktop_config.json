@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "game-state": {
+      "command": "node",
+      "args": ["/home/ken/claude-projects/cogito/mcp-game-state-server.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}

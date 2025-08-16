@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import Anthropic from '@anthropic-ai/sdk';
 
 // Email transporter will be initialized when needed
 let emailTransporter = null;
@@ -107,18 +106,10 @@ export async function getEmailTransporter() {
   return emailTransporter;
 }
 
-// Initialize both email and Anthropic services
+// Initialize email service
 export async function initializeEmail() {
-  // Initialize Anthropic client
-  const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY
-  });
-  
-  console.log('✅ Anthropic client initialized');
-  
-  // Return both services
+  // Just return the email transporter function
   return {
-    anthropic,
     getEmailTransporter
   };
 }

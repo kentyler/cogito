@@ -31,7 +31,7 @@ export async function validateContent(content) {
   return true;
 }
 
-export async function ensureMeetingExists(req, db) {
+export async function ensureMeetingExists_DISABLED(req, db) {
   let meetingId = req.session?.meeting_id;
   
   // Debug logging

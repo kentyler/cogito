@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth } from './auth.js';
-import { extractRequestContext } from '../lib/event-logger.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 import { createRecallBot, getWebsocketUrls } from '../lib/bot-creation/recall-api.js';
 import { createMeetingRecord, updateMeetingWithEmail } from '../lib/bot-creation/meeting-handler.js';
 import { processMeetingFiles } from '../lib/bot-creation/file-processor.js';
@@ -52,14 +52,29 @@ router.post('/create-bot', requireAuth, async (req, res) => {
       botId: botData.id
     });
     
-    // Log successful meeting creation
-    const context = extractRequestContext(req);
-    req.logger?.logEvent('meeting_created', {
-      meeting_id: meeting.id,
-      meeting_url: meeting_url,
-      bot_id: botData.id,
-      client_id: client_id
-    }, context);
+    // Log successful meeting creation using centralized logging
+    try {
+      const dbAgent = new DatabaseAgent();
+      await dbAgent.connect();
+      await dbAgent.logEvent('meeting_created', {
+        meeting_id: meeting.id,
+        meeting_url: meeting_url,
+        bot_id: botData.id,
+        client_id: client_id,
+        timestamp: new Date().toISOString()
+      }, {
+        userId: user_id,
+        sessionId: req.sessionID,
+        endpoint: `${req.method} ${req.path}`,
+        ip: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        severity: 'info',
+        component: 'BotCreation'
+      });
+      await dbAgent.close();
+    } catch (logError) {
+      console.error('Failed to log meeting creation:', logError);
+    }
     
     // Update meeting with transcript email
     const userEmail = req.session.user.email;
@@ -86,9 +101,24 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     console.error('Request body:', req.body);
     console.error('User session:', req.session?.user);
     
-    // Log error to database
-    const context = extractRequestContext(req);
-    req.logger?.logError('bot_creation_error', error, context);
+    // Log error to database using centralized logging
+    try {
+      const dbAgent = new DatabaseAgent();
+      await dbAgent.connect();
+      await dbAgent.logError('bot_creation_error', error, {
+        userId: req.session?.user?.user_id || req.session?.user?.id,
+        sessionId: req.sessionID,
+        endpoint: `${req.method} ${req.path}`,
+        ip: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        meeting_url: req.body?.meeting_url,
+        severity: 'error',
+        component: 'BotCreation'
+      });
+      await dbAgent.close();
+    } catch (logError) {
+      console.error('Failed to log bot creation error:', logError);
+    }
     
     res.status(500).json({ error: 'Failed to create bot', details: error.message });
   }

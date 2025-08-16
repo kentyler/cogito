@@ -39,6 +39,24 @@ window.showTab = function(tabName) {
         if (window.fileUpload && window.fileUpload.init) {
             window.fileUpload.init();
         }
+    } else if (tabName === 'daily-summary') {
+        // Initialize daily summary component if it exists
+        console.log('Daily Summary tab selected');
+        if (window.DailySummary && window.DailySummary.render) {
+            console.log('Calling DailySummary.render()');
+            window.DailySummary.render();
+        } else {
+            console.error('DailySummary not found or render method missing');
+        }
+    } else if (tabName === 'monthly-summary') {
+        // Initialize monthly summary component if it exists
+        console.log('Monthly Summary tab selected');
+        if (window.MonthlySummary && window.MonthlySummary.render) {
+            console.log('Calling MonthlySummary.render()');
+            window.MonthlySummary.render();
+        } else {
+            console.error('MonthlySummary not found or render method missing');
+        }
     } else if (tabName !== 'meetings') {
         console.log(`Switched to ${tabName} tab (stub)`);
     }

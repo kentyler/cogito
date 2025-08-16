@@ -1,4 +1,0 @@
-goog.provide('cogito.db');
-cogito.db.default_db = new cljs.core.PersistentArrayMap(null, 8, [new cljs.core.Keyword(null,"user","user",1532431356),null,new cljs.core.Keyword(null,"authenticated?","authenticated?",-1988130123),false,new cljs.core.Keyword(null,"turns","turns",-1118736892),cljs.core.PersistentVector.EMPTY,new cljs.core.Keyword(null,"current-prompt","current-prompt",998257734),"",new cljs.core.Keyword(null,"loading?","loading?",1905707049),false,new cljs.core.Keyword(null,"error","error",-978969032),null,new cljs.core.Keyword("workbench","active-tab","workbench/active-tab",-23767367),new cljs.core.Keyword(null,"conversation","conversation",1148767509),new cljs.core.Keyword(null,"alternative-indices","alternative-indices",2011932146),cljs.core.PersistentArrayMap.EMPTY], null);
-
-//# sourceMappingURL=cogito.db.js.map

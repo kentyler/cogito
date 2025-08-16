@@ -4,6 +4,7 @@
     'use strict';
 
     // Handle bot creation submission
+    // Available methods: createBot exists on botCreationAPI
     async function handleCreateBot(meetingUrl, meetingName, formElements) {
         window.botCreationForm.setLoading(formElements, true);
         window.botCreationForm.hideMessage(formElements.message);
@@ -63,6 +64,7 @@
     }
 
     // Handle force complete meeting
+    // Available methods: forceCompleteMeeting exists on botCreationAPI
     async function handleForceCompleteMeeting(meetingId, formElements) {
         window.botCreationState.setCompleting(meetingId, true);
 

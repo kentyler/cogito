@@ -3,7 +3,6 @@ import { DatabaseAgent } from '../../lib/database-agent.js';
 import { AdminClientOperations } from '../lib/admin-client-operations.js';
 import { requireAdmin, ensureDbConnection } from '../middleware/admin-auth.js';
 import { createUserManagementRoutes } from './admin-user-management.js';
-import { extractRequestContext } from '../lib/event-logger.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();
@@ -24,15 +23,15 @@ router.get('/clients', requireAdmin, async (req, res) => {
     console.error('Error fetching clients:', error);
     
     // Log error
-    const context = extractRequestContext(req);
-    const eventLogger = dbAgent.getEventLogger();
-    if (eventLogger) {
-      await eventLogger.logError('admin_clients_fetch_failed', error, {
-        ...context,
-        severity: 'error',
-        component: 'ClientManagement'
-      });
-    }
+    await dbAgent.logError('admin_clients_fetch_failed', error, {
+      userId: req.session?.user?.user_id || req.session?.user?.id,
+      sessionId: req.sessionID,
+      endpoint: `${req.method} ${req.path}`,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      severity: 'error',
+      component: 'ClientManagement'
+    });
     
     res.status(500).json({ error: 'Failed to fetch clients' });
   }
@@ -67,16 +66,16 @@ router.post('/clients', requireAdmin, async (req, res) => {
     console.error('Error creating client:', error);
     
     // Log error
-    const context = extractRequestContext(req);
-    const eventLogger = dbAgent.getEventLogger();
-    if (eventLogger) {
-      await eventLogger.logError('admin_client_creation_failed', error, {
-        ...context,
-        client_name: req.body?.name,
-        severity: 'error',
-        component: 'ClientManagement'
-      });
-    }
+    await dbAgent.logError('admin_client_creation_failed', error, {
+      userId: req.session?.user?.user_id || req.session?.user?.id,
+      sessionId: req.sessionID,
+      endpoint: `${req.method} ${req.path}`,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      client_name: req.body?.name,
+      severity: 'error',
+      component: 'ClientManagement'
+    });
 
     const statusCode = error.message === 'Client name is required' ? 400 : 500;
     res.status(statusCode).json({ error: error.message || 'Failed to create client' });
@@ -125,16 +124,16 @@ router.delete('/clients/:id', requireAdmin, async (req, res) => {
     console.error('Error deleting client:', error);
     
     // Log error
-    const context = extractRequestContext(req);
-    const eventLogger = dbAgent.getEventLogger();
-    if (eventLogger) {
-      await eventLogger.logError('admin_client_deletion_failed', error, {
-        ...context,
-        client_id: req.params.id,
-        severity: 'error',
-        component: 'ClientManagement'
-      });
-    }
+    await dbAgent.logError('admin_client_deletion_failed', error, {
+      userId: req.session?.user?.user_id || req.session?.user?.id,
+      sessionId: req.sessionID,
+      endpoint: `${req.method} ${req.path}`,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      client_id: req.params.id,
+      severity: 'error',
+      component: 'ClientManagement'
+    });
 
     res.status(500).json({ error: 'Failed to delete client' });
   }

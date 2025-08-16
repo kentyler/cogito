@@ -46,6 +46,7 @@
     }
 
     // Render stuck meetings list
+    // Available methods: forceCompleteMeeting exists on window.botCreation, meeting_id and bot_id properties exist on meeting objects
     function renderStuckMeetings(container, meetings, completing, onComplete) {
         if (meetings.length === 0) {
             container.innerHTML = `

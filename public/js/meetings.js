@@ -102,6 +102,14 @@ window.loadMeetingsList = async function() {
         });
 
         if (!response.ok) {
+            // If unauthorized, clear localStorage and redirect to login
+            if (response.status === 401) {
+                console.log('Session expired, redirecting to login');
+                localStorage.removeItem('user');
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+                throw new Error('Session expired - please log in again');
+            }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
@@ -160,6 +168,14 @@ window.deleteMeeting = async function(meetingId, meetingName) {
         });
 
         if (!response.ok) {
+            // If unauthorized, clear localStorage and redirect to login
+            if (response.status === 401) {
+                console.log('Session expired, redirecting to login');
+                localStorage.removeItem('user');
+                document.getElementById('loginForm').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+                throw new Error('Session expired - please log in again');
+            }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 

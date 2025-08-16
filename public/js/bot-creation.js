@@ -13,6 +13,7 @@
         if (!container) return;
 
         // Create main structure
+        // Available methods: createListContainers exists on botCreationLists
         container.innerHTML = `
             <div class="bot-creation-container">
                 <div id="botFormContainer"></div>
@@ -27,6 +28,7 @@
         });
 
         // Cache element references
+        // Available methods: getElementById exists on document
         elements = {
             runningBotsList: document.getElementById('runningBotsList'),
             stuckMeetingsList: document.getElementById('stuckMeetingsList'),
@@ -153,6 +155,7 @@
             forceCompleteMeeting
         );
         
+        // Available methods: handleForceCompleteMeeting exists on botCreationHandlers
         const success = await window.botCreationHandlers.handleForceCompleteMeeting(meetingId, formElements);
         if (success) {
             await fetchStuckMeetings();

@@ -1,6 +1,6 @@
 import express from 'express';
 import { WebhookService } from '../services/webhook-service.js';
-import { extractRequestContext } from '../lib/event-logger.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
 
@@ -62,9 +62,22 @@ router.post('/webhook/chat', async (req, res) => {
   } catch (error) {
     console.error('❌ Error processing chat webhook:', error);
     
-    // Log error to database
-    const context = extractRequestContext(req);
-    req.logger?.logError('webhook_chat_error', error, context);
+    // Log error to database using centralized logging
+    try {
+      const dbAgent = new DatabaseAgent();
+      await dbAgent.connect();
+      await dbAgent.logError('webhook_chat_error', error, {
+        endpoint: `${req.method} ${req.path}`,
+        ip: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        botId: req.body?.data?.bot_id,
+        severity: 'error',
+        component: 'WebhookChat'
+      });
+      await dbAgent.close();
+    } catch (logError) {
+      console.error('Failed to log webhook chat error:', logError);
+    }
     
     if (error.message.includes('No data') || error.message.includes('Missing message')) {
       return res.status(400).json({ error: error.message });

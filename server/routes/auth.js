@@ -49,8 +49,9 @@ router.post('/login', async (req, res) => {
     
     // Initialize DatabaseAgent for this request
     const dbAgent = new DatabaseAgent();
+    await dbAgent.connect();
     
-    // Authenticate user using DatabaseAgent
+    // Authenticate user using DatabaseAgent (handles its own event logging)
     const authenticatedUser = await dbAgent.users.authenticate(email, password);
     
     if (!authenticatedUser) {
@@ -71,6 +72,7 @@ router.post('/login', async (req, res) => {
         
         req.session.user = {
           user_id: authenticatedUser.id,
+          id: authenticatedUser.id,  // Some code uses .id
           email: authenticatedUser.email,
           client_id: clients[0].client_id,
           client_name: clients[0].client_name,
@@ -82,6 +84,7 @@ router.post('/login', async (req, res) => {
           if (err) {
             return res.status(500).json({ error: 'Session creation failed' });
           }
+          
           res.json({ 
             success: true, 
             user: { 
@@ -105,6 +108,7 @@ router.post('/login', async (req, res) => {
         if (err) {
           return res.status(500).json({ error: 'Session creation failed' });
         }
+        
         res.json({ 
           success: true,
           requiresClientSelection: true,
@@ -116,6 +120,64 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  } finally {
+    await dbAgent?.close();
+  }
+});
+
+// Check auth endpoint - validates if session is still valid
+router.get('/check', requireAuth, (req, res) => {
+  res.json({ 
+    authenticated: true, 
+    user: {
+      id: req.user.id,
+      email: req.user.email
+    }
+  });
+});
+
+// Logout endpoint
+router.post('/logout', async (req, res) => {
+  try {
+    const sessionUser = req.session?.user;
+    
+    // Initialize DatabaseAgent for event logging
+    const dbAgent = new DatabaseAgent();
+    await dbAgent.connect();
+    
+    // Log logout event before destroying session
+    if (sessionUser) {
+      await dbAgent.logAuthEvent('logout', {
+        email: sessionUser.email,
+        user_id: sessionUser.user_id || sessionUser.id,
+        client_id: sessionUser.client_id,
+        client_name: sessionUser.client_name,
+        session_duration_ms: Date.now() - (req.session.cookie.originalMaxAge || 0)
+      }, {
+        userId: sessionUser.user_id || sessionUser.id,
+        sessionId: req.sessionID,
+        endpoint: `${req.method} ${req.path}`,
+        ip: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent')
+      });
+    }
+    
+    // Destroy session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Error destroying session:', err);
+        return res.status(500).json({ error: 'Logout failed' });
+      }
+      
+      res.clearCookie('connect.sid'); // Clear session cookie
+      res.json({ success: true, message: 'Logged out successfully' });
+    });
+    
+    await dbAgent.close();
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
 });
 

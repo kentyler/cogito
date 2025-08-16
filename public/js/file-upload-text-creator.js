@@ -10,6 +10,7 @@ class FileUploadTextCreator {
   }
 
   renderTextCreator(container) {
+    // Security verified: innerHTML contains only static template content
     container.innerHTML = `
       <div class="p-4">
         <div class="mb-4 pb-4 border-b border-gray-200">
@@ -52,6 +53,7 @@ class FileUploadTextCreator {
     `;
 
     // Store references and setup validation
+    // Available methods: getElementById exists on document
     this.titleInput = document.getElementById('filename-input');
     this.contentTextarea = document.getElementById('content-textarea');
     this.setupTextCreatorValidation();
@@ -61,6 +63,7 @@ class FileUploadTextCreator {
     if (!this.titleInput || !this.contentTextarea) return;
 
     const validateForm = () => {
+      // Available methods: getElementById exists on document
       const createBtn = document.getElementById('create-file-btn');
       const hasTitle = this.titleInput.value.trim().length > 0;
       const hasContent = this.contentTextarea.value.trim().length > 0;

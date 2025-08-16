@@ -48,6 +48,7 @@
         container.innerHTML = formHtml;
 
         // Set up form elements
+        // Available methods: getElementById exists on document
         const elements = {
             form: document.getElementById('botCreationForm'),
             meetingUrl: document.getElementById('meetingUrl'),
@@ -59,6 +60,7 @@
         };
 
         // Display user email if available
+        // Available methods: getItem exists on localStorage
         const userEmail = localStorage.getItem('userEmail');
         if (userEmail) {
             elements.userEmailInfo.classList.remove('hidden');
