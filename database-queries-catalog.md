@@ -37,13 +37,11 @@
 - Stuck meeting handling
 
 ## Files with Most Queries (Top 10)
-1. kanban-web-app/server.js: 18 queries
-2. lib/how-to-service.js: 12 queries  
-3. lib/location-manager.js: 11 queries
-4. server/routes/upload-files.js: 9 queries
-5. server/routes/meetings-crud.js: 8 queries
-6. kanban-web-app/claude-kanban-commands.js: 8 queries
-7. Multiple files with 6+ queries each
+1. lib/how-to-service.js: 12 queries  
+2. lib/location-manager.js: 11 queries
+3. server/routes/upload-files.js: 9 queries
+4. server/routes/meetings-crud.js: 8 queries
+5. Multiple files with 6+ queries each
 
 ## Next Steps
 1. Extract actual SQL from each file

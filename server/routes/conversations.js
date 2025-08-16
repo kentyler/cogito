@@ -60,25 +60,14 @@ router.post('/conversational-turn', async (req, res) => {
     let clientName = 'your organization';
     
     try {
-      const meetingResult = await req.pool.query(
-        'SELECT client_id FROM meetings.meetings WHERE id = $1',
-        [meeting_id]
-      );
+      const dbAgent = new DatabaseAgent();
+      await dbAgent.connect();
+      const meetingClientInfo = await dbAgent.meetings.getMeetingClientInfo(meeting_id);
+      await dbAgent.close();
       
-      if (meetingResult.rows.length > 0) {
-        clientId = meetingResult.rows[0].client_id;
-        
-        // Get client name if we have a client ID
-        if (clientId) {
-          const clientResult = await req.pool.query(
-            'SELECT name FROM client_mgmt.clients WHERE id = $1',
-            [clientId]
-          );
-          
-          if (clientResult.rows.length > 0) {
-            clientName = clientResult.rows[0].name;
-          }
-        }
+      if (meetingClientInfo) {
+        clientId = meetingClientInfo.client_id;
+        clientName = meetingClientInfo.client_name || clientName;
       }
     } catch (error) {
       console.warn('Could not get client info from meeting:', error.message);
