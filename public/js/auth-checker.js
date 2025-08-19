@@ -8,7 +8,7 @@
  */
 window.checkAuth = async function() {
     try {
-        const response = await fetch('/api/check-auth', {
+        const response = await fetch('/auth/check', {
             method: 'GET',
             credentials: 'include'
         });
