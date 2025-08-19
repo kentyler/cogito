@@ -98,5 +98,3 @@ tests/database-agent/domains/archive/
 scripts/compare-schemas-simple.js
 scripts/review-dev-games.js
 lib/game-state-agent.js
-lib/file-upload/vector-embedding-service.js
-lib/file-upload/file-search-service.js

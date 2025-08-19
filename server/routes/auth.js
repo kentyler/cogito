@@ -40,6 +40,7 @@ export function requireAuth(req, res, next) {
 
 // Login endpoint
 router.post('/login', async (req, res) => {
+  let dbAgent;
   try {
     const { email, password } = req.body;
     
@@ -48,7 +49,7 @@ router.post('/login', async (req, res) => {
     }
     
     // Initialize DatabaseAgent for this request
-    const dbAgent = new DatabaseAgent();
+    dbAgent = new DatabaseAgent();
     await dbAgent.connect();
     
     // Authenticate user using DatabaseAgent (handles its own event logging)
