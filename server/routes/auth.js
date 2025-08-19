@@ -127,14 +127,24 @@ router.post('/login', async (req, res) => {
 });
 
 // Check auth endpoint - validates if session is still valid
-router.get('/check', requireAuth, (req, res) => {
-  res.json({ 
-    authenticated: true, 
-    user: {
-      id: req.user.id,
-      email: req.user.email
-    }
-  });
+router.get('/check', (req, res) => {
+  // Check if user is authenticated via session
+  if (req.session?.user?.id && req.session?.user?.email) {
+    res.json({ 
+      authenticated: true, 
+      user: {
+        id: req.session.user.id,
+        email: req.session.user.email,
+        client_id: req.session.user.client_id,
+        client_name: req.session.user.client_name
+      }
+    });
+  } else {
+    // Not authenticated - return proper response (not an error)
+    res.json({ 
+      authenticated: false 
+    });
+  }
 });
 
 // Logout endpoint
