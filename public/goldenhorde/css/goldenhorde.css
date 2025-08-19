@@ -1,0 +1,130 @@
+/* Chat interface custom styles */
+
+.prompt-category h3 {
+    transition: color 0.2s ease;
+}
+
+.category-chevron {
+    transition: transform 0.2s ease;
+}
+
+.category-collapsed .category-chevron {
+    transform: rotate(-90deg);
+}
+
+.prompt-item {
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+}
+
+.prompt-item:hover {
+    border-left-color: #3b82f6;
+    transform: translateX(2px);
+}
+
+.message {
+    animation: fadeIn 0.3s ease;
+    max-width: 85%;
+}
+
+.message.user {
+    margin-left: auto;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.message.assistant {
+    margin-right: auto;
+    background: white;
+    border: 1px solid #e5e7eb;
+}
+
+.message.assistant .content {
+    color: #374151;
+}
+
+.message.user .content {
+    color: white;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-right: auto;
+    max-width: 85%;
+}
+
+.typing-dot {
+    width: 6px;
+    height: 6px;
+    background: #9ca3af;
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar styling */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Hide categories when collapsed */
+.category-collapsed > div:last-child {
+    display: none;
+}
+
+/* Search highlighting */
+.prompt-item.highlighted {
+    background-color: #fef3c7 !important;
+    border-color: #f59e0b;
+}
+
+.prompt-item.hidden {
+    display: none;
+}

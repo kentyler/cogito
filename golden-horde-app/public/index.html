@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Horde Collective</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/goldenhorde.css">
+</head>
+<body class="bg-gray-100 h-screen">
+    
+    <!-- Main Chat Interface -->
+    <div id="chatInterface" class="h-screen flex">
+        <!-- Left Sidebar - Prompt Templates -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-800">Prompt Library</h2>
+                <div class="text-xs text-gray-600 mt-1">Choose a template to get started</div>
+            </div>
+            
+            <!-- Search prompts -->
+            <div class="p-4 border-b border-gray-200">
+                <input type="text" id="promptSearch" 
+                       class="w-full p-2 border border-gray-300 rounded-md text-sm"
+                       placeholder="Search templates..."
+                       oninput="filterPrompts()">
+            </div>
+            
+            <!-- Prompt Categories -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-4 space-y-4" id="promptCategories">
+                    
+                    <!-- Quick Start -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">🚀 Quick Start</h3>
+                        <div class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Help me understand [TOPIC]. Explain it clearly with examples.')">
+                                💡 Explain a Topic
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('I need to solve this problem: [DESCRIBE PROBLEM]. What are some potential solutions?')">
+                                🔧 Problem Solving
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Golden Horde -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">🏹 About the Horde</h3>
+                        <div class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePromptAndSend('What\\'s the purpose of the Horde?', this)">
+                                🎯 Purpose of the Horde
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePromptAndSend('How can I get involved?', this)">
+                                🤝 How to Get Involved
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePromptAndSend('Who can be involved with the Horde?', this)">
+                                👥 Who Can Join
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Analysis -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2 cursor-pointer hover:text-blue-600" 
+                            onclick="toggleCategory('analysis')">
+                            📊 Analysis
+                            <span class="category-chevron float-right">▼</span>
+                        </h3>
+                        <div id="analysis-prompts" class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Analyze this data and identify key patterns: [PASTE DATA]')">
+                                📈 Data Analysis
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Compare [OPTION A] vs [OPTION B]. What are the pros and cons of each?')">
+                                ⚖️ Compare Options
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('What are the main risks and opportunities for [SITUATION]?')">
+                                🎯 Risk Assessment
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Writing -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2 cursor-pointer hover:text-blue-600" 
+                            onclick="toggleCategory('writing')">
+                            ✍️ Writing
+                            <span class="category-chevron float-right">▼</span>
+                        </h3>
+                        <div id="writing-prompts" class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Write a professional email about [TOPIC] to [RECIPIENT].')">
+                                📧 Email Draft
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Summarize this text in 3 key bullet points: [PASTE TEXT]')">
+                                📝 Summarize
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Rewrite this text to be more [PROFESSIONAL/CASUAL/PERSUASIVE]: [PASTE TEXT]')">
+                                ✏️ Rewrite Text
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Planning -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2 cursor-pointer hover:text-blue-600" 
+                            onclick="toggleCategory('planning')">
+                            📋 Planning
+                            <span class="category-chevron float-right">▼</span>
+                        </h3>
+                        <div id="planning-prompts" class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Create a project plan for [PROJECT NAME] with timeline and milestones.')">
+                                📅 Project Plan
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Break down this goal into actionable steps: [DESCRIBE GOAL]')">
+                                🎯 Goal Planning
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('What should I consider when making this decision: [DESCRIBE DECISION]?')">
+                                🤔 Decision Help
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Creative -->
+                    <div class="prompt-category">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2 cursor-pointer hover:text-blue-600" 
+                            onclick="toggleCategory('creative')">
+                            🎨 Creative
+                            <span class="category-chevron float-right">▼</span>
+                        </h3>
+                        <div id="creative-prompts" class="space-y-1 ml-2">
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Generate 5 creative ideas for [CHALLENGE OR OPPORTUNITY].')">
+                                💡 Brainstorm
+                            </button>
+                            <button class="prompt-item w-full text-left p-2 text-sm bg-gray-50 hover:bg-blue-50 rounded border text-gray-700"
+                                    onclick="usePrompt('Create a story or scenario about [TOPIC] to illustrate [CONCEPT].')">
+                                📖 Create Story
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Header -->
+            <div class="bg-white border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-semibold text-gray-800">Cogito Chat</h1>
+                    <div class="flex items-center gap-2">
+                        <button onclick="clearConversation()" 
+                                class="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200">
+                            Clear
+                        </button>
+                        <button onclick="logout()" 
+                                class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded hover:bg-red-200">
+                            Logout
+                        </button>
+                        <div class="text-xs text-gray-500" id="statusIndicator">Ready</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversation Area -->
+            <div id="conversation" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <div class="text-center text-gray-500 py-8">
+                    <div class="text-6xl mb-4">🤖</div>
+                    <p class="text-lg mb-2">Welcome to Cogito Chat</p>
+                    <p class="text-sm">Select a prompt template from the left or type your own message below.</p>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="flex gap-2">
+                    <textarea id="messageInput" 
+                              class="flex-1 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Type your message..."
+                              rows="2"
+                              onkeydown="handleKeyDown(event)"></textarea>
+                    <button id="sendButton" 
+                            onclick="sendMessage()"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                        Send
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <span>Press Ctrl+Enter to send</span>
+                    <span id="charCount">0 characters</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <script src="js/goldenhorde-events.js"></script>
+    <script src="js/goldenhorde-prompts.js"></script>
+    <script src="js/goldenhorde-conversation.js"></script>
+    <script src="js/goldenhorde-api.js"></script>
+    <script src="js/goldenhorde-main.js"></script>
+</body>
+</html>

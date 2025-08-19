@@ -30,6 +30,8 @@ import { WebSocketService } from './server/services/websocket-service.js';
 // Import routes
 import authRoutes from './server/routes/auth.js';
 import authExtendedRoutes from './server/routes/auth-extended.js';
+import authOAuthRoutes from './server/routes/auth-oauth.js';
+import chatInterfaceRoutes from './server/routes/chat-interface.js';
 import clientManagementRoutes from './server/routes/client-management.js';
 import adminClientManagementRoutes from './server/routes/admin-client-management.js';
 import conversationRoutes from './server/routes/conversations.js';
@@ -133,6 +135,7 @@ async function startServer() {
     // Mount route handlers with /api prefix for auth routes
     app.use('/api', authRoutes);
     app.use('/api', authExtendedRoutes);
+    app.use('/auth/oauth', authOAuthRoutes);
     app.use('/api', clientManagementRoutes);
     app.use('/api/admin', adminClientManagementRoutes);
     app.use('/api', conversationRoutes);

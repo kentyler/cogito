@@ -17,8 +17,29 @@ export async function generateLLMResponse(req, {
   avatarId = null 
 }) {
   try {
-    // Get user's selected LLM configuration with client-specific API keys
-    const llmConfig = await getUserSelectedLLM(req.pool, userId, clientId);
+    // Check if this is a Golden Horde request (avatar, path-based, or context-based)
+    const isGoldenHorde = avatarId === 'golden_horde_collective' || 
+                          req.originalUrl?.includes('/goldenhorde/') ||
+                          context === 'golden-horde-interface';
+    
+    let llmConfig;
+    if (isGoldenHorde) {
+      // Override to use Claude 3 Haiku for Golden Horde
+      console.log('🔍 Golden Horde detected - forcing Claude 3 Haiku');
+      llmConfig = {
+        id: 'claude-3-haiku',
+        name: 'Claude 3 Haiku',
+        provider: 'anthropic',
+        model: 'claude-3-haiku-20240307',
+        maxTokens: 4000,
+        temperature: 0.7,
+        apiKey: null // Will use global Anthropic key
+      };
+    } else {
+      // Get user's selected LLM configuration with client-specific API keys
+      llmConfig = await getUserSelectedLLM(req.pool, userId, clientId);
+    }
+    
     console.log('🔍 STEP 7.5: Using LLM:', llmConfig.name, '(' + llmConfig.id + ')');
     console.log('🔍 Has client-specific key:', !!llmConfig.apiKey);
     
