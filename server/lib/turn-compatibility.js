@@ -13,7 +13,7 @@ export function createTurn(req, turnData) {
 }
 
 
-export function findSimilarTurns(req, turnId, limit, threshold) {
+export function findSimilarTurns(req, turnId, limit, threshold, parentClientId = null) {
   if (!req.turnProcessor) {
     throw new Error('Turn processor not available - req.turnProcessor is not initialized');
   }
@@ -22,5 +22,5 @@ export function findSimilarTurns(req, turnId, limit, threshold) {
     throw new Error('Turn processor missing findSimilarTurns method');
   }
   
-  return req.turnProcessor.findSimilarTurns(turnId, limit, threshold);
+  return req.turnProcessor.findSimilarTurns(turnId, limit, threshold, parentClientId);
 }

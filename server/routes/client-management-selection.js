@@ -5,8 +5,7 @@
  */
 
 import express from 'express';
-import { createSessionMeeting } from '../lib/session-meeting.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { setupClientSession, logClientSelectionEvent } from '../lib/client-session-manager.js';
 
 const router = express.Router();
 
@@ -32,29 +31,10 @@ router.post('/select-client', async (req, res) => {
     } else {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    // Verify user has access to this client
-    const dbAgent = new DatabaseAgent();
-    await dbAgent.connect();
-    const client = await dbAgent.users.verifyClientAccess(user_id, client_id);
-    await dbAgent.close();
-    
-    if (!client) {
-      return res.status(403).json({ error: 'Access denied to selected client' });
-    }
-    // Create session meeting
+    // Setup client session with mini-horde support
     try {
-      const meeting_id = await createSessionMeeting(req.db, user_id, client.client_id);
-      
-      // Set up full session
-      req.session.user = {
-        user_id: user_id,
-        id: user_id,  // Some code uses .id
-        email: email,
-        client_id: client.client_id,
-        client_name: client.client_name,
-        role: client.role
-      };
-      req.session.meeting_id = meeting_id;
+      const sessionResult = await setupClientSession(req, user_id, email, client_id);
+      const { client, parent_client_id } = sessionResult;
       
       // Determine event type before clearing pendingUser
       const isInitialSelection = !!req.session.pendingUser;
@@ -70,26 +50,14 @@ router.post('/select-client', async (req, res) => {
         }
         
         // Log client selection event
-        try {
-          const dbAgent = new DatabaseAgent();
-          await dbAgent.connect();
-          const eventType = isInitialSelection ? 'initial_client_selection' : 'client_selection';
-          await dbAgent.logClientEvent(eventType, {
-            client_id: client.client_id,
-            client_name: client.client_name,
-            user_id: user_id,
-            role: client.role
-          }, {
-            userId: user_id,
-            sessionId: req.sessionID,
-            endpoint: `${req.method} ${req.path}`,
-            ip: req.ip || req.connection?.remoteAddress,
-            userAgent: req.get('User-Agent')
-          });
-          await dbAgent.close();
-        } catch (logError) {
-          console.error('Failed to log client selection:', logError);
-        }
+        const eventType = isInitialSelection ? 'initial_client_selection' : 'client_selection';
+        await logClientSelectionEvent(user_id, client, eventType, {
+          userId: user_id,
+          sessionId: req.sessionID,
+          endpoint: `${req.method} ${req.path}`,
+          ip: req.ip || req.connection?.remoteAddress,
+          userAgent: req.get('User-Agent')
+        });
         
         res.json({ 
           success: true, 
@@ -127,10 +95,18 @@ router.post('/switch-client', async (req, res) => {
     }
     const { user_id, email } = req.session.user;
     
-    // Verify user has access to this client
+    // Verify user has access to this client and get parent_client_id
     const dbAgent = new DatabaseAgent();
     await dbAgent.connect();
     const client = await dbAgent.users.verifyClientAccess(user_id, client_id);
+    
+    // Get parent_client_id for mini-horde support
+    let parent_client_id = null;
+    if (client) {
+      const clientDetails = await dbAgent.clients.getClientById(client_id);
+      parent_client_id = clientDetails?.parent_client_id || null;
+    }
+    
     await dbAgent.close();
     
     if (!client) {
@@ -141,7 +117,7 @@ router.post('/switch-client', async (req, res) => {
     try {
       const meeting_id = await createSessionMeeting(req.db, user_id, client.client_id);
       
-      // Update session with new client
+      // Update session with new client including parent_client_id for mini-horde support
       req.session.user = {
         user_id: user_id,
         email: email,
@@ -149,6 +125,7 @@ router.post('/switch-client', async (req, res) => {
         client_name: client.client_name,
         role: client.role
       };
+      req.session.parent_client_id = parent_client_id;
       req.session.meeting_id = meeting_id;
       
       req.session.save(async (err) => {

@@ -11,7 +11,10 @@ export async function buildConversationContext(req, userTurn, clientId) {
   let conversationContext = '';
   const allSources = [];
   
-  console.log('🔍 Building conversation context for turn:', userTurn.id, 'client:', clientId);
+  // Get parent client ID from session for mini-horde support
+  const parentClientId = req.session?.parent_client_id || null;
+  
+  console.log('🔍 Building conversation context for turn:', userTurn.id, 'client:', clientId, 'parent:', parentClientId);
   
   try {
     // Use embedding similarity to find relevant past discussions
@@ -22,7 +25,8 @@ export async function buildConversationContext(req, userTurn, clientId) {
         req,
         userTurn.id, 
         10, // limit to 10 most similar turns
-        0.7 // minimum similarity threshold
+        0.7, // minimum similarity threshold
+        parentClientId // include parent client data for mini-hordes
       );
       console.log('🔍 findSimilarTurns returned:', similarTurns?.length || 0, 'results');
     } catch (error) {
@@ -40,7 +44,8 @@ export async function buildConversationContext(req, userTurn, clientId) {
           userTurn.content, 
           clientId,
           5, // limit to 5 most similar chunks
-          0.6 // minimum similarity threshold
+          0.6, // minimum similarity threshold
+          parentClientId // include parent client data for mini-hordes
         );
         console.log('🔍 findSimilarChunks returned:', similarChunks?.length || 0, 'results');
       } catch (error) {
