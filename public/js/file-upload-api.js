@@ -91,7 +91,7 @@ class FileUploadAPI {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          filename: title,
+          title: title,
           content: content
         })
       });

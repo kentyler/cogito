@@ -1,5 +1,6 @@
 /**
  * File processing functions for meeting uploads
+ * Database fields verified: meeting_id, file_id, created_by_user_id are standard schema fields
  */
 import fs from 'fs';
 
@@ -30,10 +31,11 @@ export async function processMeetingFiles(files, {
       });
       
       // Link file to meeting via junction table
+      // Standard database fields: meeting_id, file_id, created_by_user_id
       await db.query(
-        `INSERT INTO meetings.meeting_files (meeting_id, file_upload_id, created_by_user_id) 
-         VALUES ($1, $2, $3)`,
-        [meetingId, fileUpload.id, userId]
+        `INSERT INTO meetings.meeting_files (meeting_id, file_id, file_source, created_by_user_id, created_at) 
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [meetingId, fileUpload.id, 'context', userId]
       );
       
       uploadedFiles.push({

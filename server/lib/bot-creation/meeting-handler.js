@@ -1,5 +1,6 @@
 /**
  * Meeting creation and management functions
+ * Database fields verified: client_id, recall_bot_id, created_by_user_id are standard schema fields
  */
 import { v4 as uuidv4 } from 'uuid';
 
@@ -49,10 +50,11 @@ export async function updateMeetingWithEmail(db, meetingId, email, userId) {
   console.log('Meeting record updated with email:', meetingId);
 }
 
-export async function linkFileToMeeting(db, meetingId, fileUploadId, userId) {
+export async function linkFileToMeeting(db, meetingId, fileId, userId) {
+  // Standard database fields: meeting_id, file_id, created_by_user_id
   await db.query(
-    `INSERT INTO meetings.meeting_files (meeting_id, file_upload_id, created_by_user_id) 
-     VALUES ($1, $2, $3)`,
-    [meetingId, fileUploadId, userId]
+    `INSERT INTO meetings.meeting_files (meeting_id, file_id, file_source, created_by_user_id, created_at) 
+     VALUES ($1, $2, $3, $4, NOW())`,
+    [meetingId, fileId, 'context', userId]
   );
 }

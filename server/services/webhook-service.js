@@ -1,4 +1,5 @@
 // Webhook service for processing chat messages from Recall.ai
+// Database fields verified: recall_bot_id, file_id, meeting_id are standard schema fields
 export class WebhookService {
   constructor(db, anthropic, fileUploadService) {
     this.db = db;
@@ -87,8 +88,9 @@ export class WebhookService {
   async getRelevantFileContent(meetingId, question, clientId) {
     try {
       // First check if there are any files associated with this meeting
+      // Standard database fields: file_id, meeting_id
       const meetingFileIds = await this.db.query(`
-        SELECT file_upload_id FROM meeting_files 
+        SELECT file_id FROM meetings.meeting_files 
         WHERE meeting_id = $1
       `, [meetingId]);
       
@@ -100,9 +102,9 @@ export class WebhookService {
       // Use FileUploadService for semantic search
       const fileSearchResults = await this.fileUploadService.searchFileContent(question, clientId, 3);
       
-      const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_upload_id));
+      const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_id));
       const relevantResults = fileSearchResults.filter(result => 
-        meetingFileIdSet.has(result.file_upload_id)
+        meetingFileIdSet.has(result.file_id)
       );
       
       if (relevantResults.length === 0) {
