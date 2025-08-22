@@ -15,4 +15,5 @@ router.use('/', avatarRoutes);
 router.use('/', llmRoutes);
 router.use('/', temperatureRoutes);
 
+
 export default router;

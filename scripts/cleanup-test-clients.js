@@ -8,7 +8,7 @@ async function cleanupTestClients() {
     // Schema verified: client_mgmt.clients table confirmed in production database
     // Check for any test clients
     const result = await dbAgent.connector.query(
-      "SELECT id, name FROM client_mgmt.clients WHERE name LIKE 'Test Client%' ORDER BY id DESC"
+      'SELECT id, name FROM client_mgmt.clients WHERE name LIKE \'Test Client%\' ORDER BY id DESC'
     );
     console.log('Found test clients:', result.rows.length);
     if (result.rows.length > 0) {
@@ -17,7 +17,7 @@ async function cleanupTestClients() {
     
     // Clean up old test clients
     const deleteResult = await dbAgent.connector.query(
-      "DELETE FROM client_mgmt.clients WHERE name LIKE 'Test Client%'"
+      'DELETE FROM client_mgmt.clients WHERE name LIKE \'Test Client%\''
     );
     console.log('\nDeleted', deleteResult.rowCount, 'test clients');
     

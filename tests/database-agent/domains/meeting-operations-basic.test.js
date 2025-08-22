@@ -64,7 +64,7 @@ export async function runBasicMeetingOperationsTests() {
       
       // Test with excluded statuses
       await dbAgent.connector.query(
-        "UPDATE meetings.meetings SET status = 'completed' WHERE id = $1",
+        'UPDATE meetings.meetings SET status = \'completed\' WHERE id = $1',
         [meetingId]
       );
       const noMeeting = await dbAgent.meetings.getByBotId(botId); // completed is excluded by default

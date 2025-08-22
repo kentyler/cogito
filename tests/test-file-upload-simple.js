@@ -22,7 +22,7 @@ async function testSimple() {
     
     // Test 3: Simple text chunking
     console.log('3. Testing text chunking...');
-    const text = "First sentence. Second sentence. Third sentence.";
+    const text = 'First sentence. Second sentence. Third sentence.';
     const chunks = service.modules.textChunker.chunkText(text, 20, 5);
     console.log('✅ Text chunking:', `${chunks.length} chunks created`);
     

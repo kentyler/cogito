@@ -25,7 +25,7 @@ async function testModularClientDetector() {
     
     // Test 3: Client name extraction (no database needed)
     console.log('3. Testing client name extraction...');
-    const testText = "This is a meeting of the conflict club";
+    const testText = 'This is a meeting of the conflict club';
     const candidates = detector.modules.extractor.extractClientNames(testText, 'meeting');
     console.log('✅ Name extraction successful:', candidates);
     
@@ -36,12 +36,12 @@ async function testModularClientDetector() {
     
     // Test 5: Basic detection (with actual database query)
     console.log('5. Testing basic detection...');
-    const detectionResult = await detector.detectClient("Meeting for test client xyz", 'meeting');
+    const detectionResult = await detector.detectClient('Meeting for test client xyz', 'meeting');
     console.log('✅ Detection completed:', detectionResult.status);
     
     // Test 6: No candidates scenario
     console.log('6. Testing no candidates scenario...');
-    const noCandidatesResult = await detector.detectClient("This has no client names", 'general');
+    const noCandidatesResult = await detector.detectClient('This has no client names', 'general');
     console.log('✅ No candidates handled:', noCandidatesResult.status === 'no_candidates' ? 'Correct' : 'Unexpected');
     
     // Test 7: Result formatting (with mock data)
@@ -49,7 +49,7 @@ async function testModularClientDetector() {
     const mockSearchResults = { exact_matches: [], fuzzy_matches: [], keyword_matches: [] };
     const mockCandidates = ['test client'];
     const formattedResult = detector.modules.formatter.formatDetectionResult(
-      mockSearchResults, mockCandidates, "test text"
+      mockSearchResults, mockCandidates, 'test text'
     );
     console.log('✅ Result formatting successful:', formattedResult.status);
     

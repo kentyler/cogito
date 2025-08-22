@@ -48,6 +48,7 @@ import uploadFilesRoutes from './server/routes/upload-files.js';
 import invitationsRoutes from './server/routes/invitations.js';
 import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
 import settingsRoutes from './server/routes/settings.js';
+import temperatureSettingsRoutes from './server/routes/temperature-settings.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -151,6 +152,7 @@ async function startServer() {
     app.use('/api/upload-files', uploadFilesRoutes);
     app.use('/api/invitations', invitationsRoutes);
     app.use('/api', settingsRoutes);
+    app.use('/api', temperatureSettingsRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);
