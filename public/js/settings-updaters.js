@@ -6,9 +6,9 @@
 
 // Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
 // Schema verified: avatar_id from avatars table, last_avatar_id from users table, llm_id from llms table
-import { loadAvailableAvatars, loadCurrentTemperature } from './settings-data-loader.js';
+import { loadAvailableAvatars } from './settings-data-loader.js';
 import { updateSettingsForm } from './settings-form-updater.js';
-import { updateTemperatureDisplay } from './temperature-settings.js';
+import { loadCurrentTemperature, updateTemperatureDisplay } from './temperature-settings.js';
 
 export async function updateClientSetting(clientId, settingsState) {
     try {
