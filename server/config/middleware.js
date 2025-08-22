@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { setupCORS } from './cors.js';
+import path from 'path';
 
 const pgSession = connectPgSimple(session);
 
@@ -46,6 +47,14 @@ export function setupMiddleware(app, pool) {
       domain: process.env.COOKIE_DOMAIN || undefined // Allow setting custom domain if needed
     }
   }));
+
+  // Set correct MIME types for JavaScript files
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+    next();
+  });
 
   // Serve static files
   app.use(express.static('public'));
