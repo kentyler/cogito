@@ -22,9 +22,17 @@
                             ${bot.meeting_name || 'Unnamed Meeting'}
                         </div>
                         <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
-                        <div class="text-xs text-gray-500 mt-2">Bot ID: ${bot.id}</div>
+                        <div class="text-xs text-gray-500 mt-2">
+                            <div>Bot ID: ${bot.id}</div>
+                            ${bot.creator_name || bot.creator_email ? `
+                                <div class="mt-1">Created by: ${bot.creator_name || bot.creator_email}</div>
+                            ` : ''}
+                            ${bot.created_at ? `
+                                <div class="mt-1">Created: ${new Date(bot.created_at).toLocaleDateString()} at ${new Date(bot.created_at).toLocaleTimeString()}</div>
+                            ` : ''}
+                        </div>
                         ${bot.status ? `
-                            <div class="text-xs mt-1">
+                            <div class="text-xs mt-2">
                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                                     ${bot.status === 'active' ? 'bg-green-100 text-green-800' :
                                       bot.status === 'joining' ? 'bg-yellow-100 text-yellow-800' :
