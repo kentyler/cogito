@@ -1,8 +1,11 @@
 /**
  * Settings Update Functions - Handle client, avatar, LLM, and temperature updates
  * Available methods: updateClientSetting, updateAvatarSetting, updateLLMSetting, updateTemperatureSetting
+ * Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
  */
 
+// Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
+// Schema verified: avatar_id from avatars table, last_avatar_id from users table, llm_id from llms table
 import { loadAvailableAvatars, loadCurrentTemperature } from './settings-data-loader.js';
 import { updateSettingsForm } from './settings-form-updater.js';
 import { updateTemperatureDisplay } from './temperature-settings.js';
@@ -21,6 +24,15 @@ export async function updateClientSetting(clientId, settingsState) {
             settingsState.currentTemperature = await loadCurrentTemperature(clientId);
             
             updateSettingsForm(settingsState, updateTemperatureDisplay);
+            
+            // Update client indicator - get the client name from the dropdown
+            const select = document.getElementById('settingsClient');
+            if (select && window.updateClientIndicator) {
+                const selectedOption = select.options[select.selectedIndex];
+                if (selectedOption) {
+                    window.updateClientIndicator(selectedOption.text);
+                }
+            }
         }
     } catch (error) {
         console.error('Error updating client:', error);

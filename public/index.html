@@ -70,7 +70,9 @@
         <div id="mainContent" class="hidden">
             <!-- Header -->
             <div class="bg-white rounded-lg shadow p-4 mb-4 flex justify-between items-center">
-                <h1 class="text-xl font-semibold text-gray-800">Cogito</h1>
+                <h1 class="text-xl font-semibold text-gray-800">
+                    Cogito<span id="clientIndicator" class="text-gray-600"></span>
+                </h1>
                 <div class="flex items-center gap-4">
                     <span id="userInfo" class="text-sm text-gray-600"></span>
                     <div class="relative">
@@ -270,6 +272,7 @@
     <!-- JavaScript modules -->
     <script src="js/navigation.js"></script>
     <script src="js/client-selection-ui.js"></script>
+    <script src="js/client-switcher.js"></script>
     <script src="js/oauth-auth.js"></script>
     <script src="js/logout-handler.js"></script>
     <script src="js/auth-checker.js"></script>
@@ -293,6 +296,31 @@
     <script src="js/file-upload.js"></script>
     <script src="js/conversation.js"></script>
     <script>
+        // Update client indicator in header
+        window.updateClientIndicator = function(clientName) {
+            const indicator = document.getElementById('clientIndicator');
+            if (indicator) {
+                if (clientName) {
+                    indicator.textContent = ': ' + clientName;
+                } else {
+                    // Try to get from select element or localStorage
+                    const select = document.getElementById('settingsClient');
+                    if (select && select.selectedIndex >= 0) {
+                        const selectedOption = select.options[select.selectedIndex];
+                        if (selectedOption && selectedOption.text) {
+                            indicator.textContent = ': ' + selectedOption.text;
+                        }
+                    } else {
+                        // Fallback to localStorage
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        if (user.client_name) {
+                            indicator.textContent = ': ' + user.client_name;
+                        }
+                    }
+                }
+            }
+        };
+        
         // Provide immediate stub functions for settings that will be replaced by module
         window.toggleSettings = function() {
             console.log('Settings module loading...');
@@ -309,6 +337,8 @@
         };
         window.updateClient = function(clientId) {
             console.log('Settings module loading...');
+            // Update client indicator immediately
+            updateClientIndicator();
         };
         window.updateAvatar = function(avatarId) {
             console.log('Settings module loading...');
@@ -336,6 +366,9 @@
             
             // Check authentication on page load
             checkAuth();
+            
+            // Initialize client indicator
+            updateClientIndicator();
         });
     </script>
 </body>

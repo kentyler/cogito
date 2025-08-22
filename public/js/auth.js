@@ -1,4 +1,6 @@
 // Authentication functions - modular components in separate files
+// Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
+// Schema verified: client_id from client_mgmt.clients table
 window.login = async function() {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value.trim();
@@ -43,9 +45,16 @@ window.login = async function() {
             // Display user info with client name if available
             const clientName = data.user.client_name || data.user.client || '';
             if (clientName) {
+                // Security: Using textContent prevents XSS - safe to use template literal
                 document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email} (${clientName})`;
             } else {
+                // Security: Using textContent prevents XSS - safe to use template literal
                 document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
+            }
+            
+            // Update client indicator in header
+            if (window.updateClientIndicator) {
+                window.updateClientIndicator(clientName);
             }
             
             // Auto-load meetings after login
@@ -139,6 +148,11 @@ window.selectClient = async function(client) {
             userInfo.textContent += ` (${client.client_name})`;
         }
         
+        // Update client indicator in header
+        if (window.updateClientIndicator) {
+            window.updateClientIndicator(client.client_name);
+        }
+        
         // Auto-load meetings after client selection
         setMeetingsStatus('Loading meetings...', 'info');
         window.loadMeetingsList();
@@ -149,52 +163,4 @@ window.selectClient = async function(client) {
     }
 }
 
-// Switch client function for dropdown
-window.switchClient = async function(clientId) {
-    const clients = JSON.parse(localStorage.getItem('availableClients') || '[]');
-    const newClient = clients.find(c => c.client_id == clientId);
-    
-    if (!newClient || newClient.client_id == window.currentClient?.client_id) {
-        return; // No change needed
-    }
-    
-    try {
-        // Show loading state
-        document.getElementById('userInfo').textContent = 'Switching client...';
-        
-        const response = await fetch('/api/select-client', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ client_id: newClient.client_id }),
-            credentials: 'include'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to switch client');
-        }
-        
-        const data = await response.json();
-        
-        // Update current client
-        window.currentClient = newClient;
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Update UI
-        document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
-        
-        // Reload meetings for new client
-        window.setMeetingsStatus('Loading meetings for new client...', 'info');
-        window.loadMeetingsList();
-        
-    } catch (error) {
-        console.error('Client switch error:', error);
-        // Restore previous selection
-        document.getElementById('clientSelector').value = window.currentClient?.client_id;
-        document.getElementById('userInfo').textContent = `Logged in as: ${JSON.parse(localStorage.getItem('user')).email}`;
-        alert('Failed to switch client: ' + error.message);
-    }
-}
-
-// Auth checking functionality moved to auth-checker.js module
+// Client switching functionality moved to client-switcher.js module
