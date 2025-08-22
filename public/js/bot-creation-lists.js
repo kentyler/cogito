@@ -21,7 +21,9 @@
                         <div class="font-medium text-gray-900">
                             ${bot.meeting_name || 'Unnamed Meeting'}
                         </div>
-                        <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
+                        ${bot.meeting_url && bot.meeting_url !== 'null' ? `
+                            <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
+                        ` : ''}
                         <div class="text-xs text-gray-500 mt-2">
                             <div>Bot ID: ${bot.id}</div>
                             ${bot.creator_email && bot.creator_email !== 'null' ? `
