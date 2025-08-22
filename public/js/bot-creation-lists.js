@@ -24,8 +24,8 @@
                         <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
                         <div class="text-xs text-gray-500 mt-2">
                             <div>Bot ID: ${bot.id}</div>
-                            ${bot.creator_name || bot.creator_email ? `
-                                <div class="mt-1">Created by: ${bot.creator_name || bot.creator_email}</div>
+                            ${bot.creator_email ? `
+                                <div class="mt-1">Created by: ${bot.creator_email}</div>
                             ` : ''}
                             ${bot.created_at ? `
                                 <div class="mt-1">Created: ${new Date(bot.created_at).toLocaleDateString()} at ${new Date(bot.created_at).toLocaleTimeString()}</div>
