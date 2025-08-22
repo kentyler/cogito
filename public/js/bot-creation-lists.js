@@ -14,7 +14,9 @@
             return;
         }
 
-        container.innerHTML = bots.map(bot => `
+        container.innerHTML = bots.map(bot => {
+            const botId = bot.bot_id || bot.id;
+            return `
             <div class="bot-item p-4 border border-gray-200 rounded-md bg-white shadow-sm">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -45,14 +47,15 @@
                             </div>
                         ` : ''}
                     </div>
-                    <button onclick="window.botCreation.shutdownBot('${bot.bot_id || bot.id}')"
+                    <button onclick="window.botCreation.shutdownBot('${botId}')"
                             class="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                            ${shuttingDown[bot.bot_id || bot.id] ? 'disabled' : ''}>
-                        ${shuttingDown[bot.bot_id || bot.id] ? 'Shutting down...' : 'Shutdown'}
+                            ${shuttingDown[botId] ? 'disabled' : ''}>
+                        ${shuttingDown[botId] ? 'Shutting down...' : 'Shutdown'}
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     // Render stuck meetings list
