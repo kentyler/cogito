@@ -14,17 +14,21 @@
             return;
         }
 
-        container.innerHTML = bots.map(bot => `
+        container.innerHTML = bots.map(bot => {
+            const botId = bot.bot_id || bot.id;
+            return `
             <div class="bot-item p-4 border border-gray-200 rounded-md bg-white shadow-sm">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="font-medium text-gray-900">
                             ${bot.meeting_name || 'Unnamed Meeting'}
                         </div>
-                        <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
+                        ${bot.meeting_url && bot.meeting_url !== 'null' ? `
+                            <div class="text-sm text-gray-600 mt-1">${bot.meeting_url}</div>
+                        ` : ''}
                         <div class="text-xs text-gray-500 mt-2">
                             <div>Bot ID: ${bot.id}</div>
-                            ${bot.creator_email ? `
+                            ${bot.creator_email && bot.creator_email !== 'null' ? `
                                 <div class="mt-1">Created by: ${bot.creator_email}</div>
                             ` : ''}
                             ${bot.created_at ? `
@@ -43,14 +47,15 @@
                             </div>
                         ` : ''}
                     </div>
-                    <button onclick="window.botCreation.shutdownBot('${bot.id}')"
+                    <button onclick="window.botCreation.shutdownBot('${botId}')"
                             class="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                            ${shuttingDown[bot.id] ? 'disabled' : ''}>
-                        ${shuttingDown[bot.id] ? 'Shutting down...' : 'Shutdown'}
+                            ${shuttingDown[botId] ? 'disabled' : ''}>
+                        ${shuttingDown[botId] ? 'Shutting down...' : 'Shutdown'}
                     </button>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     // Render stuck meetings list
