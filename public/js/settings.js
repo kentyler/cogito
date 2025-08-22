@@ -1,15 +1,18 @@
 // Settings dropdown functionality for client, avatar, and LLM selection
+import { loadCurrentTemperature, updateTemperature, updateTemperatureDisplay } from './temperature-settings.js';
+import { loadAvailableClients, loadAvailableAvatars, loadAvailableLLMs } from './settings-data-loader.js';
+import { updateSettingsForm } from './settings-form-updater.js';
 
 // Settings dropdown state
 let settingsState = {
     currentClient: null,
     currentAvatar: null,
     currentLLM: 'claude-3-5-sonnet',
+    currentTemperature: 0.7,
     availableClients: [],
     availableAvatars: [],
     availableLLMs: [
         { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
-        // More LLMs will be added here
     ]
 };
 

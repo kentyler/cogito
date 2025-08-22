@@ -161,7 +161,20 @@ export async function isValidLLM(llmId, pool = null) {
 export async function getUserSelectedLLM(pool, userId, clientId = null) {
   try {
     if (!userId) {
-      return getLLMConfig(DEFAULT_LLM);
+      const defaultConfig = getLLMConfig(DEFAULT_LLM);
+      
+      // Even without user, check for client temperature setting if clientId provided
+      const { loadClientTemperature } = await import('./client-temperature-loader.js');
+      const clientTemperature = await loadClientTemperature(clientId);
+      if (clientTemperature !== null) {
+        console.log(`🌡️ Using client temperature setting: ${clientTemperature} for client ${clientId} (no user)`);
+        return {
+          ...defaultConfig,
+          temperature: clientTemperature
+        };
+      }
+      
+      return defaultConfig;
     }
     
     // Get user's selected LLM and client
@@ -184,14 +197,18 @@ export async function getUserSelectedLLM(pool, userId, clientId = null) {
       const dbLLM = await getLLMByModel(pool, userLLMId);
       
       if (dbLLM) {
-        // Return site-wide LLM config with actual API key
+        // Get client-specific temperature setting if available
+        const { loadClientTemperature } = await import('./client-temperature-loader.js');
+        const clientTemperature = await loadClientTemperature(userClientId) || dbLLM.temperature || 0.7;
+        
+        // Return site-wide LLM config with client-specific temperature
         return {
           id: dbLLM.model,
           name: dbLLM.name,
           provider: dbLLM.provider,
           model: dbLLM.model,
           maxTokens: dbLLM.max_tokens || 4000,
-          temperature: dbLLM.temperature || 0.7,
+          temperature: clientTemperature,
           apiKey: dbLLM.api_key,
           description: `${dbLLM.name} via site-wide API key`,
           dbId: dbLLM.id
@@ -199,8 +216,21 @@ export async function getUserSelectedLLM(pool, userId, clientId = null) {
       }
     }
     
-    // Fall back to static config
-    return getLLMConfig(userLLMId);
+    // Fall back to static config with client temperature override
+    const staticConfig = getLLMConfig(userLLMId);
+    
+    // Check for client-specific temperature setting
+    const { loadClientTemperature } = await import('./client-temperature-loader.js');
+    const clientTemperature = await loadClientTemperature(userClientId);
+    if (clientTemperature !== null) {
+      console.log(`🌡️ Using client temperature setting: ${clientTemperature} for client ${userClientId} (static fallback)`);
+      return {
+        ...staticConfig,
+        temperature: clientTemperature
+      };
+    }
+    
+    return staticConfig;
     
   } catch (error) {
     console.error('Error getting user selected LLM:', error);
