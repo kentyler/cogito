@@ -20,32 +20,32 @@ async function testFragmentExtraction() {
   const sampleTurns = [
     {
       turnId: uuidv4(),
-      content: "I'm frustrated with the authentication setup process. It keeps failing when I try to integrate with OAuth providers.",
+      content: 'I\'m frustrated with the authentication setup process. It keeps failing when I try to integrate with OAuth providers.',
       expectedElements: ['undesirable_effect']
     },
     {
       turnId: uuidv4(), 
-      content: "The problem is that we can't deploy to production because we're missing the SSL certificates and the database migration scripts aren't ready.",
+      content: 'The problem is that we can\'t deploy to production because we\'re missing the SSL certificates and the database migration scripts aren\'t ready.',
       expectedElements: ['undesirable_effect', 'obstacle']
     },
     {
       turnId: uuidv4(),
-      content: "What if we used JWT tokens instead of sessions? That way we could avoid the server-side state management complexity.",
+      content: 'What if we used JWT tokens instead of sessions? That way we could avoid the server-side state management complexity.',
       expectedElements: ['injection']  
     },
     {
       turnId: uuidv4(),
-      content: "I want to keep the existing user data but also need to upgrade to the new schema. I'm torn between doing a gradual migration or a complete rebuild.",
+      content: 'I want to keep the existing user data but also need to upgrade to the new schema. I\'m torn between doing a gradual migration or a complete rebuild.',
       expectedElements: ['want', 'need', 'conflict']
     },
     {
       turnId: uuidv4(),
-      content: "We need to improve performance, but we also need to maintain backward compatibility. The users expect fast responses, but we can't break existing integrations.",
+      content: 'We need to improve performance, but we also need to maintain backward compatibility. The users expect fast responses, but we can\'t break existing integrations.',
       expectedElements: ['need', 'conflict', 'assumption']
     },
     {
       turnId: uuidv4(),
-      content: "I assume the database can handle the increased load, but we should probably set up monitoring to be sure.",
+      content: 'I assume the database can handle the increased load, but we should probably set up monitoring to be sure.',
       expectedElements: ['assumption', 'injection']
     }
   ];

@@ -57,8 +57,8 @@ function updateFile(filePath) {
     // JavaScript object property access
     { from: /\.meeting_id/g, to: '.id' },
     { from: /\.turn_id/g, to: '.id' },
-    { from: /\['meeting_id'\]/g, to: "['id']" },
-    { from: /\['turn_id'\]/g, to: "['id']" },
+    { from: /\['meeting_id'\]/g, to: '[\'id\']' },
+    { from: /\['turn_id'\]/g, to: '[\'id\']' },
     { from: /"meeting_id"/g, to: '"id"' },
     { from: /"turn_id"/g, to: '"id"' }
   ];

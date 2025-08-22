@@ -229,7 +229,7 @@ class ClientParticipantLookupTest {
     await this.db.testConnection();
     
     // Test with a real client that should exist
-    const testString = "this is a meeting of the Conflict Club on 6/21/2025 Attendees: Ken Tyler ken@8thfold.com";
+    const testString = 'this is a meeting of the Conflict Club on 6/21/2025 Attendees: Ken Tyler ken@8thfold.com';
     
     const result = await this.processSetupString(testString);
     

@@ -19,13 +19,13 @@ async function testModularFileUploadService() {
     
     // Test 2: Content extraction (mock file)
     console.log('2. Testing content extraction...');
-    const testContent = "This is a test file for content extraction.";
+    const testContent = 'This is a test file for content extraction.';
     const supportedType = service.modules.contentExtractor.isSupported('text/plain');
     console.log('✅ Content extraction support check:', supportedType ? 'Supported' : 'Not supported');
     
     // Test 3: Text chunking
     console.log('3. Testing text chunking...');
-    const longText = "This is a long text that will be chunked into smaller pieces. ".repeat(5); // Reduced from 50 to 5
+    const longText = 'This is a long text that will be chunked into smaller pieces. '.repeat(5); // Reduced from 50 to 5
     const chunks = service.modules.textChunker.chunkText(longText, 100, 20);
     console.log('✅ Text chunking successful:', `${chunks.length} chunks created`);
     
@@ -36,7 +36,7 @@ async function testModularFileUploadService() {
     
     // Test 5: Chunk by sentences
     console.log('5. Testing sentence-based chunking...');
-    const sentenceText = "First sentence. Second sentence. Third sentence.";
+    const sentenceText = 'First sentence. Second sentence. Third sentence.';
     const sentenceChunks = service.modules.textChunker.chunkBySentences(sentenceText, 30);
     console.log('✅ Sentence chunking successful:', `${sentenceChunks.length} chunks`);
     

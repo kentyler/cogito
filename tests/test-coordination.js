@@ -21,16 +21,16 @@ async function testCoordination() {
   // Test scenarios that should trigger different coordination patterns
   const testInputs = [
     {
-      input: "Help me write a technical blog post about recursion that's also engaging",
-      expected: "Should trigger Writer + Coder coordination with precision vs engagement tension"
+      input: 'Help me write a technical blog post about recursion that\'s also engaging',
+      expected: 'Should trigger Writer + Coder coordination with precision vs engagement tension'
     },
     {
-      input: "Debug this function but explain it in a way that makes sense philosophically",
-      expected: "Should trigger Coder + Liminal coordination with technical vs philosophical tension"
+      input: 'Debug this function but explain it in a way that makes sense philosophically',
+      expected: 'Should trigger Coder + Liminal coordination with technical vs philosophical tension'
     },
     {
-      input: "Research the history of AI consciousness and create a narrative about it",
-      expected: "Should trigger Researcher + Writer coordination with accuracy vs narrative tension"
+      input: 'Research the history of AI consciousness and create a narrative about it',
+      expected: 'Should trigger Researcher + Writer coordination with accuracy vs narrative tension'
     }
   ];
 

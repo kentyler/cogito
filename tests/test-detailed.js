@@ -16,7 +16,7 @@ async function testDetailed() {
 
   const spokesperson = new SpokespersonPersonality(config);
   
-  const testInput = "Help me write a technical blog post about recursion that's also engaging";
+  const testInput = 'Help me write a technical blog post about recursion that\'s also engaging';
   
   console.log(`📝 Input: "${testInput}"`);
   console.log('\n🔍 Processing...\n');

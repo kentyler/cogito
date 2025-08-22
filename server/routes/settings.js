@@ -267,4 +267,5 @@ router.get('/user/preferences', async (req, res) => {
   }
 });
 
+
 export default router;

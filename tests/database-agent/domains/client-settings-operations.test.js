@@ -5,58 +5,13 @@
  */
 
 import { getTestDbAgent, TestFixtures, cleanupTestData } from '../test-helpers/db-setup.js';
+import { 
+  assertEquals, assertNull, assertTrue, assertFalse, createTestRunner 
+} from '../test-helpers/client-settings-test-helpers.js';
 
 export async function runClientSettingsOperationsTests() {
   let dbAgent;
-  let testResults = {
-    passed: 0,
-    failed: 0,
-    tests: []
-  };
-
-  function logTest(name, passed, message = '') {
-    const status = passed ? '✅' : '❌';
-    console.log(`  ${status} ${name}${message ? ' - ' + message : ''}`);
-    testResults.tests.push({ name, passed, message });
-    if (passed) {
-      testResults.passed++;
-    } else {
-      testResults.failed++;
-    }
-  }
-
-  async function runTest(name, testFn) {
-    try {
-      await testFn();
-      logTest(name, true);
-    } catch (error) {
-      logTest(name, false, error.message);
-    }
-  }
-
-  function assertEquals(actual, expected, message) {
-    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-      throw new Error(`${message || 'Assertion failed'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-    }
-  }
-
-  function assertNull(actual, message) {
-    if (actual !== null) {
-      throw new Error(`${message || 'Expected null'}: got ${JSON.stringify(actual)}`);
-    }
-  }
-
-  function assertTrue(actual, message) {
-    if (!actual) {
-      throw new Error(`${message || 'Expected true'}: got ${actual}`);
-    }
-  }
-
-  function assertFalse(actual, message) {
-    if (actual) {
-      throw new Error(`${message || 'Expected false'}: got ${actual}`);
-    }
-  }
+  const { testResults, runTest } = createTestRunner();
 
   try {
     console.log('\n🧪 Running Client Settings Operations Tests...');
