@@ -292,6 +292,37 @@
     <script src="js/file-upload-right-pane.js"></script>
     <script src="js/file-upload.js"></script>
     <script src="js/conversation.js"></script>
+    <script>
+        // Provide immediate stub functions for settings that will be replaced by module
+        window.toggleSettings = function() {
+            console.log('Settings module loading...');
+            const dropdown = document.getElementById('settingsDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('hidden');
+            }
+        };
+        window.closeSettings = function() {
+            const dropdown = document.getElementById('settingsDropdown');
+            if (dropdown) {
+                dropdown.classList.add('hidden');
+            }
+        };
+        window.updateClient = function(clientId) {
+            console.log('Settings module loading...');
+        };
+        window.updateAvatar = function(avatarId) {
+            console.log('Settings module loading...');
+        };
+        window.updateLLM = function(llmId) {
+            console.log('Settings module loading...');
+        };
+        window.updateTemperature = function(temperature) {
+            const display = document.getElementById('temperatureValue');
+            if (display) {
+                display.textContent = parseFloat(temperature).toFixed(2);
+            }
+        };
+    </script>
     <script type="module" src="js/settings.js"></script>
     
     <script>
