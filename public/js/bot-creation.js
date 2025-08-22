@@ -143,7 +143,10 @@
         
         const success = await window.botCreationHandlers.handleShutdownBot(botId, formElements);
         if (success) {
-            await fetchRunningBots();
+            // Small delay to ensure database update completes
+            setTimeout(async () => {
+                await fetchRunningBots();
+            }, 500);
         }
     }
 
