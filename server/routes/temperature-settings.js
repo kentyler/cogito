@@ -18,20 +18,17 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Verify user has access to this client
-    const clientAccess = await req.pool.query(
-      'SELECT 1 FROM client_mgmt.user_clients WHERE user_id = $1 AND client_id = $2 AND is_active = true',
-      [userId, clientId]
-    );
-    
-    if (clientAccess.rows.length === 0) {
-      return res.status(403).json({ error: 'Access denied to client' });
-    }
-    
     const dbAgent = new DatabaseAgent();
     await dbAgent.connect();
     
     try {
+      // Verify user has access to this client using DatabaseAgent
+      const hasAccess = await dbAgent.clients.checkUserClientAccess(userId, parseInt(clientId));
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied to client' });
+      }
+      
       const setting = await dbAgent.clientSettings.getClientSetting(parseInt(clientId), 'temperature');
       
       res.json({
@@ -73,20 +70,16 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
       return res.status(400).json({ error: 'Temperature must be a number between 0 and 1' });
     }
     
-    // Verify user has access to this client
-    const clientAccess = await req.pool.query(
-      'SELECT 1 FROM client_mgmt.user_clients WHERE user_id = $1 AND client_id = $2 AND is_active = true',
-      [userId, clientId]
-    );
-    
-    if (clientAccess.rows.length === 0) {
-      return res.status(403).json({ error: 'Access denied to client' });
-    }
-    
     const dbAgent = new DatabaseAgent();
     await dbAgent.connect();
     
     try {
+      // Verify user has access to this client using DatabaseAgent
+      const hasAccess = await dbAgent.clients.checkUserClientAccess(userId, parseInt(clientId));
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Access denied to client' });
+      }
       // Get previous temperature for logging
       let previousTemperature = null;
       try {

@@ -1,10 +1,21 @@
 // Webhook service for processing chat messages from Recall.ai
 // Database fields verified: recall_bot_id, file_id, meeting_id are standard schema fields
+import { DatabaseAgent } from '../../lib/database-agent.js';
+
 export class WebhookService {
   constructor(db, anthropic, fileUploadService) {
-    this.db = db;
+    this.db = db; // Keep for legacy compatibility
     this.anthropic = anthropic;
     this.fileUploadService = fileUploadService;
+    this.dbAgent = new DatabaseAgent();
+    this.dbAgentConnected = false;
+  }
+
+  async ensureDbAgent() {
+    if (!this.dbAgentConnected) {
+      await this.dbAgent.connect();
+      this.dbAgentConnected = true;
+    }
   }
 
   // Extract and validate webhook data
@@ -29,17 +40,14 @@ export class WebhookService {
 
   // Find meeting by bot ID
   async findMeetingByBot(botId) {
-    const meetingResult = await this.db.query(`
-      SELECT * 
-      FROM meetings.meetings
-      WHERE recall_bot_id = $1 AND meeting_type != 'system'
-    `, [botId]);
+    await this.ensureDbAgent();
+    const meeting = await this.dbAgent.meetings.getByBotId(botId, ['system']);
     
-    if (meetingResult.rows.length === 0) {
+    if (!meeting) {
       throw new Error(`No meeting found for bot ${botId}`);
     }
     
-    return meetingResult.rows[0];
+    return meeting;
   }
 
   // Check if message is a command or question
@@ -66,12 +74,10 @@ export class WebhookService {
 
   // Get conversation context from meeting
   async getConversationContext(meetingId) {
-    const conversationResult = await this.db.query(
-      'SELECT full_transcript FROM meetings.meetings WHERE id = $1',
-      [meetingId]
-    );
+    await this.ensureDbAgent();
+    const meeting = await this.dbAgent.meetings.getById(meetingId);
     
-    const transcriptArray = conversationResult.rows[0]?.full_transcript || [];
+    const transcriptArray = meeting?.full_transcript || [];
     
     if (!Array.isArray(transcriptArray) || transcriptArray.length === 0) {
       return { hasContent: false, transcriptArray: [], conversationText: '' };
@@ -87,9 +93,10 @@ export class WebhookService {
   // Get relevant file content for context
   async getRelevantFileContent(meetingId, question, clientId) {
     try {
+      await this.ensureDbAgent();
       // First check if there are any files associated with this meeting
       // Standard database fields: file_id, meeting_id
-      const meetingFileIds = await this.db.query(`
+      const meetingFileIds = await this.dbAgent.query(`
         SELECT file_id FROM meetings.meeting_files 
         WHERE meeting_id = $1
       `, [meetingId]);
@@ -125,7 +132,8 @@ export class WebhookService {
   // Get uploaded files context for summary
   async getUploadedFilesContext(meetingId) {
     try {
-      const uploadedFiles = await this.db.query(`
+      await this.ensureDbAgent();
+      const uploadedFiles = await this.dbAgent.query(`
         SELECT f.filename, f.metadata->>'description' as description
         FROM context.files f
         JOIN meetings.meeting_files mf ON mf.file_id = f.id

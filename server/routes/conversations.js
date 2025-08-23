@@ -8,6 +8,7 @@ import { createUserTurn, createLLMTurn } from '../lib/conversations/turn-handler
 import { generateLLMResponse } from '../lib/conversations/llm-handler.js';
 import { gameStateAgent } from '../../lib/game-state-agent.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { createSessionMeeting } from '../lib/session-meeting.js';
 
 const router = express.Router();
 
@@ -36,33 +37,56 @@ router.post('/conversational-turn', async (req, res) => {
       return res.status(400).send(ednError);
     }
 
-    // Validate meeting_id
-    if (!meeting_id) {
-      const ednError = `{:response-type :error :content "Meeting ID is required"}`;
-      return res.status(400).send(ednError);
+    // Handle meeting_id - create lazily if needed
+    let effectiveMeetingId = meeting_id;
+    
+    // If no meeting_id provided and no session meeting exists, create one lazily
+    if (!effectiveMeetingId && !req.session?.meeting_id) {
+      console.log('🔍 No meeting exists - creating one lazily for first turn');
+      
+      // Ensure we have client info for meeting creation
+      if (!req.session?.user?.client_id) {
+        const ednError = `{:response-type :error :content "Client selection required"}`;
+        return res.status(400).send(ednError);
+      }
+      
+      // Create the meeting now that we actually need it
+      effectiveMeetingId = await createSessionMeeting(
+        req.pool, 
+        user_id, 
+        req.session.user.client_id
+      );
+      
+      // Store in session for subsequent turns
+      req.session.meeting_id = effectiveMeetingId;
+      console.log('🔍 Created lazy meeting:', effectiveMeetingId);
+    } else if (!effectiveMeetingId && req.session?.meeting_id) {
+      // Use existing session meeting
+      effectiveMeetingId = req.session.meeting_id;
+      console.log('🔍 Using existing session meeting:', effectiveMeetingId);
+    } else {
+      // Use provided meeting_id (e.g., from transcript or other source)
+      console.log('🔍 Using provided meeting_id:', effectiveMeetingId);
     }
     
-    console.log('🔍 Using meeting_id from request:', meeting_id);
-    console.log('🔍 STEP 4: About to create user turn - no session meeting creation');
-    console.log('🔍 STEP 4a: meeting_id variable is:', meeting_id);
-    console.log('🔍 STEP 4b: req.session?.meeting_id is:', req.session?.meeting_id);
+    console.log('🔍 STEP 4: About to create user turn with meeting:', effectiveMeetingId);
     
     // Create user turn
     const userTurn = await createUserTurn(req, {
       userId: user_id,
       content: content,
-      meetingId: meeting_id
+      meetingId: effectiveMeetingId
     });
     
     // Get client info from meeting
-    console.log('🔍 STEP 6: Getting client info from meeting:', meeting_id);
+    console.log('🔍 STEP 6: Getting client info from meeting:', effectiveMeetingId);
     let clientId = null;
     let clientName = 'your organization';
     
     try {
       const dbAgent = new DatabaseAgent();
       await dbAgent.connect();
-      const meetingClientInfo = await dbAgent.meetings.getMeetingClientInfo(meeting_id);
+      const meetingClientInfo = await dbAgent.meetings.getMeetingClientInfo(effectiveMeetingId);
       await dbAgent.close();
       
       if (meetingClientInfo) {
@@ -121,7 +145,7 @@ router.post('/conversational-turn', async (req, res) => {
       userId: user_id,
       llmResponse: llmResponseResult,
       userTurn,
-      meetingId: meeting_id,
+      meetingId: effectiveMeetingId,
       avatarId: usedAvatar.id
     });
     

@@ -1,11 +1,14 @@
 import { EmailService } from './email-service.js';
 import { TranscriptService } from './transcript-service.js';
 import { MeetingCleanupService } from './meeting-cleanup-service.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 // Refactored meeting service - coordination layer for meeting operations
 export class MeetingService {
   constructor(dependencies) {
-    this.pool = dependencies.pool;
+    this.pool = dependencies.pool; // Keep for sub-services
+    this.dbAgent = new DatabaseAgent();
+    this.dbAgentConnected = false;
     this.meetingLastActivity = dependencies.meetingLastActivity || new Map();
     this.getEmailTransporter = dependencies.getEmailTransporter;
     
@@ -37,19 +40,22 @@ export class MeetingService {
   // Simple conversation timeline helper
   async appendToConversation(meetingId, content) {
     try {
-      // Get current transcript
-      const currentResult = await this.pool.query(
-        'SELECT full_transcript FROM meetings.meetings WHERE id = $1',
-        [meetingId]
-      );
+      // Ensure DatabaseAgent is connected
+      if (!this.dbAgentConnected) {
+        await this.dbAgent.connect();
+        this.dbAgentConnected = true;
+      }
       
-      if (currentResult.rows.length === 0) {
+      // Get current transcript using DatabaseAgent
+      const meeting = await this.dbAgent.meetings.getById(meetingId);
+      
+      if (!meeting) {
         console.error(`❌ Meeting not found: ${meetingId}`);
         return false;
       }
       
       // Build transcript array
-      let transcript = currentResult.rows[0].full_transcript || [];
+      let transcript = meeting.full_transcript || [];
       if (!Array.isArray(transcript)) {
         // If it's not an array, convert it to one
         transcript = [];
@@ -61,8 +67,8 @@ export class MeetingService {
         content: content
       });
       
-      // Update the database
-      await this.pool.query(
+      // Update the database using DatabaseAgent query method
+      await this.dbAgent.query(
         'UPDATE meetings.meetings SET full_transcript = $1, updated_at = NOW() WHERE id = $2',
         [JSON.stringify(transcript), meetingId]
       );

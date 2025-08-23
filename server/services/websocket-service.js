@@ -1,10 +1,13 @@
 import { WebSocketServer } from 'ws';
+import { DatabaseAgent } from '../../lib/database-agent.js';
 
 // WebSocket service for handling real-time transcription from Recall.ai
 export class WebSocketService {
   constructor(server, dependencies) {
     this.server = server;
-    this.pool = dependencies.pool;
+    this.pool = dependencies.pool; // Keep for legacy compatibility
+    this.dbAgent = new DatabaseAgent();
+    this.dbAgentConnected = false;
     this.appendToConversation = dependencies.appendToConversation;
     this.processTranscriptChunk = dependencies.processTranscriptChunk;
     this.completeMeetingByInactivity = dependencies.completeMeetingByInactivity;
@@ -71,19 +74,19 @@ export class WebSocketService {
     // Update last activity timestamp for inactivity detection
     this.meetingLastActivity.set(botId, Date.now());
     
-    // Get meeting info
-    const meetingResult = await this.pool.query(`
-      SELECT * 
-      FROM meetings.meetings
-      WHERE recall_bot_id = $1 AND meeting_type != 'system'
-    `, [botId]);
+    // Ensure DatabaseAgent is connected
+    if (!this.dbAgentConnected) {
+      await this.dbAgent.connect();
+      this.dbAgentConnected = true;
+    }
     
-    if (meetingResult.rows.length === 0) {
+    // Get meeting info using DatabaseAgent
+    const meeting = await this.dbAgent.meetings.getByBotId(botId, ['system']);
+    
+    if (!meeting) {
       console.error('❌ No meeting found for bot:', botId);
       return;
     }
-    
-    const meeting = meetingResult.rows[0];
     
     // Extract transcript data from the nested structure
     const transcriptData = message.data?.data;

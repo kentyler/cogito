@@ -1,8 +1,19 @@
 // Email service for meeting transcript delivery
+import { DatabaseAgent } from '../../lib/database-agent.js';
+
 export class EmailService {
   constructor(pool, getEmailTransporter) {
-    this.pool = pool;
+    this.pool = pool; // Keep for compatibility
     this.getEmailTransporter = getEmailTransporter;
+    this.dbAgent = new DatabaseAgent();
+    this.dbAgentConnected = false;
+  }
+
+  async ensureDbAgent() {
+    if (!this.dbAgentConnected) {
+      await this.dbAgent.connect();
+      this.dbAgentConnected = true;
+    }
   }
 
   // Format transcript array for email display
@@ -109,12 +120,9 @@ export class EmailService {
       const result = await transporter.sendMail(mailOptions);
       console.log(`✅ Transcript email sent successfully to ${meeting.transcript_email}`);
       
-      // Mark as sent in database
-      await this.pool.query(`
-        UPDATE meetings.meetings 
-        SET email_sent = TRUE 
-        WHERE id = $1
-      `, [meetingId]);
+      // Mark as sent in database using DatabaseAgent
+      await this.ensureDbAgent();
+      await this.dbAgent.meetings.markEmailSent(meetingId);
       
       console.log('✅ Database updated: email_sent = TRUE');
       

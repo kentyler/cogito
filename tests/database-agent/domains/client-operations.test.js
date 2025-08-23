@@ -138,10 +138,50 @@ export async function runClientOperationsTests() {
       logTest('deleteClient()', false, error.message);
     }
 
-    // Test 8: User Management (moved to separate test file)
+    // Test 8: User Client Access Check
+    console.log('\n📝 Testing checkUserClientAccess()');
+    try {
+      // First create a test user and client association
+      const testUser = await dbAgent.users.create({
+        email: 'test-access-' + Date.now() + '@example.com',
+        password: 'TestPass123!',
+        metadata: { display_name: 'Test Access User' }
+      });
+      
+      const testClient2 = await dbAgent.clients.createClient({
+        name: 'Test Client for Access ' + Date.now(),
+        story: 'Testing user access checks'
+      });
+      
+      // Add user to client
+      await dbAgent.clients.addUserToClient(testUser.id, testClient2.id, 'member');
+      
+      // Test positive access check
+      const hasAccess = await dbAgent.clients.checkUserClientAccess(testUser.id, testClient2.id);
+      logTest('checkUserClientAccess() returns true for valid access', hasAccess === true);
+      
+      // Test negative access check (user not associated with different client)
+      const testClient3 = await dbAgent.clients.createClient({
+        name: 'Another Test Client ' + Date.now(),
+        story: 'Testing no access'
+      });
+      
+      const noAccess = await dbAgent.clients.checkUserClientAccess(testUser.id, testClient3.id);
+      logTest('checkUserClientAccess() returns false for no access', noAccess === false);
+      
+      // Clean up
+      await dbAgent.clients.deleteClient(testClient2.id);
+      await dbAgent.clients.deleteClient(testClient3.id);
+      // User cleanup will be handled by the test cleanup
+      
+    } catch (error) {
+      logTest('checkUserClientAccess()', false, error.message);
+    }
+
+    // Test 9: User Management (moved to separate test file)
     // See client-operations-user-mgmt.test.js for user management tests
 
-    // Test 9: Validation
+    // Test 10: Validation
     console.log('\n📝 Testing validation');
     try {
       await dbAgent.clients.createClient({ name: '' });
