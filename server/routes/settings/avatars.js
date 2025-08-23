@@ -18,7 +18,7 @@ router.get('/clients/:clientId/avatars', async (req, res) => {
     const { clientId } = req.params;
     
     if (!req.session?.user?.user_id) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     const avatars = await getClientAvatars(req.pool, parseInt(clientId));
@@ -46,11 +46,11 @@ router.post('/user/avatar-preference', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     if (!avatar_id) {
-      return res.status(400).json({ error: 'Avatar ID is required' });
+      return ApiResponses.error(res, 400, 'Avatar ID is required');
     }
     
     // Get current avatar before updating (for logging)

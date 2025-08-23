@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from './auth.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../../lib/api-responses.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();
@@ -14,7 +15,7 @@ router.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Database connection error in meetings-crud:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    return ApiResponses.databaseError(res);
   }
 });
 
@@ -24,7 +25,7 @@ router.get('/meetings', requireAuth, async (req, res) => {
     // Get client_id from session
     const clientId = req.session?.user?.client_id;
     if (!clientId) {
-      return res.status(401).json({ error: 'Not authenticated or missing client context' });
+      return ApiResponses.unauthorized(res, 'Not authenticated or missing client context');
     }
     
     // Use DatabaseAgent to fetch meetings with stats
@@ -33,10 +34,10 @@ router.get('/meetings', requireAuth, async (req, res) => {
       limit: 100  // Reasonable default limit
     });
     
-    res.json(meetings);
+    return ApiResponses.success(res, meetings);
   } catch (error) {
     console.error('Error fetching meetings:', error);
-    res.status(500).json({ error: 'Failed to fetch meetings' });
+    return ApiResponses.internalError(res, 'Failed to fetch meetings');
   }
 });
 
@@ -70,21 +71,22 @@ router.delete('/meetings/:meetingId', requireAuth, async (req, res) => {
     
     console.log(`🗑️  Deleted ${result.turns_deleted} turns from meeting ${meetingId}`);
     
-    res.json({ 
-      success: true, 
-      message: `Meeting ${meetingId} and ${result.turns_deleted} associated turns deleted successfully`,
-      deleted: {
-        meeting_id: result.meeting_id,
-        turns_deleted: result.turns_deleted
+    return ApiResponses.successMessage(res, 
+      `Meeting ${meetingId} and ${result.turns_deleted} associated turns deleted successfully`,
+      {
+        deleted: {
+          meeting_id: result.meeting_id,
+          turns_deleted: result.turns_deleted
+        }
       }
-    });
+    );
     
   } catch (error) {
     console.error('Error deleting meeting:', error);
     if (error.message === 'Meeting not found') {
-      res.status(404).json({ error: 'Meeting not found' });
+      return ApiResponses.notFound(res, 'Meeting not found');
     } else {
-      res.status(500).json({ error: 'Failed to delete meeting' });
+      return ApiResponses.internalError(res, 'Failed to delete meeting');
     }
   }
 });

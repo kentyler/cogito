@@ -28,7 +28,7 @@ async function handleOAuthClientSelection(req, res, user_id, email, client_id) {
     }
     
     if (!client) {
-      return res.status(403).json({ error: 'Access denied to selected client' });
+      return ApiResponses.error(res, 403, 'Access denied to selected client');
     }
 
     // Create session meeting

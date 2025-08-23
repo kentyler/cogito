@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { createTextFile, uploadFile } from '../lib/upload-handlers.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../lib/api-responses.js';
 
 const router = express.Router();
 
@@ -38,16 +39,16 @@ router.get('/files', async (req, res) => {
   try {
     const client_id = req.session?.user?.client_id;
     if (!client_id) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.unauthorized(res, 'Authentication required');
     }
     
     await dbAgent.connect();
     const files = await dbAgent.files.getClientFiles(client_id, ['upload', 'text-input', 'snippet']);
     
-    res.json(files);
+    return ApiResponses.success(res, files);
   } catch (error) {
     console.error('Error fetching files:', error);
-    res.status(500).json({ error: 'Failed to fetch files' });
+    return ApiResponses.internalError(res, 'Failed to fetch files');
   } finally {
     await dbAgent.close();
   }
@@ -59,21 +60,21 @@ router.get('/files/:id', async (req, res) => {
     const { id } = req.params;
     const client_id = req.session?.user?.client_id;
     if (!client_id) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.unauthorized(res, 'Authentication required');
     }
     
     await dbAgent.connect();
     const fileWithContent = await dbAgent.files.getFileWithContent(id, client_id);
     
     if (!fileWithContent) {
-      return res.status(404).json({ error: 'File not found' });
+      return ApiResponses.notFound(res, 'File not found');
     }
     
-    res.json(fileWithContent);
+    return ApiResponses.success(res, fileWithContent);
     
   } catch (error) {
     console.error('Error fetching file content:', error);
-    res.status(500).json({ error: 'Failed to fetch file content' });
+    return ApiResponses.internalError(res, 'Failed to fetch file content');
   } finally {
     await dbAgent.close();
   }
@@ -85,20 +86,20 @@ router.delete('/files/:id', async (req, res) => {
     const { id } = req.params;
     const client_id = req.session?.user?.client_id;
     if (!client_id) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.unauthorized(res, 'Authentication required');
     }
     
     await dbAgent.connect();
     const deleteResult = await dbAgent.files.deleteFile(id, client_id);
     
-    res.json({ success: true });
+    return ApiResponses.success(res, { success: true });
     
   } catch (error) {
     if (error.message.includes('File not found or access denied')) {
-      return res.status(404).json({ error: 'File not found' });
+      return ApiResponses.notFound(res, 'File not found');
     }
     console.error('Error deleting file:', error);
-    res.status(500).json({ error: 'Failed to delete file' });
+    return ApiResponses.internalError(res, 'Failed to delete file');
   } finally {
     await dbAgent.close();
   }

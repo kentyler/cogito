@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { requireAdmin } from '../middleware/admin-auth.js';
+import { ApiResponses } from '../lib/api-responses.js';
 
 const router = express.Router();
 
@@ -14,10 +15,10 @@ export function createUserManagementRoutes(dbAgent) {
     try {
       const clientId = parseInt(req.params.id);
       const users = await dbAgent.clients.getClientUsers(clientId);
-      res.json(users);
+      return ApiResponses.success(res, users);
     } catch (error) {
       console.error('Get client users error:', error);
-      res.status(500).json({ error: 'Failed to load users' });
+      return ApiResponses.internalError(res, 'Failed to load users');
     }
   });
 
@@ -26,10 +27,10 @@ export function createUserManagementRoutes(dbAgent) {
     try {
       const clientId = parseInt(req.params.id);
       const meetings = await dbAgent.meetings.getClientMeetings(clientId);
-      res.json(meetings);
+      return ApiResponses.success(res, meetings);
     } catch (error) {
       console.error('Get client meetings error:', error);
-      res.status(500).json({ error: 'Failed to load meetings' });
+      return ApiResponses.internalError(res, 'Failed to load meetings');
     }
   });
 
@@ -43,7 +44,7 @@ export function createUserManagementRoutes(dbAgent) {
       
       if (!transcriptData) {
         console.log('❌ No transcript data found for meeting:', meetingId);
-        return res.status(404).json({ error: 'Meeting not found' });
+        return ApiResponses.notFound(res, 'Meeting not found');
       }
       
       console.log('✅ Transcript found, length:', transcriptData.full_transcript ? 
@@ -52,10 +53,10 @@ export function createUserManagementRoutes(dbAgent) {
           JSON.stringify(transcriptData.full_transcript).length
         ) : 0);
       
-      res.json(transcriptData);
+      return ApiResponses.success(res, transcriptData);
     } catch (error) {
       console.error('Get meeting transcript error:', error);
-      res.status(500).json({ error: 'Failed to load meeting transcript' });
+      return ApiResponses.internalError(res, 'Failed to load meeting transcript');
     }
   });
 
@@ -64,10 +65,10 @@ export function createUserManagementRoutes(dbAgent) {
     try {
       const clientId = parseInt(req.params.id);
       const files = await dbAgent.files.getClientFiles(clientId);
-      res.json(files);
+      return ApiResponses.success(res, files);
     } catch (error) {
       console.error('Get client files error:', error);
-      res.status(500).json({ error: 'Failed to load files' });
+      return ApiResponses.internalError(res, 'Failed to load files');
     }
   });
 
@@ -107,7 +108,7 @@ export function createUserManagementRoutes(dbAgent) {
       });
     } catch (error) {
       console.error('Add user to client error:', error);
-      res.status(500).json({ error: 'Failed to add user to client' });
+      return ApiResponses.internalError(res, 'Failed to add user to client');
     }
   });
 
@@ -120,7 +121,7 @@ export function createUserManagementRoutes(dbAgent) {
       const removed = await dbAgent.clients.removeUserFromClient(userId, clientId);
       
       if (!removed) {
-        return res.status(404).json({ error: 'User-client association not found' });
+        return ApiResponses.notFound(res, 'User-client association not found');
       }
       
       res.json({ 
@@ -129,7 +130,7 @@ export function createUserManagementRoutes(dbAgent) {
       });
     } catch (error) {
       console.error('Remove user from client error:', error);
-      res.status(500).json({ error: 'Failed to remove user from client' });
+      return ApiResponses.internalError(res, 'Failed to remove user from client');
     }
   });
 

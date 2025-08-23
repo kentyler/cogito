@@ -15,7 +15,7 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     const dbAgent = new DatabaseAgent();
@@ -26,7 +26,7 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
       const hasAccess = await dbAgent.clients.checkUserClientAccess(userId, parseInt(clientId));
       
       if (!hasAccess) {
-        return res.status(403).json({ error: 'Access denied to client' });
+        return ApiResponses.error(res, 403, 'Access denied to client');
       }
       
       const setting = await dbAgent.clientSettings.getClientSetting(parseInt(clientId), 'temperature');
@@ -58,16 +58,16 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     if (temperature === undefined || temperature === null) {
-      return res.status(400).json({ error: 'Temperature value is required' });
+      return ApiResponses.error(res, 400, 'Temperature value is required');
     }
     
     const tempValue = parseFloat(temperature);
     if (isNaN(tempValue) || tempValue < 0 || tempValue > 1) {
-      return res.status(400).json({ error: 'Temperature must be a number between 0 and 1' });
+      return ApiResponses.error(res, 400, 'Temperature must be a number between 0 and 1');
     }
     
     const dbAgent = new DatabaseAgent();
@@ -78,7 +78,7 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
       const hasAccess = await dbAgent.clients.checkUserClientAccess(userId, parseInt(clientId));
       
       if (!hasAccess) {
-        return res.status(403).json({ error: 'Access denied to client' });
+        return ApiResponses.error(res, 403, 'Access denied to client');
       }
       // Get previous temperature for logging
       let previousTemperature = null;

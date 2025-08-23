@@ -18,7 +18,7 @@ router.use(createUserManagementRoutes(dbAgent));
 router.get('/clients', requireAdmin, async (req, res) => {
   try {
     const clients = await adminOps.getAllClients();
-    res.json(clients);
+    return ApiResponses.success(res, clients);
   } catch (error) {
     console.error('Error fetching clients:', error);
     
@@ -33,7 +33,7 @@ router.get('/clients', requireAdmin, async (req, res) => {
       component: 'ClientManagement'
     });
     
-    res.status(500).json({ error: 'Failed to fetch clients' });
+    return ApiResponses.error(res, 500, 'Failed to fetch clients');
   }
 });
 
@@ -42,18 +42,18 @@ router.get('/clients/:id', requireAdmin, async (req, res) => {
   try {
     const clientId = parseInt(req.params.id);
     if (isNaN(clientId)) {
-      return res.status(400).json({ error: 'Invalid client ID' });
+      return ApiResponses.error(res, 400, 'Invalid client ID');
     }
 
     const client = await adminOps.getClientDetails(clientId);
     if (!client) {
-      return res.status(404).json({ error: 'Client not found' });
+      return ApiResponses.error(res, 404, 'Client not found');
     }
 
-    res.json({ client });
+    return ApiResponses.success(res, { client });
   } catch (error) {
     console.error('Error fetching client:', error);
-    res.status(500).json({ error: 'Failed to fetch client details' });
+    return ApiResponses.error(res, 500, 'Failed to fetch client details');
   }
 });
 
@@ -87,15 +87,15 @@ router.put('/clients/:id', requireAdmin, async (req, res) => {
   try {
     const clientId = parseInt(req.params.id);
     if (isNaN(clientId)) {
-      return res.status(400).json({ error: 'Invalid client ID' });
+      return ApiResponses.error(res, 400, 'Invalid client ID');
     }
 
     const client = await adminOps.updateClient(clientId, req.body);
     if (!client) {
-      return res.status(404).json({ error: 'Client not found' });
+      return ApiResponses.error(res, 404, 'Client not found');
     }
 
-    res.json({ client });
+    return ApiResponses.success(res, { client });
   } catch (error) {
     console.error('Error updating client:', error);
     const statusCode = error.message === 'No updates provided' ? 400 : 500;
@@ -108,12 +108,12 @@ router.delete('/clients/:id', requireAdmin, async (req, res) => {
   try {
     const clientId = parseInt(req.params.id);
     if (isNaN(clientId)) {
-      return res.status(400).json({ error: 'Invalid client ID' });
+      return ApiResponses.error(res, 400, 'Invalid client ID');
     }
 
     const deletedClient = await adminOps.deleteClient(clientId, req);
     if (!deletedClient) {
-      return res.status(404).json({ error: 'Client not found' });
+      return ApiResponses.error(res, 404, 'Client not found');
     }
     
     res.json({ 
@@ -135,7 +135,7 @@ router.delete('/clients/:id', requireAdmin, async (req, res) => {
       component: 'ClientManagement'
     });
 
-    res.status(500).json({ error: 'Failed to delete client' });
+    return ApiResponses.error(res, 500, 'Failed to delete client');
   }
 });
 

@@ -6,6 +6,9 @@
 
 import express from 'express';
 import { setupClientSession, logClientSelectionEvent } from '../lib/client-session-manager.js';
+import { DatabaseAgent } from '../../lib/database-agent.js';
+import { createSessionMeeting } from '../lib/session-meeting.js';
+import { ApiResponses } from '../../lib/api-responses.js';
 
 const router = express.Router();
 
@@ -15,7 +18,7 @@ router.post('/select-client', async (req, res) => {
     const { client_id } = req.body;
     
     if (!client_id) {
-      return res.status(400).json({ error: 'Client ID required' });
+      return ApiResponses.badRequest(res, 'Client ID required');
     }
     
     // Check for either pending authentication or already logged in user
@@ -29,7 +32,7 @@ router.post('/select-client', async (req, res) => {
       ({ user_id, email } = req.session.user);
       user_id = req.session.user.user_id || req.session.user.id;
     } else {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.unauthorized(res, 'Authentication required');
     }
     // Setup client session with mini-horde support
     try {
@@ -46,7 +49,7 @@ router.post('/select-client', async (req, res) => {
       
       req.session.save(async (err) => {
         if (err) {
-          return res.status(500).json({ error: 'Session creation failed' });
+          return ApiResponses.internalError(res, 'Session creation failed');
         }
         
         // Log client selection event
@@ -59,8 +62,7 @@ router.post('/select-client', async (req, res) => {
           userAgent: req.get('User-Agent')
         });
         
-        res.json({ 
-          success: true, 
+        return ApiResponses.successMessage(res, 'Client selected successfully', {
           user: { 
             user_id: user_id,
             email: email,
@@ -73,11 +75,11 @@ router.post('/select-client', async (req, res) => {
       });
     } catch (meetingError) {
       console.error('Failed to create session meeting:', meetingError);
-      return res.status(500).json({ error: 'Failed to initialize session' });
+      return ApiResponses.internalError(res, 'Failed to initialize session');
     }
   } catch (error) {
     console.error('Client selection error:', error);
-    res.status(500).json({ error: 'Client selection failed' });
+    return ApiResponses.internalError(res, 'Client selection failed');
   }
 });
 
@@ -87,11 +89,11 @@ router.post('/switch-client', async (req, res) => {
     const { client_id } = req.body;
     
     if (!client_id) {
-      return res.status(400).json({ error: 'Client ID required' });
+      return ApiResponses.badRequest(res, 'Client ID required');
     }
     
     if (!req.session || !req.session.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return ApiResponses.unauthorized(res, 'Not authenticated');
     }
     const { user_id, email } = req.session.user;
     
@@ -110,7 +112,7 @@ router.post('/switch-client', async (req, res) => {
     await dbAgent.close();
     
     if (!client) {
-      return res.status(403).json({ error: 'Access denied to selected client' });
+      return ApiResponses.forbidden(res, 'Access denied to selected client');
     }
     
     // Create new session meeting for the new client
@@ -130,7 +132,7 @@ router.post('/switch-client', async (req, res) => {
       
       req.session.save(async (err) => {
         if (err) {
-          return res.status(500).json({ error: 'Session update failed' });
+          return ApiResponses.internalError(res, 'Session update failed');
         }
         
         // Log client switch event
@@ -155,8 +157,7 @@ router.post('/switch-client', async (req, res) => {
           console.error('Failed to log client switch:', logError);
         }
         
-        res.json({ 
-          success: true, 
+        return ApiResponses.successMessage(res, 'Client switched successfully', {
           user: { 
             email: email,
             client: client.client_name,
@@ -166,11 +167,11 @@ router.post('/switch-client', async (req, res) => {
       });
     } catch (meetingError) {
       console.error('Failed to create session meeting for client switch:', meetingError);
-      return res.status(500).json({ error: 'Failed to switch client' });
+      return ApiResponses.internalError(res, 'Failed to switch client');
     }
   } catch (error) {
     console.error('Client switch error:', error);
-    res.status(500).json({ error: 'Client switch failed' });
+    return ApiResponses.internalError(res, 'Client switch failed');
   }
 });
 

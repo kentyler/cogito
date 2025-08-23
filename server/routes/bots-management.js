@@ -1,3 +1,4 @@
+import { ApiResponses } from '../lib/api-responses.js';
 import express from 'express';
 import { requireAuth } from './auth.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
@@ -17,10 +18,10 @@ router.get('/bots', requireAuth, async (req, res) => {
     
     const activeBots = await dbAgent.bots.getActiveBots();
     
-    res.json(activeBots);
+    return ApiResponses.success(res, activeBots);
   } catch (error) {
     console.error('Error fetching bots:', error);
-    res.status(500).json({ error: 'Failed to fetch bots' });
+    return ApiResponses.error(res, 500, 'Failed to fetch bots');
   }
 });
 
@@ -37,10 +38,10 @@ router.get('/stuck-meetings', requireAuth, async (req, res) => {
     const stuckMeetings = await dbAgent.bots.getStuckMeetings();
     
     console.log('Found stuck meetings:', stuckMeetings.length);
-    res.json(stuckMeetings);
+    return ApiResponses.success(res, stuckMeetings);
   } catch (error) {
     console.error('Error fetching stuck meetings:', error);
-    res.status(500).json({ error: 'Failed to fetch stuck meetings' });
+    return ApiResponses.error(res, 500, 'Failed to fetch stuck meetings');
   }
 });
 
@@ -58,7 +59,7 @@ router.post('/stuck-meetings/:meetingId/complete', requireAuth, async (req, res)
     const updatedMeeting = await dbAgent.bots.forceCompleteMeeting(meetingId);
     
     if (!updatedMeeting) {
-      return res.status(404).json({ error: 'Meeting not found' });
+      return ApiResponses.error(res, 404, 'Meeting not found');
     }
     
     res.json({ 
@@ -68,7 +69,7 @@ router.post('/stuck-meetings/:meetingId/complete', requireAuth, async (req, res)
     });
   } catch (error) {
     console.error('Error completing stuck meeting:', error);
-    res.status(500).json({ error: 'Failed to complete meeting' });
+    return ApiResponses.error(res, 500, 'Failed to complete meeting');
   }
 });
 
@@ -90,7 +91,7 @@ router.post('/bots/:botId/leave', requireAuth, async (req, res) => {
     
     if (!updatedMeeting) {
       console.log(`No bot found with ID ${botId}`);
-      return res.status(404).json({ error: 'Bot not found' });
+      return ApiResponses.error(res, 404, 'Bot not found');
     }
     
     console.log(`Bot ${botId} status updated to leaving`);
@@ -106,10 +107,10 @@ router.post('/bots/:botId/leave', requireAuth, async (req, res) => {
       }
     }, 2000); // Simulate delay
     
-    res.json({ success: true, message: 'Bot is leaving the meeting' });
+    return ApiResponses.success(res, { success: true, message: 'Bot is leaving the meeting' });
   } catch (error) {
     console.error('Error leaving bot:', error);
-    res.status(500).json({ error: 'Failed to leave bot' });
+    return ApiResponses.error(res, 500, 'Failed to leave bot');
   }
 });
 

@@ -1,3 +1,4 @@
+import { ApiResponses } from '../lib/api-responses.js';
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseAgent } from '../../lib/database-agent.js';
@@ -14,7 +15,7 @@ router.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Database connection error in browser-capture:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    return ApiResponses.error(res, 500, 'Database connection failed');
   }
 });
 

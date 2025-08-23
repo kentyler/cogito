@@ -1,5 +1,6 @@
 import express from 'express';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../lib/api-responses.js';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.post('/generate-monthly-summaries', async (req, res) => {
     const { year, month } = req.body;
     
     if (!year || month === undefined) {
-      return res.status(400).json({ error: 'Year and month are required' });
+      return ApiResponses.badRequest(res, 'Year and month are required');
     }
     
     const { user_id, client_id, client_name } = db.summaries.getUserContext(req);
@@ -28,14 +29,14 @@ router.post('/generate-monthly-summaries', async (req, res) => {
       req.anthropic
     );
     
-    res.json(result);
+    return ApiResponses.success(res, result);
     
   } catch (error) {
     if (error.message === 'Authentication required') {
-      return res.status(401).json({ error: error.message });
+      return ApiResponses.unauthorized(res, error.message);
     }
     console.error('Generate monthly summaries error:', error);
-    res.status(500).json({ error: 'Failed to generate monthly summaries' });
+    return ApiResponses.internalError(res, 'Failed to generate monthly summaries');
   } finally {
     await db.close();
   }
@@ -51,7 +52,7 @@ router.post('/generate-daily-summary', async (req, res) => {
     const { date } = req.body;
     
     if (!date) {
-      return res.status(400).json({ error: 'Date is required' });
+      return ApiResponses.badRequest(res, 'Date is required');
     }
     
     const { user_id, client_id, client_name } = db.summaries.getUserContext(req);
@@ -65,14 +66,14 @@ router.post('/generate-daily-summary', async (req, res) => {
       req.anthropic
     );
     
-    res.json(result);
+    return ApiResponses.success(res, result);
     
   } catch (error) {
     if (error.message === 'Authentication required') {
-      return res.status(401).json({ error: error.message });
+      return ApiResponses.unauthorized(res, error.message);
     }
     console.error('Generate daily summary error:', error);
-    res.status(500).json({ error: 'Failed to generate daily summary' });
+    return ApiResponses.internalError(res, 'Failed to generate daily summary');
   } finally {
     await db.close();
   }
@@ -90,7 +91,7 @@ router.post('/generate-yearly-summaries', async (req, res) => {
     
     if (!year) {
       console.log('❌ No year provided in request');
-      return res.status(400).json({ error: 'Year is required' });
+      return ApiResponses.badRequest(res, 'Year is required');
     }
     
     console.log('🔍 Getting user context...');
@@ -108,14 +109,14 @@ router.post('/generate-yearly-summaries', async (req, res) => {
     );
     
     console.log('✅ Summaries generated successfully:', Object.keys(result.summaries || {}).length, 'months');
-    res.json(result);
+    return ApiResponses.success(res, result);
     
   } catch (error) {
     if (error.message === 'Authentication required') {
-      return res.status(401).json({ error: error.message });
+      return ApiResponses.unauthorized(res, error.message);
     }
     console.error('Generate yearly summaries error:', error);
-    res.status(500).json({ error: 'Failed to generate yearly summaries' });
+    return ApiResponses.internalError(res, 'Failed to generate yearly summaries');
   } finally {
     await db.close();
   }
@@ -131,7 +132,7 @@ router.get('/daily-summary/:date', async (req, res) => {
     const { date } = req.params;
     
     if (!db.summaries.validateDate(date)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+      return ApiResponses.badRequest(res, 'Invalid date format. Use YYYY-MM-DD');
     }
     
     const { user_id, client_id, client_name } = db.summaries.getUserContext(req);
@@ -143,7 +144,7 @@ router.get('/daily-summary/:date', async (req, res) => {
     
     const turns = await db.summaries.getTurnsForDateRange(startDate, endDate, client_id);
     
-    res.json({
+    return ApiResponses.success(res, {
       date,
       turns,
       turnCount: turns.length,
@@ -153,10 +154,10 @@ router.get('/daily-summary/:date', async (req, res) => {
     
   } catch (error) {
     if (error.message === 'Authentication required') {
-      return res.status(401).json({ error: error.message });
+      return ApiResponses.unauthorized(res, error.message);
     }
     console.error('Get daily summary data error:', error);
-    res.status(500).json({ error: 'Failed to get daily summary data' });
+    return ApiResponses.internalError(res, 'Failed to get daily summary data');
   } finally {
     await db.close();
   }

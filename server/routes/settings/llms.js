@@ -20,15 +20,15 @@ router.post('/user/llm-preference', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     if (!llm_id) {
-      return res.status(400).json({ error: 'LLM ID is required' });
+      return ApiResponses.error(res, 400, 'LLM ID is required');
     }
     
     if (!(await isValidLLM(llm_id, req.pool))) {
-      return res.status(400).json({ error: 'Invalid LLM ID' });
+      return ApiResponses.error(res, 400, 'Invalid LLM ID');
     }
     
     // Get current LLM before updating (for logging)
@@ -91,7 +91,7 @@ router.get('/llms', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     // Get user's client ID from user_clients junction table
@@ -101,7 +101,7 @@ router.get('/llms', async (req, res) => {
     await dbAgent.close();
     
     if (!userClient) {
-      return res.status(404).json({ error: 'User not found or no active client' });
+      return ApiResponses.error(res, 404, 'User not found or no active client');
     }
     
     const clientId = userClient.client_id;
@@ -130,7 +130,7 @@ router.get('/user/preferences', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     // Get user's preferences
@@ -140,7 +140,7 @@ router.get('/user/preferences', async (req, res) => {
     await dbAgent.close();
     
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return ApiResponses.error(res, 404, 'User not found');
     }
     
     res.json({

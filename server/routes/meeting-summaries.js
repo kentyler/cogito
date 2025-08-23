@@ -1,3 +1,4 @@
+import { ApiResponses } from '../lib/api-responses.js';
 import express from 'express';
 
 const router = express.Router();
@@ -7,10 +8,10 @@ router.get('/meeting-summary/:meetingId', async (req, res) => {
   try {
     const { meetingId } = req.params;
     const summary = await req.similarityOrchestrator.getSummaryStats(meetingId);
-    res.json(summary);
+    return ApiResponses.success(res, summary);
   } catch (error) {
     console.error('Meeting summary error:', error);
-    res.status(500).json({ error: 'Failed to get meeting summary' });
+    return ApiResponses.error(res, 500, 'Failed to get meeting summary');
   }
 });
 
@@ -19,14 +20,14 @@ router.post('/compare-meetings', async (req, res) => {
   try {
     const { meetingIds } = req.body;
     if (!Array.isArray(meetingIds) || meetingIds.length < 2) {
-      return res.status(400).json({ error: 'Please provide at least 2 meeting IDs' });
+      return ApiResponses.error(res, 400, 'Please provide at least 2 meeting IDs');
     }
 
     const comparison = await req.similarityOrchestrator.compareMeetings(meetingIds);
-    res.json(comparison);
+    return ApiResponses.success(res, comparison);
   } catch (error) {
     console.error('Meeting comparison error:', error);
-    res.status(500).json({ error: 'Failed to compare meetings' });
+    return ApiResponses.error(res, 500, 'Failed to compare meetings');
   }
 });
 

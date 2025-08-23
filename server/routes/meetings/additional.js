@@ -1,5 +1,6 @@
 import express from 'express';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../../lib/api-responses.js';
 
 // Import route modules
 import meetingSummariesRouter from './meeting-summaries.js';
@@ -16,7 +17,7 @@ router.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Database connection error in meetings-additional:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    return ApiResponses.internalError(res, 'Database connection failed');
   }
 });
 
@@ -30,7 +31,7 @@ router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId || (userId !== '1' && req.session?.user?.role !== 'admin')) {
-      return res.status(403).json({ error: 'Admin access required' });
+      return ApiResponses.forbidden(res, 'Admin access required');
     }
     
     const turnsResult = await req.db.query(`
@@ -49,7 +50,7 @@ router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
     
   } catch (error) {
     console.error('Error fetching turns directly:', error);
-    res.status(500).json({ error: 'Failed to fetch turns directly' });
+    return ApiResponses.internalError(res, 'Failed to fetch turns directly');
   }
 });
 
@@ -59,15 +60,15 @@ router.get('/admin/meetings/:meetingId/transcript', async (req, res) => {
     const userId = req.session?.user?.user_id;
     
     if (!userId || (userId !== '1' && req.session?.user?.role !== 'admin')) {
-      return res.status(403).json({ error: 'Admin access required' });
+      return ApiResponses.forbidden(res, 'Admin access required');
     }
     
     const transcript = await dbAgent.meetings.getTranscript(meetingId);
-    res.json({ full_transcript: transcript });
+    return ApiResponses.success(res, { full_transcript: transcript });
     
   } catch (error) {
     console.error('Error fetching transcript:', error);
-    res.status(500).json({ error: 'Failed to fetch transcript' });
+    return ApiResponses.internalError(res, 'Failed to fetch transcript');
   }
 });
 
@@ -94,7 +95,7 @@ router.post('/meetings/create', async (req, res) => {
     
   } catch (error) {
     console.error('Error creating meeting:', error);
-    res.status(500).json({ error: 'Failed to create meeting' });
+    return ApiResponses.internalError(res, 'Failed to create meeting');
   }
 });
 

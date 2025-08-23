@@ -6,9 +6,9 @@ const router = express.Router();
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      return res.status(500).json({ error: 'Logout failed' });
+      return ApiResponses.error(res, 500, 'Logout failed');
     }
-    res.json({ success: true });
+    return ApiResponses.success(res, { success: true });
   });
 });
 
@@ -43,7 +43,7 @@ router.get('/auth-status', (req, res) => {
       pendingClientSelection: true
     });
   } else {
-    res.json({ authenticated: false });
+    return ApiResponses.success(res, { authenticated: false });
   }
 });
 

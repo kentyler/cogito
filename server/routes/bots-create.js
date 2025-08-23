@@ -1,3 +1,4 @@
+import { ApiResponses } from '../lib/api-responses.js';
 import express from 'express';
 import { requireAuth } from './auth.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
@@ -15,7 +16,7 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     let client_id = req.session.user.client_id;
     
     if (!meeting_url) {
-      return res.status(400).json({ error: 'Meeting URL is required' });
+      return ApiResponses.error(res, 400, 'Meeting URL is required');
     }
     
     // If client_id is missing from session, use default client (temporary fix)
@@ -120,7 +121,7 @@ router.post('/create-bot', requireAuth, async (req, res) => {
       console.error('Failed to log bot creation error:', logError);
     }
     
-    res.status(500).json({ error: 'Failed to create bot', details: error.message });
+    return ApiResponses.internalError(res, 'Failed to create bot', { details: error.message });
   }
 });
 

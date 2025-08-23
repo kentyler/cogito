@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from './auth.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../lib/api-responses.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();
@@ -14,7 +15,7 @@ router.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Database connection error in extension-api:', error);
-    res.status(500).json({ error: 'Database connection failed' });
+    return ApiResponses.databaseError(res);
   }
 });
 
@@ -26,11 +27,11 @@ router.get('/user/clients', requireAuth, async (req, res) => {
     // Get all client associations for the authenticated user using DatabaseAgent
     const clients = await dbAgent.users.getUserClients(user_id);
     
-    res.json(clients);
+    return ApiResponses.success(res, clients);
     
   } catch (error) {
     console.error('Get user clients error:', error);
-    res.status(500).json({ error: 'Failed to get user clients' });
+    return ApiResponses.internalError(res, 'Failed to get user clients');
   }
 });
 
@@ -41,18 +42,18 @@ router.post('/query', requireAuth, async (req, res) => {
     const clientId = req.headers['x-client-id'];
     
     if (!query) {
-      return res.status(400).json({ error: 'Query is required' });
+      return ApiResponses.badRequest(res, 'Query is required');
     }
     
     if (!clientId) {
-      return res.status(400).json({ error: 'Client ID is required' });
+      return ApiResponses.badRequest(res, 'Client ID is required');
     }
     
     // Verify user has access to this client using DatabaseAgent
     const hasAccess = await dbAgent.clients.checkUserClientAccess(req.user.user_id, parseInt(clientId));
     
     if (!hasAccess) {
-      return res.status(403).json({ error: 'Access denied to client' });
+      return ApiResponses.forbidden(res, 'Access denied to client');
     }
     
     // Perform full-text search using DatabaseAgent
@@ -62,7 +63,7 @@ router.post('/query', requireAuth, async (req, res) => {
     });
     
     if (searchResult.results.length === 0) {
-      return res.json({ 
+      return ApiResponses.success(res, { 
         response: `No relevant conversations found for "${query}". The search looked through all meetings and conversations in your Cogito database.` 
       });
     }
@@ -74,11 +75,11 @@ router.post('/query', requireAuth, async (req, res) => {
     
     const response = `Based on your Cogito conversations, here's what I found about "${query}":\n\n${contexts}\n\nThis information comes from ${searchResult.results.length} relevant conversation(s) in your database.`;
     
-    res.json({ response });
+    return ApiResponses.success(res, { response });
     
   } catch (error) {
     console.error('Query error:', error);
-    res.status(500).json({ error: 'Query failed' });
+    return ApiResponses.internalError(res, 'Query failed');
   }
 });
 

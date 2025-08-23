@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import { createSessionMeeting } from '../lib/session-meeting.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../../lib/api-responses.js';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ export function requireAuth(req, res, next) {
   }
   
   console.log('Auth failed - returning 401');
-  return res.status(401).json({ error: 'Authentication required' });
+  return ApiResponses.unauthorized(res, 'Authentication required');
 }
 
 // Login endpoint
@@ -45,7 +46,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
+      return ApiResponses.badRequest(res, 'Email and password required');
     }
     
     // Initialize DatabaseAgent for this request
@@ -56,14 +57,14 @@ router.post('/login', async (req, res) => {
     const authenticatedUser = await dbAgent.users.authenticate(email, password);
     
     if (!authenticatedUser) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return ApiResponses.unauthorized(res, 'Invalid credentials');
     }
     
     // Get client associations using DatabaseAgent
     const clients = await dbAgent.users.getUserClients(authenticatedUser.id);
     
     if (clients.length === 0) {
-      return res.status(403).json({ error: 'No active client access' });
+      return ApiResponses.forbidden(res, 'No active client access');
     }
     
     if (clients.length === 1) {
@@ -83,11 +84,10 @@ router.post('/login', async (req, res) => {
         
         req.session.save((err) => {
           if (err) {
-            return res.status(500).json({ error: 'Session creation failed' });
+            return ApiResponses.internalError(res, 'Session creation failed');
           }
           
-          res.json({ 
-            success: true, 
+          return ApiResponses.successMessage(res, 'Login successful', {
             user: { 
               email: authenticatedUser.email,
               client: clients[0].client_name
@@ -96,7 +96,7 @@ router.post('/login', async (req, res) => {
         });
       } catch (meetingError) {
         console.error('Failed to create session meeting:', meetingError);
-        return res.status(500).json({ error: 'Failed to initialize session' });
+        return ApiResponses.internalError(res, 'Failed to initialize session');
       }
     } else {
       // Multiple clients - need selection
@@ -107,11 +107,10 @@ router.post('/login', async (req, res) => {
       
       req.session.save((err) => {
         if (err) {
-          return res.status(500).json({ error: 'Session creation failed' });
+          return ApiResponses.internalError(res, 'Session creation failed');
         }
         
-        res.json({ 
-          success: true,
+        return ApiResponses.successMessage(res, 'Client selection required', {
           requiresClientSelection: true,
           clients: clients
         });
@@ -120,7 +119,7 @@ router.post('/login', async (req, res) => {
     
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    return ApiResponses.internalError(res, 'Login failed');
   } finally {
     await dbAgent?.close();
   }
@@ -130,7 +129,7 @@ router.post('/login', async (req, res) => {
 router.get('/check', (req, res) => {
   // Check if user is authenticated via session
   if (req.session?.user?.id && req.session?.user?.email) {
-    res.json({ 
+    return ApiResponses.success(res, { 
       authenticated: true, 
       user: {
         id: req.session.user.id,
@@ -141,7 +140,7 @@ router.get('/check', (req, res) => {
     });
   } else {
     // Not authenticated - return proper response (not an error)
-    res.json({ 
+    return ApiResponses.success(res, { 
       authenticated: false 
     });
   }
@@ -177,18 +176,18 @@ router.post('/logout', async (req, res) => {
     req.session.destroy((err) => {
       if (err) {
         console.error('Error destroying session:', err);
-        return res.status(500).json({ error: 'Logout failed' });
+        return ApiResponses.internalError(res, 'Logout failed');
       }
       
       res.clearCookie('connect.sid'); // Clear session cookie
-      res.json({ success: true, message: 'Logged out successfully' });
+      return ApiResponses.successMessage(res, 'Logged out successfully');
     });
     
     await dbAgent.close();
     
   } catch (error) {
     console.error('Logout error:', error);
-    res.status(500).json({ error: 'Logout failed' });
+    return ApiResponses.internalError(res, 'Logout failed');
   }
 });
 

@@ -14,7 +14,7 @@ router.get('/clients', async (req, res) => {
   try {
     // Check if user is authenticated
     if (!req.session?.user?.user_id) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return ApiResponses.error(res, 401, 'Authentication required');
     }
     
     const user_id = req.session.user.user_id;
@@ -43,7 +43,7 @@ router.get('/clients', async (req, res) => {
 router.get('/available-clients', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return ApiResponses.error(res, 401, 'Not authenticated');
     }
     
     const { user_id } = req.session.user;
@@ -62,7 +62,7 @@ router.get('/available-clients', async (req, res) => {
     
   } catch (error) {
     console.error('Get available clients error:', error);
-    res.status(500).json({ error: 'Failed to get available clients' });
+    return ApiResponses.error(res, 500, 'Failed to get available clients');
   }
 });
 
