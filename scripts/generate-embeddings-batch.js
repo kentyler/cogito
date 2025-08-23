@@ -1,7 +1,11 @@
-const { Pool } = require('pg');
-const OpenAI = require('openai');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+import { Pool } from 'pg';
+import OpenAI from 'openai';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

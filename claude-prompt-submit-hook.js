@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
+import { Pool } from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
 // Load environment from the project root
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

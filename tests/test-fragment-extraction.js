@@ -5,9 +5,11 @@
  * to verify TOC pattern recognition and database storage.
  */
 
-const { FragmentExtractionAgent } = require('../lib/fragment-extraction-agent.cjs');
-const { v4: uuidv4 } = require('uuid');
-require('dotenv').config();
+import { FragmentExtractionAgent } from '../lib/fragment-extraction-agent.js';
+import { v4 as uuidv4 } from 'uuid';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 async function testFragmentExtraction() {
   console.log('🧪 Testing Fragment Extraction Agent...\n');
@@ -121,8 +123,8 @@ async function testFragmentExtraction() {
 }
 
 // Run the test
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   testFragmentExtraction().catch(console.error);
 }
 
-module.exports = { testFragmentExtraction };
+export { testFragmentExtraction };

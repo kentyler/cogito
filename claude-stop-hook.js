@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
-const { Pool } = require('pg');
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const { FragmentExtractionAgent } = require('./lib/fragment-extraction-agent.cjs');
+import { Pool } from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
+import { FragmentExtractionAgent } from './lib/fragment-extraction-agent.js';
+import dotenv from 'dotenv';
 
 // Load environment from the project root
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
