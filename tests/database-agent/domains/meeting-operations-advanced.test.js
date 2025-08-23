@@ -31,14 +31,29 @@ export async function runAdvancedMeetingOperationsTests() {
       const meetings = await dbAgent.meetings.listWithStats(clientId);
       logTest(testResults, 'listWithStats() returns array', Array.isArray(meetings));
       
-      const ourMeeting = meetings.find(m => m.id === meeting.id);
+      const ourMeeting = meetings.find(m => m.block_id === meeting.id);
       logTest(testResults, 'listWithStats() includes created meeting', !!ourMeeting);
-      logTest(testResults, 'listWithStats() includes turn count', ourMeeting?.turn_count === '3');
-      logTest(testResults, 'listWithStats() includes timestamps', !!ourMeeting?.first_turn_at);
+      logTest(testResults, 'listWithStats() includes turn count', ourMeeting?.turn_count === 3);
+      logTest(testResults, 'listWithStats() includes first_turn_time', !!ourMeeting?.first_turn_time);
+      
+      // Check for new fields added in refactoring
+      logTest(testResults, 'listWithStats() includes block_id (legacy compatibility)', !!ourMeeting?.block_id);
+      logTest(testResults, 'listWithStats() includes block_name (legacy compatibility)', !!ourMeeting?.block_name);
+      logTest(testResults, 'listWithStats() includes embedded_count', typeof ourMeeting?.embedded_count === 'number');
+      logTest(testResults, 'listWithStats() includes participant_count', typeof ourMeeting?.participant_count === 'number');
+      logTest(testResults, 'listWithStats() includes participant_names', Array.isArray(ourMeeting?.participant_names));
+      logTest(testResults, 'listWithStats() includes meeting_start_time', ourMeeting?.hasOwnProperty('meeting_start_time'));
+      logTest(testResults, 'listWithStats() includes meeting_end_time', ourMeeting?.hasOwnProperty('meeting_end_time'));
       
       // Test with pagination
       const limitedMeetings = await dbAgent.meetings.listWithStats(clientId, { limit: 1, offset: 0 });
       logTest(testResults, 'listWithStats() respects limit', limitedMeetings.length <= 1);
+      
+      // Test excludeSystemMeetings option
+      const allMeetings = await dbAgent.meetings.listWithStats(clientId, { excludeSystemMeetings: false });
+      const nonSystemMeetings = await dbAgent.meetings.listWithStats(clientId, { excludeSystemMeetings: true });
+      logTest(testResults, 'listWithStats() excludeSystemMeetings option works', 
+        allMeetings.length >= nonSystemMeetings.length);
       
     } catch (error) {
       logTest(testResults, 'listWithStats()', false, error.message);

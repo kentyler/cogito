@@ -3,7 +3,6 @@
  * Handles session setup and management for client selection
  */
 
-import { createSessionMeeting } from './session-meeting.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
 
 /**
@@ -32,8 +31,8 @@ export async function setupClientSession(req, userId, email, clientId) {
       throw new Error('Access denied to selected client');
     }
 
-    // Create session meeting
-    const meeting_id = await createSessionMeeting(req.db, userId, client.client_id);
+    // Don't create meeting eagerly - wait for first turn
+    // Meeting will be created lazily when the first conversation turn happens
     
     // Set up full session including parent_client_id for mini-horde support
     req.session.user = {
@@ -45,13 +44,13 @@ export async function setupClientSession(req, userId, email, clientId) {
       role: client.role
     };
     req.session.parent_client_id = parent_client_id;
-    req.session.meeting_id = meeting_id;
+    // Don't set meeting_id yet - will be created on first turn
     
     return {
       success: true,
       client,
       parent_client_id,
-      meeting_id
+      meeting_id: null  // No meeting created yet
     };
   } finally {
     await dbAgent.close();
