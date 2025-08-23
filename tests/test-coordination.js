@@ -58,7 +58,7 @@ async function testCoordination() {
       db.close();
       
     } catch (error) {
-      console.error(`\n❌ Error:`, error.message);
+      console.error(`Error: ${error.message}`);
     }
   }
   

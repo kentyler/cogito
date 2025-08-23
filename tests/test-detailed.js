@@ -32,8 +32,8 @@ async function testDetailed() {
     console.log('─'.repeat(60));
     
   } catch (error) {
-    console.error('❌ Error:', error.message);
-    console.error(error.stack);
+    console.error(`Error: ${error.message}`);
+    console.error(`Error: ${error.message}`);stack);
   }
   
   spokesperson.db.close();

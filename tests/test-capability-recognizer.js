@@ -56,8 +56,8 @@ async function testCapabilityRecognizer() {
     process.exit(0);
     
   } catch (error) {
-    console.error('❌ Test failed:', error.message);
-    console.error('Stack:', error.stack);
+    console.error(`Error: ${error.message}`);
+    console.error(`Error: ${error.message}`);stack);
     process.exit(1);
   }
 }

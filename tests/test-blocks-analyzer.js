@@ -83,8 +83,8 @@ What's your experience with non-linear thinking patterns?`,
     console.log('\n✅ All tests passed! The blocks/turns analyzer is working correctly.');
     
   } catch (error) {
-    console.error('❌ Test failed:', error.message);
-    console.error(error.stack);
+    console.error(`Error: ${error.message}`);
+    console.error(`Error: ${error.message}`);stack);
   } finally {
     await analyzer.close();
   }

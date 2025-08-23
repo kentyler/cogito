@@ -88,7 +88,7 @@ async function runAllDatabaseAgentTests() {
       console.log(`${status} ${domain.name}: ${results.passed}/${results.passed + results.failed} (${rate}%)`);
       
     } catch (error) {
-      console.error(`❌ ${domain.name} test suite failed:`, error.message);
+      console.error(`Error: ${error.message}`);
       overallResults.domainResults.push({
         name: domain.name,
         passed: 0,

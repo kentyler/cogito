@@ -42,8 +42,8 @@ export async function runAdvancedMeetingOperationsTests() {
       logTest(testResults, 'listWithStats() includes embedded_count', typeof ourMeeting?.embedded_count === 'number');
       logTest(testResults, 'listWithStats() includes participant_count', typeof ourMeeting?.participant_count === 'number');
       logTest(testResults, 'listWithStats() includes participant_names', Array.isArray(ourMeeting?.participant_names));
-      logTest(testResults, 'listWithStats() includes meeting_start_time', ourMeeting?.hasOwnProperty('meeting_start_time'));
-      logTest(testResults, 'listWithStats() includes meeting_end_time', ourMeeting?.hasOwnProperty('meeting_end_time'));
+      logTest(testResults, 'listWithStats() includes meeting_start_time', ourMeeting?.Object.prototype.hasOwnProperty.call('meeting_start_time'));
+      logTest(testResults, 'listWithStats() includes meeting_end_time', ourMeeting?.Object.prototype.hasOwnProperty.call('meeting_end_time'));
       
       // Test with pagination
       const limitedMeetings = await dbAgent.meetings.listWithStats(clientId, { limit: 1, offset: 0 });

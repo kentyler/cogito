@@ -103,7 +103,7 @@ class ClientParticipantLookupTest {
       return { status: 'similar_found', clients: clientResults.rows };
       
     } catch (error) {
-      console.error(`   ❌ Error looking up client:`, error.message);
+      console.error(`Error: ${error.message}`);
       return { status: 'error', error: error.message };
     }
   }
@@ -167,7 +167,7 @@ class ClientParticipantLookupTest {
         }
         
       } catch (error) {
-        console.error(`      ❌ Error looking up ${participant.email}:`, error.message);
+        console.error(`Error: ${error.message}`);
         not_found.push({ ...participant, error: error.message });
       }
     }
