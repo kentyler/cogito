@@ -27,17 +27,27 @@ import { setupMiddleware } from './server/config/middleware.js';
 import { MeetingService } from './server/services/meeting-service.js';
 import { WebSocketService } from './server/services/websocket-service.js';
 
-// Import routes
-import authRoutes from './server/routes/auth.js';
-import authExtendedRoutes from './server/routes/auth-extended.js';
-import authOAuthRoutes from './server/routes/auth-oauth.js';
+// Import routes (organized by domain)
+// Auth routes
+import authRoutes from './server/routes/auth/index.js';
+import authSessionRoutes from './server/routes/auth/session-management.js';
+import authOAuthRoutes from './server/routes/auth/oauth.js';
+
+// Client management routes
+import clientManagementRoutes from './server/routes/client-management/index.js';
+
+// Meeting routes
+import meetingsCrudRoutes from './server/routes/meetings/crud.js';
+import meetingsAdditionalRoutes from './server/routes/meetings/additional.js';
+
+// Settings routes
+import settingsRoutes from './server/routes/settings/index.js';
+
+// Other routes
 import chatInterfaceRoutes from './server/routes/chat-interface.js';
-import clientManagementRoutes from './server/routes/client-management.js';
 import adminClientManagementRoutes from './server/routes/admin-client-management.js';
 import conversationRoutes from './server/routes/conversations.js';
 import searchRoutes from './server/routes/search.js';
-import meetingsCrudRoutes from './server/routes/meetings-crud.js';
-import meetingsAdditionalRoutes from './server/routes/meetings-additional.js';
 import browserCaptureRoutes from './server/routes/browser-capture.js';
 import botsCreateRoutes from './server/routes/bots-create.js';
 import botsManagementRoutes from './server/routes/bots-management.js';
@@ -47,8 +57,6 @@ import summaryRoutes from './server/routes/summary-routes.js';
 import uploadFilesRoutes from './server/routes/upload-files.js';
 import invitationsRoutes from './server/routes/invitations.js';
 import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
-import settingsRoutes from './server/routes/settings.js';
-import temperatureSettingsRoutes from './server/routes/temperature-settings.js';
 
 // Import core services
 import { createTurnProcessor } from './lib/turn-processor.js';
@@ -134,15 +142,25 @@ async function startServer() {
     app.use(invitationGatewayRoutes);
     
     // Mount route handlers with /api prefix for auth routes
+    // Auth routes (organized)
     app.use('/api', authRoutes);
-    app.use('/api', authExtendedRoutes);
+    app.use('/api', authSessionRoutes);
     app.use('/auth/oauth', authOAuthRoutes);
+    
+    // Client management routes (organized)
     app.use('/api', clientManagementRoutes);
     app.use('/api/admin', adminClientManagementRoutes);
-    app.use('/api', conversationRoutes);
-    app.use(searchRoutes);
+    
+    // Meeting routes (organized)
     app.use('/api', meetingsCrudRoutes);
     app.use('/api', meetingsAdditionalRoutes);
+    
+    // Settings routes (organized)
+    app.use('/api', settingsRoutes);
+    
+    // Other routes
+    app.use('/api', conversationRoutes);
+    app.use(searchRoutes);
     app.use(browserCaptureRoutes);
     app.use('/api', botsCreateRoutes);
     app.use('/api', botsManagementRoutes);
@@ -151,8 +169,6 @@ async function startServer() {
     app.use('/api', summaryRoutes);
     app.use('/api/upload-files', uploadFilesRoutes);
     app.use('/api/invitations', invitationsRoutes);
-    app.use('/api', settingsRoutes);
-    app.use('/api', temperatureSettingsRoutes);
     
     // Create HTTP server
     const server = http.createServer(app);
