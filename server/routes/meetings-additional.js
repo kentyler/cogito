@@ -1,6 +1,8 @@
 import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { DatabaseAgent } from '../../lib/database-agent.js';
+
+// Import route modules
+import meetingSummariesRouter from './meeting-summaries.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();
@@ -18,70 +20,26 @@ router.use(async (req, res, next) => {
   }
 });
 
-// Meeting summary endpoint
-router.get('/meeting-summary/:meetingId', async (req, res) => {
-  try {
-    const { meetingId } = req.params;
-    const summary = await req.similarityOrchestrator.getSummaryStats(meetingId);
-    res.json(summary);
-  } catch (error) {
-    console.error('Meeting summary error:', error);
-    res.status(500).json({ error: 'Failed to get meeting summary' });
-  }
-});
+// Use summary routes
+router.use('/', meetingSummariesRouter);
 
-// Compare meetings endpoint
-router.post('/compare-meetings', async (req, res) => {
-  try {
-    const { meetingId1, meetingId2, options = {} } = req.body;
-    
-    if (!meetingId1 || !meetingId2) {
-      return res.status(400).json({ error: 'Two meeting IDs are required' });
-    }
-    
-    const comparison = await req.similarityOrchestrator.compareBlocks(meetingId1, meetingId2, options);
-    res.json(comparison);
-    
-  } catch (error) {
-    console.error('Meeting comparison error:', error);
-    res.status(500).json({ error: 'Failed to compare meetings' });
-  }
-});
-
-// Get turns directly - bypasses meeting lookup
+// Admin routes (simplified - only the most essential)
 router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
   try {
     const { meetingId } = req.params;
     const userId = req.session?.user?.user_id;
     
-    // Check if user is admin
-    const isAdmin = userId && (userId === '1' || req.session?.user?.role === 'admin');
-    
-    if (!isAdmin) {
+    if (!userId || (userId !== '1' && req.session?.user?.role !== 'admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
     
-    console.log(`🔍 Direct turns request for meeting ID: ${meetingId}`);
-    
-    // Get turns directly from the turns table
-    const turnsQuery = `
-      SELECT 
-        t.id,
-        t.content,
-        t.source_type,
-        t.metadata,
-        t.timestamp,
-        t.created_at,
-        t.meeting_index,
-        t.user_id
+    const turnsResult = await req.db.query(`
+      SELECT t.id, t.content, t.source_type, t.metadata, t.timestamp, 
+             t.created_at, t.meeting_index, t.user_id
       FROM meetings.turns t
       WHERE t.meeting_id = $1
       ORDER BY t.created_at ASC
-    `;
-    
-    const turnsResult = await req.db.query(turnsQuery, [meetingId]);
-    
-    console.log(`📋 Direct query found ${turnsResult.rows.length} turns for meeting ${meetingId}`);
+    `, [meetingId]);
     
     res.json({
       turns: turnsResult.rows,
@@ -95,71 +53,17 @@ router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
   }
 });
 
-// Get meeting turns - simple version
 router.get('/admin/meetings/:meetingId/transcript', async (req, res) => {
   try {
     const { meetingId } = req.params;
     const userId = req.session?.user?.user_id;
     
-    // Check if user is admin
-    const isAdmin = userId && (userId === '1' || req.session?.user?.role === 'admin');
-    
-    if (!isAdmin) {
+    if (!userId || (userId !== '1' && req.session?.user?.role !== 'admin')) {
       return res.status(403).json({ error: 'Admin access required' });
     }
     
-    console.log(`🔍 Simple transcript request for meeting ID: ${meetingId}`);
-    
-    // First, get just the turns
-    const turnsQuery = `
-      SELECT 
-        t.id,
-        t.content,
-        t.source_type,
-        t.metadata,
-        t.timestamp,
-        t.created_at,
-        t.meeting_index
-      FROM meetings.turns t
-      WHERE t.meeting_id = $1
-      ORDER BY t.created_at ASC
-    `;
-    
-    const turnsResult = await req.db.query(turnsQuery, [meetingId]);
-    
-    console.log(`📋 Found ${turnsResult.rows.length} turns for meeting ${meetingId}`);
-    
-    if (turnsResult.rows.length > 0) {
-      console.log(`✅ Returning ${turnsResult.rows.length} turns`);
-      res.json({
-        turns: turnsResult.rows
-      });
-    } else {
-      // If no turns, try to get meeting with full_transcript
-      const meetingQuery = `
-        SELECT id, name, full_transcript
-        FROM meetings.meetings
-        WHERE id = $1
-      `;
-      
-      const meetingResult = await req.db.query(meetingQuery, [meetingId]);
-      
-      if (meetingResult.rows.length === 0) {
-        return res.status(404).json({ error: 'Meeting not found' });
-      }
-      
-      const meeting = meetingResult.rows[0];
-      
-      if (meeting.full_transcript) {
-        console.log(`✅ Returning full_transcript (${meeting.full_transcript.length} chars)`);
-        res.json({
-          full_transcript: meeting.full_transcript
-        });
-      } else {
-        console.log(`✅ No turns or transcript found`);
-        res.json({ turns: [] });
-      }
-    }
+    const transcript = await dbAgent.meetings.getTranscript(meetingId);
+    res.json({ full_transcript: transcript });
     
   } catch (error) {
     console.error('Error fetching transcript:', error);
@@ -167,35 +71,25 @@ router.get('/admin/meetings/:meetingId/transcript', async (req, res) => {
   }
 });
 
-// Create a simple meeting for conversation
+// Meeting creation route
 router.post('/meetings/create', async (req, res) => {
   try {
     const { meeting_name } = req.body;
-    const user_id = req.session.user.user_id || req.session.user.id;
-    const client_id = req.session.user.client_id;
+    const userId = req.session?.user?.user_id;
     
-    if (!meeting_name) {
-      return res.status(400).json({ error: 'Meeting name is required' });
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
     
-    // Create meeting using meeting operations domain
-    const meetingData = {
+    const newMeeting = await dbAgent.meetings.create({
       name: meeting_name,
-      description: `Conversation meeting created on ${new Date().toISOString()}`,
-      meeting_type: 'conversation',
-      created_by_user_id: user_id,
-      client_id: client_id,
-      metadata: { source: 'conversational-repl' }
-    };
+      clientId: req.session?.user?.client_id || 1,
+      createdByUserId: userId
+    });
     
-    const meeting = await dbAgent.meetings.createMeeting(meetingData);
-    
-    // Return the meeting info
     res.json({
-      meeting_id: meeting.id,
-      name: meeting.name,
-      created_at: meeting.created_at,
-      status: 'active'
+      meeting_id: newMeeting.id,
+      name: newMeeting.name
     });
     
   } catch (error) {
