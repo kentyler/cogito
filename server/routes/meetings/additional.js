@@ -34,13 +34,9 @@ router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
       return ApiResponses.forbidden(res, 'Admin access required');
     }
     
-    const turnsResult = await req.db.query(`
-      SELECT t.id, t.content, t.source_type, t.metadata, t.timestamp, 
-             t.created_at, t.meeting_index, t.user_id
-      FROM meetings.turns t
-      WHERE t.meeting_id = $1
-      ORDER BY t.created_at ASC
-    `, [meetingId]);
+    // Use DatabaseAgent instead of direct SQL
+    const turns = await dbAgent.turns.getTurnsByMeeting(meetingId);
+    const turnsResult = { rows: turns };
     
     res.json({
       turns: turnsResult.rows,

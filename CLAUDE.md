@@ -189,6 +189,42 @@ Schema change from `meetings` → `meetings.meetings` caused 3 days of debugging
 - **Check/test scripts** → Don't create! Use `docs/database-schema-current.md` instead
 - **Temporary scripts** → Consider if they should be in `scripts/` folder
 
+## MANDATORY: Database Schema Verification Before SQL
+**CRITICAL**: You MUST verify table schemas before writing ANY SQL queries to prevent repeated failures from guessing table/column names.
+
+### Required Pattern for ALL Database Operations:
+```javascript
+const db = new DatabaseAgent();
+await db.connect();
+
+// STEP 1: ALWAYS verify the table first (this will show you the exact columns)
+await db.queryBuilder.verifyTable('schema_name', 'table_name');
+// This will print the exact column names!
+
+// STEP 2: Build your query using verified schema
+const { query, values } = await db.queryBuilder.buildInsert('schema_name', 'table_name', {
+  // Only use column names that were shown in step 1
+});
+
+// STEP 3: Execute
+await db.connector.query(query, values);
+```
+
+### Helper Commands:
+- List all schemas: `await db.queryBuilder.listTables()`
+- List tables in schema: `await db.queryBuilder.listTables('games')`
+- Verify specific table: `await db.queryBuilder.verifyTable('games', 'client_games')`
+
+### Common Schema Names:
+- `games` - Design games tables
+- `meetings` - Meeting related tables  
+- `conversation` - Turns and sessions
+- `context` - Files and chunks
+- `events` - Event logging
+- `client_mgmt` - Client management
+
+**WARNING**: If you skip verification and guess at table/column names, you will fail repeatedly!
+
 ## Database Helper Functions
 **IMPORTANT**: These PostgreSQL functions are available for pattern management:
 

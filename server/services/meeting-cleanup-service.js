@@ -86,7 +86,10 @@ export class MeetingCleanupService {
       
       // Check database for meetings that are stuck in joining/active status for too long
       // Only check meetings with recall_bot_id (bot meetings need cleanup, web sessions don't)
-      const stuckMeetingsResult = await this.pool.query(`
+      // Note: DatabaseAgent doesn't have a specific method for this query yet,
+      // so we use the raw query method temporarily
+      await this.dbAgent.connect();
+      const stuckMeetingsResult = await this.dbAgent.connector.query(`
         SELECT id, recall_bot_id, name as meeting_name, created_at, status
         FROM meetings.meetings
         WHERE status IN ('joining', 'active') 

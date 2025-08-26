@@ -1,0 +1,46 @@
+/**
+ * Yearly Summaries Handler
+ * Generate yearly summaries for a given year
+ */
+
+import { DatabaseAgent } from '../../lib/database-agent.js';
+import { ApiResponses } from '../../lib/api-responses.js';
+
+export async function handleYearlyGeneration(req, res) {
+  const db = new DatabaseAgent();
+  
+  try {
+    const { year } = req.body;
+    
+    if (!year) {
+      return ApiResponses.badRequest(res, 'Year is required');
+    }
+    
+    const { user_id, client_id, client_name } = db.summaries.getUserContext(req);
+    
+    if (!user_id || !client_id) {
+      return ApiResponses.unauthorized(res, 'User authentication and client required');
+    }
+    
+    await db.connect();
+    
+    const result = await db.summaries.generateYearlySummariesForYear({
+      year: parseInt(year),
+      client_id,
+      user_id
+    });
+    
+    return ApiResponses.success(res, {
+      message: 'Yearly summaries generated successfully',
+      summaries_created: result.summariesCreated || 0,
+      year,
+      client_name
+    });
+    
+  } catch (error) {
+    console.error('Error generating yearly summaries:', error);
+    return ApiResponses.internalError(res, `Failed to generate yearly summaries: ${error.message}`);
+  } finally {
+    await db.close();
+  }
+}

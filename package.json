@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "clean": "rm -rf public/js/cljs-runtime .shadow-cljs",
-    "dev-all": "npm run build && npm start",
+    "dev-all": "npm start",
     "setup-postgres": "node scripts/setup-postgres.js",
     "apply-schema": "node scripts/apply-schema.js",
     "migrate-from-sqlite": "node scripts/migrate-from-sqlite.js",

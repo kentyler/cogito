@@ -12,7 +12,7 @@ import {
   getClientAvatars,
   getDefaultAvatar,
   getAvatarById
-} from './avatar-operations.js';
+} from './avatar-operations/index.js';
 
 /**
  * Select appropriate avatar based on context (database-driven)
@@ -41,4 +41,4 @@ export {
   getClientAvatars,
   getDefaultAvatar,
   getAvatarById 
-} from './avatar-operations.js';
+} from './avatar-operations/index.js';

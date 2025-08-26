@@ -5,7 +5,7 @@
  */
 
 import express from 'express';
-import { getClientAvatars, updateUserLastAvatar } from '../lib/avatar-operations.js';
+import { getClientAvatars, updateUserLastAvatar } from '../../lib/avatar-operations/index.js';
 import { DatabaseAgent } from '../../lib/database-agent.js';
 
 const router = express.Router();
