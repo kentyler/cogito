@@ -1,5 +1,5 @@
 // Meeting cleanup service for handling inactive meetings and memory management
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 export class MeetingCleanupService {
   constructor(pool, meetingLastActivity, transcriptService) {

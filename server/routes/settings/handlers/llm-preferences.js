@@ -3,8 +3,8 @@
  * Update user's LLM selection
  */
 
-import { isValidLLM, updateUserSelectedLLM } from '../../lib/llm-config.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { isValidLLM, updateUserSelectedLLM } from '#server/conversations/llm-config.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleLLMPreferenceUpdate(req, res) {
   try {

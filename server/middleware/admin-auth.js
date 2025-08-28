@@ -4,7 +4,7 @@
  */
 
 export function requireAdmin(req, res, next) {
-  const adminUserIds = [1, 7, "1", "7"]; // ken@8thfold.com and ianpalonis@gmail.com (handle both string and number)
+  const adminUserIds = [1, 7, '1', '7']; // ken@8thfold.com and ianpalonis@gmail.com (handle both string and number)
   
   console.log('Admin check - Full session:', JSON.stringify(req.session));
   console.log('Admin check - Session user:', req.session?.user);

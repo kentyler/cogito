@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { requireAdmin } from '../middleware/admin-auth.js';
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 const router = express.Router();
 

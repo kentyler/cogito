@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
-import { createTextFile, uploadFile } from '../lib/upload-handlers.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { ApiResponses } from '../lib/api-responses.js';
+import { createTextFile, uploadFile } from '#server/uploads/upload-handlers.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 const router = express.Router();
 

@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-import { processConversationalTurn } from './turn-orchestrator.js';
-import { handleConversationError } from './error-handler.js';
+import { processConversationalTurn } from './conversations/turn-orchestrator.js';
+import { handleConversationError } from './conversations/error-handler.js';
 
 const router = express.Router();
 

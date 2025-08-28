@@ -59,9 +59,9 @@ import invitationsRoutes from './server/routes/invitations.js';
 import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
 
 // Import core services
-import { createTurnProcessor } from './lib/turn-processor.js';
-import { FileUploadService } from './lib/file-upload.js';
-import { EventLogger } from './server/lib/event-logger.js';
+import { createTurnProcessor } from '#ai-agents/turn-processor.js';
+import { FileUploadService } from '#uploads/file-upload.js';
+import { EventLogger } from '#server/events/event-logger.js';
 
 const app = express();
 
@@ -112,9 +112,9 @@ async function startServer() {
     });
     
     // Import and initialize transcript processing agents
-    const { TranscriptBufferAgent: TBA } = await import('./lib/transcript-buffer-agent.js');
-    const { TurnEmbeddingAgent: TEA } = await import('./lib/turn-embedding-agent.js');
-    const { SpeakerProfileAgent: SPA } = await import('./lib/speaker-profile-agent.js');
+    const { TranscriptBufferAgent: TBA } = await import('#ai-agents/transcript-buffer-agent.js');
+    const { TurnEmbeddingAgent: TEA } = await import('#ai-agents/turn-embedding-agent.js');
+    const { SpeakerProfileAgent: SPA } = await import('#ai-agents/speaker-profile-agent.js');
     
     TranscriptBufferAgent = TBA;
     TurnEmbeddingAgent = TEA;

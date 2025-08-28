@@ -3,7 +3,7 @@
  * Handles errors and logging for conversation endpoints
  */
 
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 export async function handleConversationError(error, req, res) {
   console.error('Conversational REPL error:', error);

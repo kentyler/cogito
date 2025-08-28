@@ -13,9 +13,9 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs postgres",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
-    "lint": "eslint lib/ server.js scripts/ tests/",
-    "lint:fix": "eslint lib/ server.js scripts/ tests/ --fix",
-    "lint:check-sizes": "eslint lib/ --rule '{\"max-lines\": [\"error\", {\"max\": 200}]}'",
+    "lint": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ scripts/ tests/",
+    "lint:fix": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ scripts/ tests/ --fix",
+    "lint:check-sizes": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ --rule '{\"max-lines\": [\"error\", {\"max\": 200}]}'",
     "mcp-server": "node mcp-game-state-server.js",
     "prod-db": "node scripts/run-on-prod.js"
   },
@@ -51,6 +51,23 @@
     "react-dom": "^18.2.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3"
+  },
+  "imports": {
+    "#database/*": "./database/*",
+    "#ai-agents/*": "./ai-agents/*",
+    "#services/*": "./services/*",
+    "#uploads/*": "./uploads/*",
+    "#classification/*": "./classification/*",
+    "#integrations/*": "./integrations/*",
+    "#server/api/*": "./server/api/*",
+    "#server/auth/*": "./server/auth/*",
+    "#server/conversations/*": "./server/conversations/*",
+    "#server/uploads/*": "./server/uploads/*",
+    "#server/meetings/*": "./server/meetings/*",
+    "#server/clients/*": "./server/clients/*",
+    "#server/events/*": "./server/events/*",
+    "#server/summaries/*": "./server/summaries/*",
+    "#server/*": "./server/*"
   },
   "devDependencies": {
     "eslint": "^9.32.0",

@@ -3,8 +3,8 @@
  * Get available LLMs for user's client
  */
 
-import { getAvailableLLMs } from '../../lib/llm-config.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { getAvailableLLMs } from '#server/conversations/llm-config.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleLLMList(req, res) {
   try {

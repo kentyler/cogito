@@ -5,7 +5,7 @@
  */
 
 import express from 'express';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 const router = express.Router();
 

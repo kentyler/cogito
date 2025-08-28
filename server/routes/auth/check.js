@@ -3,7 +3,7 @@
  * Validates current session status
  */
 
-import { ApiResponses } from '../../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export function handleAuthCheck(req, res) {
   // Check if user is authenticated via session

@@ -1,8 +1,8 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
-import { requireAuth } from './auth.js';
-import { InvitationService } from '../lib/invitation-service.js';
-import { sendInvitationEmail } from '../lib/invitation-email.js';
+import { requireAuth } from './auth/middleware.js';
+import { InvitationService } from '#server/events/invitation-service.js';
+import { sendInvitationEmail } from '#server/events/invitation-email.js';
 
 const router = express.Router();
 

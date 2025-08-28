@@ -1,4 +1,4 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
 
 const router = express.Router();

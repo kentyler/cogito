@@ -1,10 +1,10 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
-import { requireAuth } from './auth.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { createRecallBot, getWebsocketUrls } from '../lib/bot-creation/recall-api.js';
-import { createMeetingRecord, updateMeetingWithEmail } from '../lib/bot-creation/meeting-handler.js';
-import { processMeetingFiles } from '../lib/bot-creation/file-processor.js';
+import { requireAuth } from './auth/middleware.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { createRecallBot, getWebsocketUrls } from '#server/meetings/bot-creation/recall-api.js';
+import { createMeetingRecord, updateMeetingWithEmail } from '#server/meetings/bot-creation/meeting-handler.js';
+import { processMeetingFiles } from '#server/meetings/bot-creation/file-processor.js';
 
 const router = express.Router();
 

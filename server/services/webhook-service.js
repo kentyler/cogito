@@ -1,6 +1,6 @@
 // Webhook service for processing chat messages from Recall.ai
 // Database fields verified: recall_bot_id, file_id, meeting_id are standard schema fields
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 export class WebhookService {
   constructor(db, anthropic, fileUploadService) {

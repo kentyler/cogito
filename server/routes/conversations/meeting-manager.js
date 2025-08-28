@@ -3,7 +3,7 @@
  * Handles meeting ID resolution and lazy creation
  */
 
-import { createSessionMeeting } from '../../lib/session-meeting.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
 
 export async function resolveMeetingId(req, meeting_id) {
   let effectiveMeetingId = meeting_id;

@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-import clientCoreRoutes from './client-management-core.js';
-import clientSelectionRoutes from './client-management-selection.js';
+import clientCoreRoutes from './core.js';
+import clientSelectionRoutes from './selection.js';
 
 const router = express.Router();
 

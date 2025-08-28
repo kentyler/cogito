@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-import { createSessionMeeting } from '../lib/session-meeting.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 const router = express.Router();
 

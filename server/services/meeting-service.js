@@ -1,7 +1,7 @@
 import { EmailService } from './email-service.js';
 import { TranscriptService } from './transcript-service.js';
 import { MeetingCleanupService } from './meeting-cleanup-service.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 // Refactored meeting service - coordination layer for meeting operations
 export class MeetingService {

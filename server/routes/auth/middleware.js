@@ -3,7 +3,7 @@
  * Handles session and header-based authentication
  */
 
-import { ApiResponses } from '../../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export function requireAuth(req, res, next) {
   // Debug logging

@@ -3,9 +3,9 @@
  * Handles user authentication and session creation
  */
 
-import { createSessionMeeting } from '../../lib/session-meeting.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleLogin(req, res) {
   let dbAgent;

@@ -1,9 +1,9 @@
 import express from 'express';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 // Import route modules
-import meetingSummariesRouter from './meeting-summaries.js';
+import meetingSummariesRouter from '../meeting-summaries.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();

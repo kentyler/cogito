@@ -4,8 +4,8 @@
  */
 
 import express from 'express';
-import avatarRoutes from './settings-avatars.js';
-import llmRoutes from './settings-llms.js';
+import avatarRoutes from './avatars.js';
+import llmRoutes from './llms.js';
 import temperatureRoutes from './temperature-settings.js';
 
 const router = express.Router();

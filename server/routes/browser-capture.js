@@ -1,7 +1,7 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();

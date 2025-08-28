@@ -1,8 +1,8 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
 import { WebhookService } from '../services/webhook-service.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { generateDirectedResponse, generateSummaryResponse, sendChatResponse } from '../lib/webhook-chat-helpers.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { generateDirectedResponse, generateSummaryResponse, sendChatResponse } from '#server/meetings/webhook-chat-helpers.js';
 
 const router = express.Router();
 
@@ -94,8 +94,8 @@ async function generateResponse(webhookService, meeting, messageText, commandChe
   
   if (!hasContent) {
     return commandCheck.isQuestion 
-      ? "I haven't captured any content yet - are you speaking into the microphone?"
-      : "I haven't captured much conversation content yet. Please continue the meeting and I'll be able to provide better responses.";
+      ? 'I haven\'t captured any content yet - are you speaking into the microphone?'
+      : 'I haven\'t captured much conversation content yet. Please continue the meeting and I\'ll be able to provide better responses.';
   }
   
   if (!anthropic || !process.env.ANTHROPIC_API_KEY) {
@@ -113,7 +113,7 @@ async function generateResponse(webhookService, meeting, messageText, commandChe
   } catch (error) {
     console.error('❌ Error generating AI response:', error);
     return commandCheck.isQuestion 
-      ? "I'm listening to your conversation but having trouble analyzing it right now. Please continue and try again."
+      ? 'I\'m listening to your conversation but having trouble analyzing it right now. Please continue and try again.'
       : `I heard your question but I'm having trouble analyzing the conversation right now.`;
   }
 }

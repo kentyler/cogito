@@ -3,8 +3,8 @@
  * Get daily summary for a specific date
  */
 
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleDailyFetch(req, res) {
   const db = new DatabaseAgent();

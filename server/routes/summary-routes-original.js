@@ -1,6 +1,6 @@
 import express from 'express';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { ApiResponses } from '../lib/api-responses.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 const router = express.Router();
 

@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "type": "toc-thinking-tool",
+  "artifact": {
+    "name": "Evaporating Cloud",
+    "prompt": "We need to decide between implementing a new feature quickly vs. doing it right with proper testing and documentation. This creates tension in our development process.",
+    "timestamp": "2025-01-28T15:30:00Z"
+  },
+  "data": {
+    "conflict": "Should we implement the feature quickly vs. implement it properly?",
+    "wants": {
+      "A": "Meet deadline pressure",
+      "B": "Ensure code quality"
+    },
+    "needs": {
+      "C": "Deliver working software",
+      "D": "Maintain system reliability"
+    },
+    "assumptions": [
+      "Quick implementation means lower quality",
+      "Proper testing takes too much time",
+      "Management only cares about delivery speed",
+      "Technical debt is acceptable short-term"
+    ],
+    "injections": [
+      "What if we could automate testing to speed up quality assurance?",
+      "Could we deliver a minimal version that meets quality standards?",
+      "Is there a way to satisfy both speed and quality requirements?"
+    ]
+  },
+  "metadata": {
+    "session_id": "test-session-123",
+    "iterations": 3,
+    "user_notes": "This conflict comes up frequently in our sprint planning"
+  }
+}

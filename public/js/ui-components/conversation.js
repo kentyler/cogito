@@ -90,14 +90,111 @@ window.submitPrompt = async function() {
     }
 }
 
+// Handle file drops on prompt area
+window.handleFileDrop = async function(files) {
+    const meetingId = document.getElementById('meetingId').value;
+    
+    if (!meetingId) {
+        alert('Please select a meeting first');
+        return;
+    }
+    
+    if (!files || files.length === 0) return;
+    
+    // Show uploading message in conversation
+    if (typeof window.appendTurn === 'function') {
+        window.appendTurn({
+            speaker: 'System',
+            content: `📎 Uploading ${files.length} file(s)...`
+        });
+    }
+    
+    try {
+        // Use existing file upload API (when server is working)
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('files', file);
+        }
+        
+        // For now, just show what would happen
+        console.log('🔍 Would upload files:', Array.from(files).map(f => f.name));
+        
+        // Simulate file processing
+        for (const file of files) {
+            let responseMessage = '';
+            
+            if (file.name.endsWith('.cogito')) {
+                // For .cogito files, simulate analysis
+                responseMessage = `🧠 Analyzing thinking tool: ${file.name}\n\n`;
+                responseMessage += 'Analysis would appear here when server is working...';
+            } else {
+                // For regular files, show upload confirmation
+                responseMessage = `✅ Would upload: ${file.name} (${formatFileSize(file.size)})\n`;
+                responseMessage += 'File processing would happen when server is working...';
+            }
+            
+            // Add response to conversation
+            if (typeof window.appendTurn === 'function') {
+                window.appendTurn({
+                    speaker: 'Assistant',
+                    content: responseMessage
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ File drop error:', error);
+        if (typeof window.appendTurn === 'function') {
+            window.appendTurn({
+                speaker: 'System',
+                content: `❌ File drop failed: ${error.message}`
+            });
+        }
+    }
+}
+
+// Format file size helper
+window.formatFileSize = function(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
 // Add Enter key support for prompt submission
 window.initializeConversation = function() {
     const promptInput = document.getElementById('prompt-input');
     if (promptInput) {
+        // Enter key handler
         promptInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 submitPrompt();
+            }
+        });
+        
+        // Add drag-drop handlers for file drops
+        promptInput.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            promptInput.classList.add('border-blue-400', 'bg-blue-50');
+        });
+        
+        promptInput.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            promptInput.classList.remove('border-blue-400', 'bg-blue-50');
+        });
+        
+        promptInput.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            promptInput.classList.remove('border-blue-400', 'bg-blue-50');
+            
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                await handleFileDrop(files);
             }
         });
     }

@@ -1,5 +1,5 @@
 // Email service for meeting transcript delivery
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 export class EmailService {
   constructor(pool, getEmailTransporter) {

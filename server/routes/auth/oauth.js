@@ -1,10 +1,10 @@
 import express from 'express';
 import crypto from 'crypto';
-import { GoogleOAuthProvider } from '../lib/oauth/google-oauth-provider.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { createSessionMeeting } from '../lib/session-meeting.js';
-import { handleOAuthCallback } from '../lib/oauth-callback-handler.js';
-import { handleClientAssignment } from '../lib/oauth-client-assignment.js';
+import { GoogleOAuthProvider } from '#server/auth/oauth/google-oauth-provider.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
+import { handleOAuthCallback } from '#server/auth/oauth-callback-handler.js';
+import { handleClientAssignment } from '#server/auth/oauth-client-assignment.js';
 
 const router = express.Router();
 

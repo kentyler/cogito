@@ -7,7 +7,7 @@
 
 import express from 'express';
 import { getAvailableLLMs, updateUserSelectedLLM, isValidLLM } from '../lib/llm-config.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 const router = express.Router();
 

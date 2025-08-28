@@ -3,11 +3,11 @@
  * Main conversation turn processing workflow
  */
 
-import { validateAndGetUserId, validateContent } from '../../lib/conversations/session-validator.js';
-import { createUserTurn, createLLMTurn } from '../../lib/conversations/turn-handler.js';
-import { generateLLMResponse } from '../../lib/conversations/llm-handler.js';
-import { buildConversationContext } from '../../lib/conversation-context.js';
-import { gameStateAgent } from '../../lib/game-state-agent.js';
+import { validateAndGetUserId, validateContent } from '#server/conversations/session-validator.js';
+import { createUserTurn, createLLMTurn } from '#server/conversations/turn-handler.js';
+import { generateLLMResponse } from '#server/conversations/llm-handler.js';
+import { buildConversationContext } from '#server/conversations/conversation-context.js';
+import { gameStateAgent } from '#ai-agents/game-state-agent.js';
 import { resolveMeetingId } from './meeting-manager.js';
 import { resolveClientInfo } from './client-resolver.js';
 

@@ -3,8 +3,8 @@
  * Handles client information retrieval from meetings
  */
 
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { getClientInfo } from '../../lib/conversation-context.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { getClientInfo } from '#server/conversations/conversation-context.js';
 
 export async function resolveClientInfo(req, meetingId, userId) {
   console.log('🔍 Getting client info from meeting:', meetingId);

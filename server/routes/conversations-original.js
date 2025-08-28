@@ -1,15 +1,15 @@
-import { ApiResponses } from '../lib/api-responses.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 import express from 'express';
-import { buildConversationContext, getClientInfo } from '../lib/conversation-context.js';
+import { buildConversationContext, getClientInfo } from '#server/conversations/conversation-context.js';
 import { 
   validateAndGetUserId, 
   validateContent
-} from '../lib/conversations/session-validator.js';
-import { createUserTurn, createLLMTurn } from '../lib/conversations/turn-handler.js';
-import { generateLLMResponse } from '../lib/conversations/llm-handler.js';
+} from '#server/conversations/session-validator.js';
+import { createUserTurn, createLLMTurn } from '#server/conversations/turn-handler.js';
+import { generateLLMResponse } from '#server/conversations/llm-handler.js';
 import { gameStateAgent } from '../../lib/game-state-agent.js';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { createSessionMeeting } from '../lib/session-meeting.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
 
 const router = express.Router();
 

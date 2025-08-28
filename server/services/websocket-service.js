@@ -1,5 +1,5 @@
 import { WebSocketServer } from 'ws';
-import { DatabaseAgent } from '../../lib/database-agent.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 // WebSocket service for handling real-time transcription from Recall.ai
 export class WebSocketService {

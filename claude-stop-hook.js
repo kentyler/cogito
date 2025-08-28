@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { StopHookProcessor } from './lib/hook-processors/stop-hook-processor.js';
+import { StopHookProcessor } from './integrations/hook-processors/stop-hook-processor.js';
 
 // Load environment from the project root
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

@@ -1,6 +1,6 @@
 import express from 'express';
-import { DatabaseAgent } from '../../lib/database-agent.js';
-import { AdminClientOperations } from '../lib/admin-client-operations.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { AdminClientOperations } from '#server/clients/admin-client-operations.js';
 import { requireAdmin, ensureDbConnection } from '../middleware/admin-auth.js';
 import { createUserManagementRoutes } from './admin-user-management.js';
 

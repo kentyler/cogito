@@ -1,0 +1,90 @@
+/**
+ * Regular File Processor - Handles .txt, .md, .pdf files
+ */
+
+import { extractTextFromPDF, isPDF } from './pdf-processor.js';
+import { processFileContent } from './file-processor.js';
+import { generateFileSummary } from './file-summary-generator.js';
+
+/**
+ * Process regular files (.txt, .md, .pdf)
+ */
+export async function processRegularFile(db, file, clientId, userId) {
+  const { originalname, buffer, size, mimetype } = file;
+  
+  // Extract text content based on file type
+  let content;
+  let extractedMetadata = {};
+  
+  if (isPDF(originalname, mimetype)) {
+    try {
+      const pdfData = await extractTextFromPDF(buffer);
+      content = pdfData.text;
+      extractedMetadata = {
+        pdf_info: pdfData.info,
+        pdf_pages: pdfData.pages,
+        pdf_version: pdfData.version
+      };
+    } catch (pdfError) {
+      throw new Error(`PDF processing failed: ${pdfError.message}`);
+    }
+  } else {
+    // For text files, convert buffer to string
+    content = buffer.toString('utf-8');
+  }
+  
+  try {
+    await db.connector.query('BEGIN');
+    
+    // Store file in database
+    const fileResult = await db.connector.query(`
+      INSERT INTO context.files 
+      (filename, content_data, content_type, file_size, source_type, client_id, metadata) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      RETURNING *
+    `, [
+      originalname,
+      buffer,
+      mimetype || 'text/plain',
+      size,
+      'upload',
+      clientId,
+      JSON.stringify({
+        uploaded_by: userId,
+        uploaded_at: new Date().toISOString(),
+        source: 'conversation-drop',
+        ...extractedMetadata
+      })
+    ]);
+    
+    const storedFile = fileResult.rows[0];
+    
+    // Process file content for chunking and embedding
+    const chunkCount = await processFileContent(
+      { query: db.connector.query.bind(db.connector) },
+      storedFile.id,
+      content,
+      clientId
+    );
+    
+    await db.connector.query('COMMIT');
+    
+    // Generate summary for conversation response
+    const summary = generateFileSummary(content, originalname);
+    
+    return {
+      filename: originalname,
+      size,
+      type: 'document',
+      success: true,
+      summary,
+      chunks: chunkCount,
+      fileId: storedFile.id,
+      uploadedAt: storedFile.created_at
+    };
+    
+  } catch (error) {
+    await db.connector.query('ROLLBACK');
+    throw error;
+  }
+}

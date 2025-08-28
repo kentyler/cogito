@@ -3,10 +3,10 @@
  * Handles initial client selection after login
  */
 
-import { setupClientSession, logClientSelectionEvent } from '../../lib/client-session-manager.js';
-import { DatabaseAgent } from '../../../lib/database-agent.js';
-import { createSessionMeeting } from '../../lib/session-meeting.js';
-import { ApiResponses } from '../../lib/api-responses.js';
+import { setupClientSession, logClientSelectionEvent } from '#server/auth/client-session-manager.js';
+import { DatabaseAgent } from '#database/database-agent.js';
+import { createSessionMeeting } from '#server/auth/session-meeting.js';
+import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleClientSelection(req, res) {
   try {
