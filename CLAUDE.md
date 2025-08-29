@@ -18,14 +18,30 @@ The schema dump provides Claude with current database structure including:
 - Schema ownership and sources (Supabase vs User-created)
 
 ## Auto-Loading Architecture Documentation
-**AUTOMATIC**: The `intentions.edn` file is automatically loaded on startup to provide:
-- Core purpose and design principles
-- Feature implementation details with code locations
-- Active explorations and technical decisions
-- Deprecated patterns to avoid
-- Known pain points and success patterns
+**RECOMMENDED SESSION STARTUP**: Load key INTENTIONS.md files for comprehensive architectural context:
 
-This ensures Claude always has access to current architectural context and implementation details.
+### Core Architecture Files (Load First)
+1. **Root System Overview**: `INTENTIONS.md` - Overall system architecture
+2. **Database System**: `database/INTENTIONS.md` - DatabaseAgent and operations  
+3. **Server System**: `server/INTENTIONS.md` - Express application architecture
+4. **Project Instructions**: `CLAUDE.md` - Development conventions and patterns
+
+### Token Budget for Startup
+- Core 4 files: ~3,600 tokens
+- Additional subsystem files as needed: ~2,000-4,000 tokens
+- Remaining for work: ~12,000+ tokens
+
+### Loading Strategy
+```bash
+# Manual startup sequence:
+# 1. Read INTENTIONS.md (system overview)
+# 2. Read database/INTENTIONS.md (data layer)  
+# 3. Read server/INTENTIONS.md (application layer)
+# 4. Read CLAUDE.md (conventions)
+# 5. Load additional subsystem files based on work area
+```
+
+See `.claude-startup.md` for detailed loading guidance and subsystem file recommendations.
 
 ## Session History Available
 **IMPORTANT**: Session context files may contain crucial information:
