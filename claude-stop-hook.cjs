@@ -1,1 +1,0 @@
-claude-stop-hook.js

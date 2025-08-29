@@ -20,7 +20,7 @@
 - **Domain-specific**: Use specialized domains like `dbAgent.turns.findSimilarTurns()`
 
 ### Modular Architecture
-- **Component folders**: Large systems split into focused modules (e.g., `speaker-profile-agent/`, `tree-assembly-agent/`)
+- **Component folders**: Large systems split into focused modules (e.g., `speaker-profile-agent/`)
 - **Entry points**: Main files become simple re-exports for backward compatibility
 - **Specialization**: Each module handles one specific responsibility
 
@@ -52,28 +52,8 @@ await db.turns.findSimilarTurns(turnId, limit);
 
 ### 🧠 AI Processing Components
 
-#### `tree-assembly-agent/` (Modular System)
-**Purpose**: Assembles conversation fragments into TOC tree structures  
-**Architecture**: Split from 372-line monolith into focused modules:
-
-- **`fragment-grouper.js`** (118 lines): Pattern detection and grouping logic
-- **`tree-creator.js`** (211 lines): Tree structure creation and database storage  
-- **`fragment-retrieval.js`** (76 lines): Database queries for fragment discovery
-- **`tree-relationships.js`** (74 lines): Cross-tree relationships and assignments
-- **`index.js`** (92 lines): Main orchestrator and entry point
-
-**Usage**: `await treeAgent.assembleTreesOnStartup(sessionId)`
-
-#### `fragment-extraction-agent/` (Modular System)  
-**Purpose**: Extracts Theory of Constraints elements from conversation text  
-**Architecture**: Split from 319-line monolith into focused modules:
-
-- **`pattern-matcher.js`** (82 lines): TOC pattern recognition and confidence scoring
-- **`fragment-storage.js`** (34 lines): Database operations for fragment persistence
-- **`turn-retrieval.js`** (29 lines): Turn fetching and filtering logic
-- **`index.js`** (73 lines): Main orchestrator bringing components together
-
-**Usage**: `await fragmentAgent.processTurn(clientId, sessionId, turnId, content)`
+#### AI Agent Systems (REMOVED)
+**Note**: Fragment extraction and tree assembly systems were removed as they represented over-organization that LLMs can handle natively. The functionality has been integrated into the core conversation processing pipeline.
 
 #### `speaker-profile-agent/` (Modular System)
 **Purpose**: Speaker identification and profile generation  
@@ -132,8 +112,7 @@ await db.users.getUserClients(userId);
 ### ✅ Completed Improvements
 
 1. **File Size Optimization**
-   - Split 372-line `tree-assembly-agent.js` into 5 focused modules
-   - Split 319-line `fragment-extraction-agent.js` into 4 focused modules  
+   - Removed over-organizational AI agent systems (fragment extraction & tree assembly)
    - All files now under 200-line limit
 
 2. **Database Access Patterns**
