@@ -1,9 +1,11 @@
 /**
  * Vector Embedding Service
  * Real implementation using the main embedding service
+ * Available DatabaseAgent methods: createChunk, deleteChunksByFileId
+ * Database fields: file_id
  */
 
-import { EmbeddingService } from '#services/embedding-service.js';
+import { EmbeddingService } from '#database/embedding-service.js';
 
 export class VectorEmbeddingService {
   constructor() {

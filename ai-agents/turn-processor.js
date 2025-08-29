@@ -1,7 +1,9 @@
 /**
  * Turn processor with embedding generation
+ * Available DatabaseAgent methods: createTurn, turnOperations
+ * Database fields: participant_id, user_id, source_id
  */
-import { EmbeddingService } from '#services/embedding-service.js';
+import { EmbeddingService } from '#database/embedding-service.js';
 import { DatabaseAgent } from '#database/database-agent.js';
 import { v4 as uuidv4 } from 'uuid';
 

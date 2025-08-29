@@ -2,7 +2,7 @@
  * Embedding Retry Handler - Handle embedding generation with retry logic
  */
 
-import { EmbeddingService } from '#services/embedding-service.js';
+import { EmbeddingService } from '#database/embedding-service.js';
 
 export class EmbeddingRetryHandler {
   constructor(options = {}) {
