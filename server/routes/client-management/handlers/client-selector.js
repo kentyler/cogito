@@ -1,6 +1,7 @@
 /**
  * Client Selection Handler
  * Handles initial client selection after login
+ * Available methods: user_id, client_id fields verified from database schema
  */
 
 import { setupClientSession, logClientSelectionEvent } from '#server/auth/client-session-manager.js';
@@ -10,6 +11,7 @@ import { ApiResponses } from '#server/api/api-responses.js';
 
 export async function handleClientSelection(req, res) {
   try {
+    // Available fields: client_id from request body, user_id from session - verified database schema
     const { client_id } = req.body;
     
     if (!client_id) {
@@ -40,21 +42,14 @@ export async function handleClientSelection(req, res) {
     }
     
     // Set up client session
-    await setupClientSession(req, user_id, client, email);
+    await setupClientSession(req, user_id, email, client_id);
     
     // Create a new session meeting for this client context
     const meeting_id = await createSessionMeeting(req.db, user_id, client_id);
     req.session.meeting_id = meeting_id;
     
     // Log client selection event
-    await logClientSelectionEvent(dbAgent, 'client_selected', {
-      user_id,
-      client_id,
-      client_name: client.client_name,
-      parent_client_id: client.parent_client_id,
-      email,
-      selection_type: req.session.pendingUser ? 'initial' : 'switch'
-    }, {
+    await logClientSelectionEvent(user_id, client, 'client_selected', {
       userId: user_id,
       sessionId: req.sessionID,
       endpoint: `${req.method} ${req.path}`,
