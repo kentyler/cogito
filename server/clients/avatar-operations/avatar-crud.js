@@ -4,8 +4,12 @@
 
 /**
  * Get specific avatar by ID
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.avatarId - Avatar ID to retrieve
+ * @returns {Promise<Object|null>} Avatar object or null if not found
  */
-export async function getAvatarById(pool, avatarId) {
+export async function getAvatarById({ pool, avatarId }) {
   try {
     const result = await pool.query(`
       SELECT id, name, description, voice_template, response_style

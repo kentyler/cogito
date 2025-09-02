@@ -23,15 +23,20 @@ export async function selectAvatar(pool, { clientId, userId, avatarId, context =
 
 /**
  * Load avatar configuration from database
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.avatarId - Avatar ID to load
+ * @param {string} options.clientId - Client ID for fallback default avatar
+ * @returns {Promise<Object>} Avatar configuration object
  */
-export async function loadAvatar(pool, avatarId, clientId) {
+export async function loadAvatar({ pool, avatarId, clientId }) {
   if (avatarId) {
-    const avatar = await getAvatarById(pool, avatarId);
+    const avatar = await getAvatarById({ pool, avatarId });
     if (avatar) return avatar;
   }
   
   // Fallback to default avatar for client
-  return await getDefaultAvatar(pool, clientId);
+  return await getDefaultAvatar({ pool, clientId });
 }
 
 // Re-export functions from avatar-operations for convenience

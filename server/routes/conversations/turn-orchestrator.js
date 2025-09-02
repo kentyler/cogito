@@ -37,11 +37,15 @@ export async function processConversationalTurn(req, { content, context, meeting
   });
   
   // Get client info from meeting
-  const { clientId, clientName } = await resolveClientInfo(req, effectiveMeetingId, user_id);
+  const { clientId, clientName } = await resolveClientInfo({ 
+    req, 
+    meetingId: effectiveMeetingId, 
+    userId: user_id 
+  });
   
   // Build conversation context
   console.log('🔍 STEP 7: Building conversation context');
-  const contextResult = await buildConversationContext(req, userTurn, clientId);
+  const contextResult = await buildConversationContext({ req, userTurn, clientId });
   const conversationContext = contextResult.context || contextResult;
   const sources = contextResult.sources || [];
   
@@ -70,7 +74,7 @@ export async function processConversationalTurn(req, { content, context, meeting
   
   // Update user's last used avatar
   if (user_id && usedAvatar) {
-    await updateUserLastAvatar(req.pool, user_id, usedAvatar.id);
+    await updateUserLastAvatar({ pool: req.pool, userId: user_id, avatarId: usedAvatar.id });
   }
   
   // Create LLM turn

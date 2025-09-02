@@ -1,8 +1,17 @@
 /**
  * Find similar file chunks using embedding similarity
  * Supports mini-horde inheritance: searches own client + parent client data
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {Object} options.embeddingService - Embedding service instance
+ * @param {string} options.content - Content to find similar chunks for
+ * @param {string} options.clientId - Client ID to search within
+ * @param {number} [options.limit=5] - Maximum number of chunks to return
+ * @param {number} [options.minSimilarity=0.6] - Minimum similarity threshold
+ * @param {string|null} [options.parentClientId=null] - Parent client ID for mini-horde support
+ * @returns {Promise<Array<Object>>} Array of similar chunks
  */
-export async function findSimilarChunks(pool, embeddingService, content, clientId, limit = 5, minSimilarity = 0.6, parentClientId = null) {
+export async function findSimilarChunks({ pool, embeddingService, content, clientId, limit = 5, minSimilarity = 0.6, parentClientId = null }) {
   try {
     // Validate content before generating embedding
     if (!content || typeof content !== 'string' || content.trim().length === 0) {

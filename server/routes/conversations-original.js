@@ -97,7 +97,7 @@ router.post('/conversational-turn', async (req, res) => {
     } catch (error) {
       console.warn('Could not get client info from meeting:', error.message);
       // Fall back to session-based client info
-      const fallbackInfo = await getClientInfo(req, user_id);
+      const fallbackInfo = await getClientInfo({ req, userId: user_id });
       clientId = fallbackInfo.clientId;
       clientName = fallbackInfo.clientName;
     }
@@ -106,7 +106,7 @@ router.post('/conversational-turn', async (req, res) => {
     
     // Build conversation context
     console.log('🔍 STEP 7: Building conversation context');
-    const contextResult = await buildConversationContext(req, userTurn, clientId);
+    const contextResult = await buildConversationContext({ req, userTurn, clientId });
     const conversationContext = contextResult.context || contextResult; // Handle both old and new formats
     const sources = contextResult.sources || [];
     console.log('🔍 STEP 7a: Conversation context built, length:', conversationContext?.length || 0);
@@ -138,7 +138,7 @@ router.post('/conversational-turn', async (req, res) => {
     
     // Update user's last used avatar
     if (user_id && usedAvatar) {
-      await updateUserLastAvatar(req.pool, user_id, usedAvatar.id);
+      await updateUserLastAvatar({ pool: req.pool, userId: user_id, avatarId: usedAvatar.id });
     }
     
     // Create LLM turn

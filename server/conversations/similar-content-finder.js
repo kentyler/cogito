@@ -41,15 +41,15 @@ export class SimilarContentFinder {
 
     console.log('🔍 Looking for similar file chunks for client:', clientId);
     try {
-      const similarChunks = await findSimilarChunks(
-        req.pool, 
-        req.turnProcessor.embeddingService, 
-        userTurn.content, 
+      const similarChunks = await findSimilarChunks({
+        pool: req.pool,
+        embeddingService: req.turnProcessor.embeddingService,
+        content: userTurn.content,
         clientId,
-        5, // limit to 5 most similar chunks
-        0.6, // minimum similarity threshold
+        limit: 5, // limit to 5 most similar chunks
+        minSimilarity: 0.6, // minimum similarity threshold
         parentClientId // include parent client data for mini-hordes
-      );
+      });
       console.log('🔍 findSimilarChunks returned:', similarChunks?.length || 0, 'results');
       return similarChunks;
     } catch (error) {

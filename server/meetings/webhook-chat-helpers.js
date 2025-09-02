@@ -2,8 +2,17 @@
  * Helper functions for webhook chat processing
  */
 
-// Generate response for directed questions
-export async function generateDirectedResponse(webhookService, meeting, messageText, conversationText, anthropic) {
+/**
+ * Generate response for directed questions
+ * @param {Object} options
+ * @param {Object} options.webhookService - Webhook service instance
+ * @param {Object} options.meeting - Meeting object
+ * @param {string} options.messageText - Original message text
+ * @param {string} options.conversationText - Full conversation transcript
+ * @param {Object} options.anthropic - Anthropic client instance
+ * @returns {Promise<string>} Generated response text
+ */
+export async function generateDirectedResponse({ webhookService, meeting, messageText, conversationText, anthropic }) {
   // Extract the actual question after "cogito"
   const questionMatch = messageText.match(/cogito[,:]?\s*(.+)/i);
   const question = questionMatch ? questionMatch[1].trim() : messageText;
@@ -37,8 +46,16 @@ Be thorough in your response while remaining clear and conversational. If the qu
   return message.content[0].text;
 }
 
-// Generate summary response for '?' command
-export async function generateSummaryResponse(webhookService, meeting, conversationText, anthropic) {
+/**
+ * Generate summary response for '?' command
+ * @param {Object} options
+ * @param {Object} options.webhookService - Webhook service instance
+ * @param {Object} options.meeting - Meeting object
+ * @param {string} options.conversationText - Full conversation transcript
+ * @param {Object} options.anthropic - Anthropic client instance
+ * @returns {Promise<string>} Generated summary text
+ */
+export async function generateSummaryResponse({ webhookService, meeting, conversationText, anthropic }) {
   // Get uploaded files context
   const uploadedFilesContext = await webhookService.getUploadedFilesContext(meeting.id);
   
@@ -65,8 +82,16 @@ Be insightful and analytical while remaining conversational. You can offer obser
   return message.content[0].text;
 }
 
-// Send response back to meeting chat
-export async function sendChatResponse(botId, response, meetingId, appendToConversation) {
+/**
+ * Send response back to meeting chat
+ * @param {Object} options
+ * @param {string} options.botId - Recall.ai bot ID
+ * @param {string} options.response - Response text to send
+ * @param {string} options.meetingId - Meeting ID for context
+ * @param {Function} options.appendToConversation - Function to append to conversation
+ * @returns {Promise<Object>} Chat response result
+ */
+export async function sendChatResponse({ botId, response, meetingId, appendToConversation }) {
   try {
     console.log('📤 Sending response to meeting chat:', response);
     

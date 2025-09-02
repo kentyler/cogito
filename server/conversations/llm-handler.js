@@ -86,17 +86,17 @@ export async function generateLLMResponse(req, {
     }
     
     // Call the now-async buildConversationalPrompt with database parameters
-    const prompt = await buildConversationalPrompt(
-      clientName, 
-      conversationContext, 
-      content, 
-      context, 
-      gameState, 
-      clientId, 
-      req.pool, 
-      userId, 
+    const prompt = await buildConversationalPrompt({
+      clientName,
+      conversationContext,
+      content,
+      context,
+      gameState,
+      clientId,
+      pool: req.pool,
+      userId,
       avatarId
-    );
+    });
     
     console.log('🔍 STEP 8: Sending prompt to LLM');
     console.log('🔍 Prompt length:', prompt.length, 'characters');

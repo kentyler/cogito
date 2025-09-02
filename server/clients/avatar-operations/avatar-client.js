@@ -6,8 +6,12 @@ import { getAvatarById } from './avatar-crud.js';
 
 /**
  * Get available avatars for a client
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.clientId - Client ID
+ * @returns {Promise<Array<Object>>} Array of available avatars
  */
-export async function getClientAvatars(pool, clientId) {
+export async function getClientAvatars({ pool, clientId }) {
   try {
     const result = await pool.query(`
       SELECT a.id, a.name, a.description, a.voice_template, a.response_style, ca.is_default
@@ -26,8 +30,12 @@ export async function getClientAvatars(pool, clientId) {
 
 /**
  * Get default avatar for a client
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.clientId - Client ID
+ * @returns {Promise<Object>} Default avatar object
  */
-export async function getDefaultAvatar(pool, clientId) {
+export async function getDefaultAvatar({ pool, clientId }) {
   try {
     const result = await pool.query(`
       SELECT a.id, a.name, a.description, a.voice_template, a.response_style
@@ -42,17 +50,23 @@ export async function getDefaultAvatar(pool, clientId) {
     }
     
     // Fallback to cogito_assistant if no default found
-    return await getAvatarById(pool, 'cogito_assistant');
+    return await getAvatarById({ pool, avatarId: 'cogito_assistant' });
   } catch (error) {
     console.error('Error getting default avatar:', error);
-    return await getAvatarById(pool, 'cogito_assistant');
+    return await getAvatarById({ pool, avatarId: 'cogito_assistant' });
   }
 }
 
 /**
  * Assign avatar to client
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.clientId - Client ID
+ * @param {string} options.avatarId - Avatar ID to assign
+ * @param {boolean} [options.isDefault=false] - Whether to set as default avatar
+ * @returns {Promise<Object>} Assignment record
  */
-export async function assignAvatarToClient(pool, clientId, avatarId, isDefault = false) {
+export async function assignAvatarToClient({ pool, clientId, avatarId, isDefault = false }) {
   try {
     // If setting as default, unset other defaults for this client
     if (isDefault) {

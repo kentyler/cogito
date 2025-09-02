@@ -21,7 +21,7 @@ router.get('/clients/:clientId/avatars', async (req, res) => {
       return ApiResponses.error(res, 401, 'Authentication required');
     }
     
-    const avatars = await getClientAvatars(req.pool, parseInt(clientId));
+    const avatars = await getClientAvatars({ pool: req.pool, clientId: parseInt(clientId) });
     
     res.json({
       success: true,
@@ -65,7 +65,7 @@ router.post('/user/avatar-preference', async (req, res) => {
     }
     
     // Update user's last used avatar
-    await updateUserLastAvatar(req.pool, userId, avatar_id);
+    await updateUserLastAvatar({ pool: req.pool, userId, avatarId: avatar_id });
     
     // Log avatar preference change
     try {

@@ -3,8 +3,15 @@ import { ContextBuilder } from './context-builder.js';
 import { ClientInfoFetcher } from './client-info-fetcher.js';
 import { findSimilarChunks } from './conversation-context/chunk-finder.js';
 
-// Build conversation context from similar turns and file chunks
-export async function buildConversationContext(req, userTurn, clientId) {
+/**
+ * Build conversation context from similar turns and file chunks
+ * @param {Object} options
+ * @param {Object} options.req - Express request object
+ * @param {Object} options.userTurn - User turn object
+ * @param {string} options.clientId - Client ID
+ * @returns {Promise<Object>} Context and sources
+ */
+export async function buildConversationContext({ req, userTurn, clientId }) {
   // Get parent client ID from session for mini-horde support
   const parentClientId = req.session?.parent_client_id || null;
   
@@ -23,8 +30,14 @@ export async function buildConversationContext(req, userTurn, clientId) {
   return { context: conversationContext, sources: allSources };
 }
 
-// Get client information for context
-export async function getClientInfo(req, user_id) {
+/**
+ * Get client information for context
+ * @param {Object} options
+ * @param {Object} options.req - Express request object
+ * @param {string} options.userId - User ID
+ * @returns {Promise<Object>} Client info with ID and name
+ */
+export async function getClientInfo({ req, userId }) {
   try {
     // Get info from session first
     const { clientId, clientName: sessionName } = ClientInfoFetcher.getClientInfoFromSession(req);

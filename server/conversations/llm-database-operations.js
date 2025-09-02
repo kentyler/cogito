@@ -122,7 +122,15 @@ export async function createSiteLLM(pool, llmData) {
   }
 }
 
-export async function updateSiteLLM(pool, llmId, updates) {
+/**
+ * Update site LLM configuration
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.llmId - LLM ID to update
+ * @param {Object} options.updates - Fields to update
+ * @returns {Promise<Object>} Updated LLM record
+ */
+export async function updateSiteLLM({ pool, llmId, updates }) {
   try {
     const setClause = [];
     const values = [];
@@ -165,7 +173,15 @@ export async function deleteSiteLLM(pool, llmId) {
   }
 }
 
-export async function updateUserSelectedLLM(pool, userId, llmId) {
+/**
+ * Update user's selected LLM
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.userId - User ID
+ * @param {string} options.llmId - LLM ID to set as selected
+ * @returns {Promise<Object>} Updated user record
+ */
+export async function updateUserSelectedLLM({ pool, userId, llmId }) {
   try {
     const result = await pool.query(`
       UPDATE client_mgmt.users SET last_llm_id = $1, updated_at = NOW()

@@ -33,7 +33,11 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     // Create bot with Recall.ai
     let botData;
     try {
-      botData = await createRecallBot(meeting_url, websocketUrl, webhookUrl);
+      botData = await createRecallBot({ 
+        meetingUrl: meeting_url, 
+        websocketUrl, 
+        webhookUrl 
+      });
     } catch (error) {
       console.error('Failed to create Recall bot:', error);
       return res.status(500).json({ 
@@ -79,7 +83,7 @@ router.post('/create-bot', requireAuth, async (req, res) => {
     
     // Update meeting with transcript email
     const userEmail = req.session.user.email;
-    await updateMeetingWithEmail(req.db, meeting.id, userEmail, user_id);
+    await updateMeetingWithEmail({ db: req.db, meetingId: meeting.id, email: userEmail, userId: user_id });
     
     // Process uploaded files if any
     const uploadedFiles = await processMeetingFiles(req.files, {

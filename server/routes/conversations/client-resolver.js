@@ -6,7 +6,15 @@
 import { DatabaseAgent } from '#database/database-agent.js';
 import { getClientInfo } from '#server/conversations/conversation-context.js';
 
-export async function resolveClientInfo(req, meetingId, userId) {
+/**
+ * Resolve client information from meeting context
+ * @param {Object} options
+ * @param {Object} options.req - Express request object
+ * @param {string} options.meetingId - Meeting ID to resolve client info from
+ * @param {number} options.userId - User ID for fallback client resolution
+ * @returns {Promise<Object>} Object with clientId and clientName
+ */
+export async function resolveClientInfo({ req, meetingId, userId }) {
   console.log('🔍 Getting client info from meeting:', meetingId);
   let clientId = null;
   let clientName = 'your organization';
@@ -24,7 +32,7 @@ export async function resolveClientInfo(req, meetingId, userId) {
   } catch (error) {
     console.warn('Could not get client info from meeting:', error.message);
     // Fall back to session-based client info
-    const fallbackInfo = await getClientInfo(req, userId);
+    const fallbackInfo = await getClientInfo({ req, userId });
     clientId = fallbackInfo.clientId;
     clientName = fallbackInfo.clientName;
   }

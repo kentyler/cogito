@@ -37,11 +37,22 @@ router.post('/webhook/chat', async (req, res) => {
     if (commandCheck.isQuestion || commandCheck.isDirectedAtCogito) {
       console.log(`🔍 Processing as ${commandCheck.isDirectedAtCogito ? 'directed question' : 'general question'}`);
       
-      const response = await generateResponse(webhookService, meeting, messageText, commandCheck, req.anthropic);
+      const response = await generateResponse({
+        webhookService,
+        meeting,
+        messageText,
+        commandCheck,
+        anthropic: req.anthropic
+      });
       
       if (response) {
         // Send the response back to the meeting chat
-        await sendChatResponse(botId, response, meetingId, req.appendToConversation);
+        await sendChatResponse({
+          botId,
+          response,
+          meetingId,
+          appendToConversation: req.appendToConversation
+        });
         console.log('✅ Question processed and response sent');
       }
       
@@ -88,8 +99,17 @@ router.post('/webhook/chat', async (req, res) => {
   }
 });
 
-// Generate AI response based on message type
-async function generateResponse(webhookService, meeting, messageText, commandCheck, anthropic) {
+/**
+ * Generate AI response based on message type
+ * @param {Object} options
+ * @param {Object} options.webhookService - Webhook service for conversation context
+ * @param {Object} options.meeting - Meeting object with id
+ * @param {string} options.messageText - The message text to process
+ * @param {Object} options.commandCheck - Command check results (isQuestion, isDirectedAtCogito)
+ * @param {Object} options.anthropic - Anthropic API client instance
+ * @returns {Promise<string>} Generated response text
+ */
+async function generateResponse({ webhookService, meeting, messageText, commandCheck, anthropic }) {
   const { hasContent, conversationText } = await webhookService.getConversationContext(meeting.id);
   
   if (!hasContent) {
@@ -106,9 +126,9 @@ async function generateResponse(webhookService, meeting, messageText, commandChe
   
   try {
     if (commandCheck.isDirectedAtCogito) {
-      return await generateDirectedResponse(webhookService, meeting, messageText, conversationText, anthropic);
+      return await generateDirectedResponse({ webhookService, meeting, messageText, conversationText, anthropic });
     } else {
-      return await generateSummaryResponse(webhookService, meeting, conversationText, anthropic);
+      return await generateSummaryResponse({ webhookService, meeting, conversationText, anthropic });
     }
   } catch (error) {
     console.error('❌ Error generating AI response:', error);

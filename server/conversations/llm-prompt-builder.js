@@ -128,7 +128,21 @@ Assess whether multiple conversation territories exist, then respond appropriate
 CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory text before or after the data structure.`;
 }
 
-export async function buildConversationalPrompt(clientName, conversationContext, content, context, gameState, clientId, pool, userId = null, avatarId = null) {
+/**
+ * Build conversational prompt with avatar instructions and context
+ * @param {Object} options
+ * @param {string} options.clientName - Client name for personalization
+ * @param {string} options.conversationContext - Previous conversation context
+ * @param {string} options.content - User's current message content
+ * @param {Object} options.context - Additional context information
+ * @param {Object} options.gameState - Current game state if applicable
+ * @param {string} options.clientId - Client ID for avatar selection
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} [options.userId] - User ID for avatar preference
+ * @param {string} [options.avatarId] - Specific avatar ID to use
+ * @returns {Promise<string>} Complete conversational prompt
+ */
+export async function buildConversationalPrompt({ clientName, conversationContext, content, context, gameState, clientId, pool, userId = null, avatarId = null }) {
   const contextualResponse = context && context.responding_to_alternative ? 
     `CONTEXT: User is responding to alternative "${context.responding_to_alternative.alternative_summary}" (${context.responding_to_alternative.alternative_id}) from a previous response set.` : 
     '';

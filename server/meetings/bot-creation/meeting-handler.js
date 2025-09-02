@@ -40,7 +40,16 @@ export async function createMeetingRecord(db, {
   return meeting;
 }
 
-export async function updateMeetingWithEmail(db, meetingId, email, userId) {
+/**
+ * Update meeting with email information
+ * @param {Object} options
+ * @param {Object} options.db - Database connection
+ * @param {string} options.meetingId - Meeting ID
+ * @param {string} options.email - Email to add to meeting
+ * @param {string} options.userId - User ID making the update
+ * @returns {Promise<void>}
+ */
+export async function updateMeetingWithEmail({ db, meetingId, email, userId }) {
   await db.query(
     `UPDATE meetings.meetings 
      SET transcript_email = $1, invited_by_user_id = $2
@@ -50,7 +59,16 @@ export async function updateMeetingWithEmail(db, meetingId, email, userId) {
   console.log('Meeting record updated with email:', meetingId);
 }
 
-export async function linkFileToMeeting(db, meetingId, fileId, userId) {
+/**
+ * Link a file to a meeting
+ * @param {Object} options
+ * @param {Object} options.db - Database connection
+ * @param {string} options.meetingId - Meeting ID
+ * @param {string} options.fileId - File ID to link
+ * @param {string} options.userId - User ID linking the file
+ * @returns {Promise<void>}
+ */
+export async function linkFileToMeeting({ db, meetingId, fileId, userId }) {
   // Standard database fields: meeting_id, file_id, created_by_user_id
   await db.query(
     `INSERT INTO meetings.meeting_files (meeting_id, file_id, file_source, created_by_user_id, created_at) 

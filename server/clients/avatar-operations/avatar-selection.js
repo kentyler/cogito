@@ -6,8 +6,12 @@ import { getClientAvatars, getDefaultAvatar } from './avatar-client.js';
 
 /**
  * Get user's last used avatar
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.userId - User ID
+ * @returns {Promise<Object|null>} User's last used avatar or null
  */
-export async function getUserLastAvatar(pool, userId) {
+export async function getUserLastAvatar({ pool, userId }) {
   try {
     const result = await pool.query(`
       SELECT a.id, a.name, a.description, a.voice_template, a.response_style
@@ -25,8 +29,13 @@ export async function getUserLastAvatar(pool, userId) {
 
 /**
  * Update user's last used avatar
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.userId - User ID
+ * @param {string} options.avatarId - Avatar ID to set as last used
+ * @returns {Promise<Object>} Updated user record
  */
-export async function updateUserLastAvatar(pool, userId, avatarId) {
+export async function updateUserLastAvatar({ pool, userId, avatarId }) {
   try {
     const result = await pool.query(`
       UPDATE client_mgmt.users 
@@ -48,7 +57,7 @@ export async function updateUserLastAvatar(pool, userId, avatarId) {
 export async function selectAvatar(pool, { clientId, userId, avatarId, context = 'general' }) {
   // If specific avatar requested, try to get it (if client has access)
   if (avatarId) {
-    const clientAvatars = await getClientAvatars(pool, clientId);
+    const clientAvatars = await getClientAvatars({ pool, clientId });
     const requestedAvatar = clientAvatars.find(a => a.id === avatarId);
     if (requestedAvatar) {
       return requestedAvatar;
@@ -57,10 +66,10 @@ export async function selectAvatar(pool, { clientId, userId, avatarId, context =
   
   // Check user's last used avatar
   if (userId) {
-    const userLastAvatar = await getUserLastAvatar(pool, userId);
+    const userLastAvatar = await getUserLastAvatar({ pool, userId });
     if (userLastAvatar) {
       // Verify user's last avatar is available to this client
-      const clientAvatars = await getClientAvatars(pool, clientId);
+      const clientAvatars = await getClientAvatars({ pool, clientId });
       const hasAccess = clientAvatars.find(a => a.id === userLastAvatar.id);
       if (hasAccess) {
         return userLastAvatar;
@@ -69,5 +78,5 @@ export async function selectAvatar(pool, { clientId, userId, avatarId, context =
   }
   
   // Fall back to client default
-  return await getDefaultAvatar(pool, clientId);
+  return await getDefaultAvatar({ pool, clientId });
 }
