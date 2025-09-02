@@ -1,6 +1,13 @@
 // Turn processing helpers that require proper middleware initialization
 
-export function createTurn(req, turnData) {
+/**
+ * Create turn using turn processor
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with turn processor
+ * @param {Object} options.turnData - Turn data to create
+ * @returns {Object} Created turn
+ */
+export function createTurn({ req, turnData }) {
   if (!req.turnProcessor) {
     throw new Error('Turn processor not available - req.turnProcessor is not initialized');
   }

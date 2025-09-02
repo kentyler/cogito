@@ -73,11 +73,12 @@ export async function extractTextFromPDF(buffer) {
 
 /**
  * Check if a file is a PDF based on extension or MIME type
- * @param {string} filename - File name
- * @param {string} mimetype - MIME type
- * @returns {boolean} - True if file is a PDF
+ * @param {Object} options
+ * @param {string} options.filename - File name to check
+ * @param {string} options.mimeType - MIME type of the file
+ * @returns {boolean} True if file is a PDF
  */
-export function isPDF(filename, mimetype) {
+export function isPDF({ filename, mimeType }) {
   const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-  return ext === '.pdf' || mimetype === 'application/pdf';
+  return ext === '.pdf' || mimeType === 'application/pdf';
 }

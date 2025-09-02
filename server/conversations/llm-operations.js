@@ -67,7 +67,7 @@ export async function isValidLLM(llmId, pool = null) {
   if (pool) {
     try {
       const { getLLMByModel } = await import('./llm-database-operations.js');
-      const dbLLM = await getLLMByModel(pool, llmId);
+      const dbLLM = await getLLMByModel({ pool, modelId: llmId });
       return !!dbLLM;
     } catch (error) {
       console.error('Error validating LLM against database:', error);
@@ -119,7 +119,7 @@ export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
     
     if (userLLMId) {
       const { getLLMByModel } = await import('./llm-database-operations.js');
-      const dbLLM = await getLLMByModel(pool, userLLMId);
+      const dbLLM = await getLLMByModel({ pool, modelId: userLLMId });
       
       if (dbLLM) {
         const { loadClientTemperature } = await import('./client-temperature-loader.js');

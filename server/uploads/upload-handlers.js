@@ -87,7 +87,7 @@ export async function uploadFile(req, res) {
     let content;
     let extractedMetadata = {};
     
-    if (isPDF(originalname, mimetype)) {
+    if (isPDF({ filename: originalname, mimeType: mimetype })) {
       // Extract text from PDF
       try {
         const pdfData = await extractTextFromPDF(buffer);

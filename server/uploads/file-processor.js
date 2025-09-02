@@ -5,10 +5,16 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Chunk text into smaller pieces
-export function chunkText(text, maxChunkSize = 2000) {
+/**
+ * Chunk text into smaller pieces for processing
+ * @param {Object} options
+ * @param {string} options.textContent - Text content to chunk
+ * @param {number} [options.maxChunkSize=2000] - Maximum size per chunk
+ * @returns {Array<string>} Array of text chunks
+ */
+export function chunkText({ textContent, maxChunkSize = 2000 }) {
   const chunks = [];
-  const lines = text.split('\n');
+  const lines = textContent.split('\n');
   let currentChunk = '';
   
   for (const line of lines) {
@@ -42,9 +48,17 @@ export async function generateEmbedding(text) {
   }
 }
 
-// Process file and store chunks with embeddings
-export async function processFileContent(client, fileId, content, clientId) {
-  const chunks = chunkText(content);
+/**
+ * Process file and store chunks with embeddings
+ * @param {Object} options
+ * @param {Object} options.client - Database client with query method
+ * @param {string} options.fileId - File ID to associate chunks with
+ * @param {string} options.content - Text content to process
+ * @param {string} options.clientId - Client ID for chunk association
+ * @returns {Promise<number>} Number of chunks created
+ */
+export async function processFileContent({ client, fileId, content, clientId }) {
+  const chunks = chunkText({ textContent: content });
   
   for (let i = 0; i < chunks.length; i++) {
     const chunkText = chunks[i];

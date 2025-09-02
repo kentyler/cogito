@@ -18,7 +18,14 @@ export async function getAllLLMs(pool) {
   }
 }
 
-export async function getLLMByProvider(pool, provider) {
+/**
+ * Get LLM configuration by provider
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.provider - Provider name (e.g., 'anthropic', 'openai')
+ * @returns {Promise<Object|null>} LLM configuration or null
+ */
+export async function getLLMByProvider({ pool, provider }) {
   try {
     const result = await pool.query(`
       SELECT id, provider, api_key, additional_config
@@ -34,7 +41,14 @@ export async function getLLMByProvider(pool, provider) {
   }
 }
 
-export async function getLLMByModel(pool, modelId) {
+/**
+ * Get LLM configuration by model ID
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.modelId - Model ID to look up
+ * @returns {Promise<Object|null>} LLM model configuration or null
+ */
+export async function getLLMByModel({ pool, modelId }) {
   try {
     const result = await pool.query(`
       SELECT m.id as model_db_id, m.name, m.model_id, m.max_tokens, m.temperature,
@@ -95,7 +109,14 @@ export async function getAvailableModels(pool) {
   }
 }
 
-export async function siteHasProvider(pool, provider) {
+/**
+ * Check if site has a configured provider
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.provider - Provider name to check
+ * @returns {Promise<boolean>} True if provider is configured
+ */
+export async function siteHasProvider({ pool, provider }) {
   try {
     const result = await pool.query(`
       SELECT COUNT(*) as count FROM client_mgmt.llms
@@ -108,7 +129,14 @@ export async function siteHasProvider(pool, provider) {
   }
 }
 
-export async function createSiteLLM(pool, llmData) {
+/**
+ * Create a new site-wide LLM configuration
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {Object} options.llmData - LLM configuration data
+ * @returns {Promise<Object>} Created LLM record
+ */
+export async function createSiteLLM({ pool, llmData }) {
   const { name, provider, model, apiKey, temperature = 0.7, maxTokens = 4000, additionalConfig = null } = llmData;
   try {
     const result = await pool.query(`
@@ -161,7 +189,14 @@ export async function updateSiteLLM({ pool, llmId, updates }) {
   }
 }
 
-export async function deleteSiteLLM(pool, llmId) {
+/**
+ * Delete a site-wide LLM configuration
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.llmId - LLM ID to delete
+ * @returns {Promise<Object>} Deleted LLM record
+ */
+export async function deleteSiteLLM({ pool, llmId }) {
   try {
     const result = await pool.query(`
       DELETE FROM client_mgmt.llms WHERE id = $1 RETURNING *

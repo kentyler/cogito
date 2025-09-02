@@ -8,15 +8,21 @@ import { generateFileSummary } from './file-summary-generator.js';
 
 /**
  * Process regular files (.txt, .md, .pdf)
+ * @param {Object} options
+ * @param {Object} options.db - Database connection/pool
+ * @param {Object} options.file - Multer file object with originalname, buffer, size, mimetype
+ * @param {string} options.clientId - Client ID for file association
+ * @param {string} options.userId - User ID who uploaded the file
+ * @returns {Promise<Object>} File processing result with file_id and metadata
  */
-export async function processRegularFile(db, file, clientId, userId) {
+export async function processRegularFile({ db, file, clientId, userId }) {
   const { originalname, buffer, size, mimetype } = file;
   
   // Extract text content based on file type
   let content;
   let extractedMetadata = {};
   
-  if (isPDF(originalname, mimetype)) {
+  if (isPDF({ filename: originalname, mimeType: mimetype })) {
     try {
       const pdfData = await extractTextFromPDF(buffer);
       content = pdfData.text;
@@ -60,17 +66,17 @@ export async function processRegularFile(db, file, clientId, userId) {
     const storedFile = fileResult.rows[0];
     
     // Process file content for chunking and embedding
-    const chunkCount = await processFileContent(
-      { query: db.connector.query.bind(db.connector) },
-      storedFile.id,
+    const chunkCount = await processFileContent({
+      client: { query: db.connector.query.bind(db.connector) },
+      fileId: storedFile.id,
       content,
       clientId
-    );
+    });
     
     await db.connector.query('COMMIT');
     
     // Generate summary for conversation response
-    const summary = generateFileSummary(content, originalname);
+    const summary = generateFileSummary({ fileContent: content, filename: originalname });
     
     return {
       filename: originalname,
