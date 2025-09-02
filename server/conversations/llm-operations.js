@@ -31,8 +31,13 @@ export function getAllLLMConfigs() {
 
 /**
  * Get available LLMs (site-wide from database)
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string|null} [options.clientId=null] - Client ID for client-specific models
+ * @param {string|null} [options.userId=null] - User ID for user preferences
+ * @returns {Promise<Array<Object>>} Array of available LLM configurations
  */
-export async function getAvailableLLMs(pool, clientId = null, userId = null) {
+export async function getAvailableLLMs({ pool, clientId = null, userId = null }) {
   const { getAvailableModels } = await import('./llm-database-operations.js');
   
   try {
@@ -75,8 +80,13 @@ export async function isValidLLM(llmId, pool = null) {
 
 /**
  * Get user's selected LLM from database (with client-specific API keys)
+ * @param {Object} options
+ * @param {Object} options.pool - Database connection pool
+ * @param {string} options.userId - User ID
+ * @param {string|null} [options.clientId=null] - Client ID for API key context
+ * @returns {Promise<Object|null>} User's selected LLM configuration or null
  */
-export async function getUserSelectedLLM(pool, userId, clientId = null) {
+export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
   try {
     if (!userId) {
       const defaultConfig = getLLMConfig(DEFAULT_LLM);

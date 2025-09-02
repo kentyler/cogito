@@ -37,7 +37,7 @@ export async function generateLLMResponse(req, {
       };
     } else {
       // Get user's selected LLM configuration with client-specific API keys
-      llmConfig = await getUserSelectedLLM(req.pool, userId, clientId);
+      llmConfig = await getUserSelectedLLM({ pool: req.pool, userId, clientId });
     }
     
     console.log('🔍 STEP 7.5: Using LLM:', llmConfig.name, '(' + llmConfig.id + ')');

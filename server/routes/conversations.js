@@ -29,7 +29,7 @@ router.post('/conversational-turn', async (req, res) => {
     res.json(result);
     
   } catch (error) {
-    await handleConversationError(error, req, res);
+    await handleConversationError({ error, req, res });
   }
 });
 

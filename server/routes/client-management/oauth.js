@@ -12,18 +12,25 @@ const router = express.Router();
 /**
  * OAuth-specific client selection logic
  * Handles the specific requirements for OAuth users
+ * @param {Object} options
+ * @param {Object} options.req - Express request object
+ * @param {Object} options.res - Express response object
+ * @param {string} options.userId - User ID from OAuth authentication
+ * @param {string} options.email - User email from OAuth
+ * @param {string} options.clientId - Selected client ID
+ * @returns {Promise<Object>} Selection result with client and parent info
  */
-async function handleOAuthClientSelection(req, res, user_id, email, client_id) {
+async function handleOAuthClientSelection({ req, res, userId, email, clientId }) {
   const dbAgent = new DatabaseAgent();
   await dbAgent.connect();
   
   try {
-    const client = await dbAgent.users.verifyClientAccess(user_id, client_id);
+    const client = await dbAgent.users.verifyClientAccess(userId, clientId);
     
     // Get parent_client_id for mini-horde support
     let parent_client_id = null;
     if (client) {
-      const clientDetails = await dbAgent.clients.getClientById(client_id);
+      const clientDetails = await dbAgent.clients.getClientById(clientId);
       parent_client_id = clientDetails?.parent_client_id || null;
     }
     
@@ -32,12 +39,12 @@ async function handleOAuthClientSelection(req, res, user_id, email, client_id) {
     }
 
     // Create session meeting
-    const meeting_id = await createSessionMeeting(req.db, user_id, client.client_id);
+    const meeting_id = await createSessionMeeting({ pool: req.db, userId, clientId: client.client_id });
     
     // Set up OAuth user session with mini-horde support
     req.session.user = {
-      user_id: user_id,
-      id: user_id,
+      user_id: userId,
+      id: userId,
       email: email,
       client_id: client.client_id,
       client_name: client.client_name,

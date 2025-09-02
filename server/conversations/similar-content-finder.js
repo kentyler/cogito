@@ -11,13 +11,13 @@ export class SimilarContentFinder {
    */
   static async findSimilarTurns(req, userTurnId, parentClientId) {
     try {
-      const similarTurns = await findSimilarTurns(
+      const similarTurns = await findSimilarTurns({
         req,
-        userTurnId, 
-        10, // limit to 10 most similar turns
-        0.7, // minimum similarity threshold
+        turnId: userTurnId,
+        limit: 10, // limit to 10 most similar turns
+        threshold: 0.7, // minimum similarity threshold
         parentClientId // include parent client data for mini-hordes
-      );
+      });
       console.log('🔍 findSimilarTurns returned:', similarTurns?.length || 0, 'results');
       return similarTurns;
     } catch (error) {

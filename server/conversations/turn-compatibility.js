@@ -13,7 +13,17 @@ export function createTurn(req, turnData) {
 }
 
 
-export function findSimilarTurns(req, turnId, limit, threshold, parentClientId = null) {
+/**
+ * Find similar turns using turn processor
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with turn processor
+ * @param {string} options.turnId - Turn ID to find similar turns for
+ * @param {number} options.limit - Maximum number of similar turns to return
+ * @param {number} options.threshold - Similarity threshold
+ * @param {string|null} [options.parentClientId=null] - Parent client ID for mini-horde support
+ * @returns {Array<Object>} Array of similar turns
+ */
+export function findSimilarTurns({ req, turnId, limit, threshold, parentClientId = null }) {
   if (!req.turnProcessor) {
     throw new Error('Turn processor not available - req.turnProcessor is not initialized');
   }

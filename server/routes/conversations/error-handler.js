@@ -5,7 +5,15 @@
 
 import { DatabaseAgent } from '#database/database-agent.js';
 
-export async function handleConversationError(error, req, res) {
+/**
+ * Handle conversation errors with logging and response formatting
+ * @param {Object} options
+ * @param {Error} options.error - Error object to handle
+ * @param {Object} options.req - Express request object
+ * @param {Object} options.res - Express response object
+ * @returns {Promise<Object>} Express response with EDN-formatted error
+ */
+export async function handleConversationError({ error, req, res }) {
   console.error('Conversational REPL error:', error);
   
   // Log error to database using centralized logging

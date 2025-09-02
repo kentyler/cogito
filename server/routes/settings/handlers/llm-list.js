@@ -19,7 +19,7 @@ export async function handleLLMList(req, res) {
       return ApiResponses.error(res, 400, 'Client selection required');
     }
     
-    const llms = await getAvailableLLMs(req.pool, clientId);
+    const llms = await getAvailableLLMs({ pool: req.pool, clientId });
     
     res.json({
       success: true,

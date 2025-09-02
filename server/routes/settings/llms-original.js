@@ -106,7 +106,7 @@ router.get('/llms', async (req, res) => {
     
     const clientId = userClient.client_id;
     
-    const llms = await getAvailableLLMs(req.pool, clientId, userId);
+    const llms = await getAvailableLLMs({ pool: req.pool, clientId, userId });
     
     res.json({
       success: true,
