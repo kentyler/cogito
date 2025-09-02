@@ -53,11 +53,18 @@ export async function updateUserLastAvatar({ pool, userId, avatarId }) {
 
 /**
  * Select appropriate avatar based on context
+ * @param {Object} options
+ * @param {Object} options.databasePool - Database connection pool
+ * @param {string} options.clientId - Client ID to select avatar for
+ * @param {string} options.userId - User ID for avatar preferences
+ * @param {string} options.avatarId - Specific avatar ID to select (optional)
+ * @param {string} options.selectionContext - Context for avatar selection (default: 'general')
+ * @returns {Promise<Object>} Selected avatar object
  */
-export async function selectAvatar(pool, { clientId, userId, avatarId, context = 'general' }) {
+export async function selectAvatar({ databasePool, clientId, userId, avatarId, selectionContext = 'general' }) {
   // If specific avatar requested, try to get it (if client has access)
   if (avatarId) {
-    const clientAvatars = await getClientAvatars({ pool, clientId });
+    const clientAvatars = await getClientAvatars({ pool: databasePool, clientId });
     const requestedAvatar = clientAvatars.find(a => a.id === avatarId);
     if (requestedAvatar) {
       return requestedAvatar;
@@ -66,10 +73,10 @@ export async function selectAvatar(pool, { clientId, userId, avatarId, context =
   
   // Check user's last used avatar
   if (userId) {
-    const userLastAvatar = await getUserLastAvatar({ pool, userId });
+    const userLastAvatar = await getUserLastAvatar({ pool: databasePool, userId });
     if (userLastAvatar) {
       // Verify user's last avatar is available to this client
-      const clientAvatars = await getClientAvatars({ pool, clientId });
+      const clientAvatars = await getClientAvatars({ pool: databasePool, clientId });
       const hasAccess = clientAvatars.find(a => a.id === userLastAvatar.id);
       if (hasAccess) {
         return userLastAvatar;
@@ -78,5 +85,5 @@ export async function selectAvatar(pool, { clientId, userId, avatarId, context =
   }
   
   // Fall back to client default
-  return await getDefaultAvatar({ pool, clientId });
+  return await getDefaultAvatar({ pool: databasePool, clientId });
 }

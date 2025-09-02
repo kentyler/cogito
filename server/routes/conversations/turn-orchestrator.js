@@ -1,6 +1,12 @@
 /**
  * Turn Orchestrator
  * Main conversation turn processing workflow
+ * @param {Object} options
+ * @param {Object} options.expressRequest - Express request object with session, pool, etc.
+ * @param {string} options.conversationContent - Content of the user's turn
+ * @param {string} options.conversationContext - Additional context for the conversation
+ * @param {string} options.meetingId - Meeting ID (optional, will be resolved if needed)
+ * @returns {Promise<Object>} Turn processing result with response and metadata
  */
 
 import { validateAndGetUserId, validateContent } from '#server/conversations/session-validator.js';
@@ -11,54 +17,54 @@ import { gameStateAgent } from '#ai-agents/game-state-agent.js';
 import { resolveMeetingId } from './meeting-manager.js';
 import { resolveClientInfo } from './client-resolver.js';
 
-export async function processConversationalTurn(req, { content, context, meeting_id }) {
+export async function processConversationalTurn({ expressRequest, conversationContent, conversationContext, meetingId }) {
   console.log('🔍 STEP 1: Starting turn processing');
   
   // Validate user authentication
-  const user_id = await validateAndGetUserId(req);
+  const user_id = await validateAndGetUserId(expressRequest);
   if (!user_id) {
     throw new AuthError('Authentication required');
   }
   
   // Validate content
-  if (!await validateContent(content)) {
+  if (!await validateContent(conversationContent)) {
     throw new ValidationError('Content is required');
   }
 
   // Handle meeting_id - create lazily if needed
-  const effectiveMeetingId = await resolveMeetingId(req, meeting_id);
+  const effectiveMeetingId = await resolveMeetingId(expressRequest, meetingId);
   console.log('🔍 STEP 4: Resolved meeting ID:', effectiveMeetingId);
   
   // Create user turn
-  const userTurn = await createUserTurn(req, {
+  const userTurn = await createUserTurn(expressRequest, {
     userId: user_id,
-    content: content,
+    content: conversationContent,
     meetingId: effectiveMeetingId
   });
   
   // Get client info from meeting
   const { clientId, clientName } = await resolveClientInfo({ 
-    req, 
+    expressRequest, 
     meetingId: effectiveMeetingId, 
     userId: user_id 
   });
   
   // Build conversation context
   console.log('🔍 STEP 7: Building conversation context');
-  const contextResult = await buildConversationContext({ req, userTurn, clientId });
+  const contextResult = await buildConversationContext({ expressRequest, userTurn, clientId });
   const conversationContext = contextResult.context || contextResult;
   const sources = contextResult.sources || [];
   
   // Check game state
   console.log('🔍 STEP 8: Checking game state');
-  const gameStateResult = await gameStateAgent.processTurn(req.sessionID, content, clientId);
+  const gameStateResult = await gameStateAgent.processTurn(expressRequest.sessionID, conversationContent, clientId);
   
   // Generate LLM response and get avatar info
-  const llmResponseResult = await generateLLMResponse(req, {
+  const llmResponseResult = await generateLLMResponse(expressRequest, {
     clientName,
     conversationContext,
-    content,
-    context,
+    content: conversationContent,
+    context: conversationContext,
     gameState: gameStateResult,
     clientId,
     userId: user_id
@@ -66,19 +72,20 @@ export async function processConversationalTurn(req, { content, context, meeting
   
   // Handle avatar selection and updates
   const { selectAvatar, updateUserLastAvatar } = await import('../../lib/avatar-operations/index.js');
-  const usedAvatar = await selectAvatar(req.pool, { 
+  const usedAvatar = await selectAvatar({ 
+    databasePool: expressRequest.pool,
     clientId, 
     userId: user_id, 
-    context: 'general' 
+    selectionContext: 'general' 
   });
   
   // Update user's last used avatar
   if (user_id && usedAvatar) {
-    await updateUserLastAvatar({ pool: req.pool, userId: user_id, avatarId: usedAvatar.id });
+    await updateUserLastAvatar({ pool: expressRequest.pool, userId: user_id, avatarId: usedAvatar.id });
   }
   
   // Create LLM turn
-  const llmTurn = await createLLMTurn(req, {
+  const llmTurn = await createLLMTurn(expressRequest, {
     userId: user_id,
     llmResponse: llmResponseResult,
     userTurn,
@@ -89,7 +96,7 @@ export async function processConversationalTurn(req, { content, context, meeting
   return {
     id: llmTurn.id,
     user_turn_id: userTurn.id,
-    prompt: content,
+    prompt: conversationContent,
     response: llmResponseResult,
     sources: sources,
     created_at: llmTurn.created_at

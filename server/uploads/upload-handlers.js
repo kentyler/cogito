@@ -47,7 +47,7 @@ export async function createTextFile(req, res) {
       ]);
       
       const file = fileResult.rows[0];
-      const chunkCount = await processFileContent(client, file.id, content, client_id);
+      const chunkCount = await processFileContent({ client, fileId: file.id, content, clientId: client_id });
       
       await client.query('COMMIT');
       
@@ -135,7 +135,7 @@ export async function uploadFile(req, res) {
       ]);
       
       const file = fileResult.rows[0];
-      const chunkCount = await processFileContent(client, file.id, content, client_id);
+      const chunkCount = await processFileContent({ client, fileId: file.id, content, clientId: client_id });
       
       await client.query('COMMIT');
       

@@ -148,11 +148,12 @@ export async function buildConversationalPrompt({ clientName, conversationContex
     '';
 
   // Select and load avatar from database
-  const avatar = await selectAvatar(pool, { 
+  const avatar = await selectAvatar({ 
+    databasePool: pool,
     clientId, 
     userId, 
     avatarId, 
-    context: 'general' 
+    selectionContext: 'general' 
   });
   
   // Process avatar template with variables

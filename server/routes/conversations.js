@@ -20,10 +20,11 @@ router.post('/conversational-turn', async (req, res) => {
   try {
     const { content, context, meeting_id } = req.body;
     
-    const result = await processConversationalTurn(req, {
-      content,
-      context, 
-      meeting_id
+    const result = await processConversationalTurn({
+      expressRequest: req,
+      conversationContent: content,
+      conversationContext: context, 
+      meetingId: meeting_id
     });
     
     res.json(result);

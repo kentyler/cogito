@@ -16,9 +16,16 @@ import {
 
 /**
  * Select appropriate avatar based on context (database-driven)
+ * @param {Object} options
+ * @param {Object} options.databasePool - Database connection pool
+ * @param {string} options.clientId - Client ID to select avatar for
+ * @param {string} options.userId - User ID for avatar preferences
+ * @param {string} options.avatarId - Specific avatar ID to select (optional)
+ * @param {string} options.selectionContext - Context for avatar selection (default: 'general')
+ * @returns {Promise<Object>} Selected avatar object
  */
-export async function selectAvatar(pool, { clientId, userId, avatarId, context = 'general' }) {
-  return await dbSelectAvatar(pool, { clientId, userId, avatarId, context });
+export async function selectAvatar({ databasePool, clientId, userId, avatarId, selectionContext = 'general' }) {
+  return await dbSelectAvatar({ databasePool, clientId, userId, avatarId, selectionContext });
 }
 
 /**
