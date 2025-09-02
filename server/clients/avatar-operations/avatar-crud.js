@@ -36,14 +36,23 @@ export async function getAvatarById({ pool, avatarId }) {
 
 /**
  * Create a new avatar (admin function)
+ * @param {Object} options
+ * @param {Object} options.databasePool - Database connection pool
+ * @param {string} options.avatarId - Unique ID for the new avatar
+ * @param {string} options.avatarName - Display name for the avatar
+ * @param {string} options.avatarDescription - Description of the avatar
+ * @param {string} options.voiceTemplate - Template defining the avatar's voice/personality
+ * @param {Object} options.responseStyle - Style configuration object for responses
+ * @param {string} options.createdBy - User ID who created the avatar
+ * @returns {Promise<Object>} Created avatar object
  */
-export async function createAvatar(pool, { id, name, description, voiceTemplate, responseStyle, createdBy }) {
+export async function createAvatar({ databasePool, avatarId, avatarName, avatarDescription, voiceTemplate, responseStyle, createdBy }) {
   try {
-    const result = await pool.query(`
+    const result = await databasePool.query(`
       INSERT INTO client_mgmt.avatars (id, name, description, voice_template, response_style, created_by)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
-    `, [id, name, description, voiceTemplate, JSON.stringify(responseStyle), createdBy]);
+    `, [avatarId, avatarName, avatarDescription, voiceTemplate, JSON.stringify(responseStyle), createdBy]);
     
     return result.rows[0];
   } catch (error) {
