@@ -29,7 +29,11 @@ router.post('/send', requireAuth, async (req, res) => {
     );
     
     // Send invitation email
-    await sendInvitationEmail(email, req.session.user.email, invitationToken);
+    await sendInvitationEmail({ 
+      email, 
+      inviterEmail: req.session.user.email, 
+      invitationToken 
+    });
     
     res.json({ 
       success: true, 

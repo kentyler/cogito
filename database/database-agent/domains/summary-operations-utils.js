@@ -35,7 +35,7 @@ export class SummaryUtils {
   /**
    * Build query to fetch turns for a date range
    */
-  static buildTurnsQuery(startDate, endDate, client_id) {
+  static buildTurnsQuery({ startDate, endDate, clientId }) {
     let turnsQuery = `
       SELECT t.id, t.content, t.source_type, t.created_at, t.metadata,
              u.email
@@ -47,9 +47,9 @@ export class SummaryUtils {
     
     let queryParams = [startDate, endDate];
     
-    if (client_id) {
+    if (clientId) {
       turnsQuery += ` AND t.client_id = $3`;
-      queryParams.push(client_id);
+      queryParams.push(clientId);
     }
     
     turnsQuery += ` ORDER BY t.created_at ASC`;
@@ -76,7 +76,7 @@ export class SummaryUtils {
   /**
    * Generate AI summary using Anthropic API
    */
-  static async generateAISummary(anthropic, prompt, maxTokens = 300) {
+  static async generateAISummary({ anthropic, prompt, maxTokens = 300 }) {
     try {
       const message = await anthropic.messages.create({
         model: 'claude-3-haiku-20240307',

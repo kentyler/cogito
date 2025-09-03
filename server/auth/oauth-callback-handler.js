@@ -9,12 +9,14 @@ import { handleClientAssignment } from './oauth-client-assignment.js';
 
 /**
  * Handle OAuth callback from provider
- * @param {Object} req - Express request object  
- * @param {Object} res - Express response object
- * @param {Object} provider - OAuth provider instance
- * @param {string} providerName - Name of the OAuth provider
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with query and session
+ * @param {Object} options.res - Express response object
+ * @param {Object} options.provider - OAuth provider instance with auth methods
+ * @param {string} options.providerName - Name of the OAuth provider (e.g., 'google', 'github')
+ * @returns {Promise<void>} Resolves when OAuth flow is complete
  */
-export async function handleOAuthCallback(req, res, provider, providerName) {
+export async function handleOAuthCallback({ req, res, provider, providerName }) {
   const { code, state } = req.query;
   
   if (!code) {
@@ -67,12 +69,24 @@ export async function handleOAuthCallback(req, res, provider, providerName) {
       
       // Handle client assignment (auto-assign if needed)
       const isGoldenHordeInterface = req.session.goldenHordeOAuth;
-      const clients = await handleClientAssignment(dbAgent, user, isGoldenHordeInterface);
+      const clients = await handleClientAssignment({ 
+        dbAgent, 
+        user, 
+        isGoldenHordeInterface 
+      });
       console.log(`📋 User ${profile.email} has access to ${clients.length} clients`);
       
       if (clients.length === 1) {
         // Auto-select single client and create session
-        await setupUserSession(req, res, user, clients[0], dbAgent, profile, isGoldenHordeInterface);
+        await setupUserSession({
+          req,
+          res,
+          user,
+          client: clients[0],
+          dbAgent,
+          profile,
+          isGoldenHordeInterface
+        });
       } else {
         // Multiple clients - show selection
         req.session.pendingUser = {
@@ -101,8 +115,17 @@ export async function handleOAuthCallback(req, res, provider, providerName) {
 
 /**
  * Setup user session with single client
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with db and session
+ * @param {Object} options.res - Express response object
+ * @param {Object} options.user - User object with id, email, and name
+ * @param {Object} options.client - Client object with client_id, client_name, and role
+ * @param {Object} options.dbAgent - Database agent for client operations
+ * @param {Object} options.profile - OAuth profile with provider and picture
+ * @param {boolean} [options.isGoldenHordeInterface=false] - Whether this is Golden Horde interface
+ * @returns {Promise<void>} Resolves when session is configured
  */
-async function setupUserSession(req, res, user, client, dbAgent, profile, isGoldenHordeInterface) {
+async function setupUserSession({ req, res, user, client, dbAgent, profile, isGoldenHordeInterface }) {
   try {
     // Get parent_client_id for mini-horde support
     // Available methods: getClientById returns client with parent_client_id field
@@ -110,7 +133,11 @@ async function setupUserSession(req, res, user, client, dbAgent, profile, isGold
     const parent_client_id = clientDetails?.parent_client_id || null;
     
     // Create session meeting
-    const meeting_id = await createSessionMeeting(req.db, user.id, client.client_id);
+    const meeting_id = await createSessionMeeting({ 
+      pool: req.db, 
+      userId: user.id, 
+      clientId: client.client_id 
+    });
     
     // Set up session
     req.session.user = {

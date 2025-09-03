@@ -20,7 +20,7 @@ export async function generateYearlySummaries(req, res) {
       const lastDay = new Date(year, month + 1, 0).getDate();
       const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')} 23:59:59`;
       
-      const { turnsQuery, queryParams } = buildTurnsQuery(startDate, endDate, client_id);
+      const { turnsQuery, queryParams } = buildTurnsQuery({ startDate, endDate, clientId: client_id });
       
       try {
         const turnsResult = await req.pool.query(turnsQuery, queryParams);
@@ -39,7 +39,11 @@ Based on ${turnsResult.rows.length} conversations, focus on:
 
 Provide a well-structured summary in 3-4 paragraphs that captures the essence of the month's discussions.`;
 
-          const summary = await generateAISummary(req.anthropic, prompt, 600);
+          const summary = await generateAISummary({ 
+            anthropic: req.anthropic, 
+            prompt, 
+            maxTokens: 600 
+          });
           
           summaries[month] = {
             summary,

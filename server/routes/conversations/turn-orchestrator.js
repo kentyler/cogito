@@ -52,7 +52,7 @@ export async function processConversationalTurn({ expressRequest, conversationCo
   // Build conversation context
   console.log('🔍 STEP 7: Building conversation context');
   const contextResult = await buildConversationContext({ expressRequest, userTurn, clientId });
-  const conversationContext = contextResult.context || contextResult;
+  const builtContext = contextResult.context || contextResult;
   const sources = contextResult.sources || [];
   
   // Check game state
@@ -62,9 +62,9 @@ export async function processConversationalTurn({ expressRequest, conversationCo
   // Generate LLM response and get avatar info
   const llmResponseResult = await generateLLMResponse(expressRequest, {
     clientName,
-    conversationContext,
+    conversationContext: builtContext,
     content: conversationContent,
-    context: conversationContext,
+    context: builtContext,
     gameState: gameStateResult,
     clientId,
     userId: user_id

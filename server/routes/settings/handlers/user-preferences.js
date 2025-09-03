@@ -5,6 +5,7 @@
 
 import { DatabaseAgent } from '#database/database-agent.js';
 import { ApiResponses } from '#server/api/api-responses.js';
+import { EventLogger, extractRequestContext } from '#server/events/event-logger.js';
 
 export async function handleUserPreferences(req, res) {
   try {
@@ -21,7 +22,7 @@ export async function handleUserPreferences(req, res) {
     
     await dbAgent.close();
     
-    res.json({
+    return ApiResponses.success(res, {
       success: true,
       preferences: preferences || {},
       user_id: userId
@@ -29,9 +30,12 @@ export async function handleUserPreferences(req, res) {
     
   } catch (error) {
     console.error('Error fetching user preferences:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch user preferences'
-    });
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('user_preferences_fetch_error', error, context);
+    
+    return ApiResponses.internalError(res, 'Failed to fetch user preferences');
   }
 }

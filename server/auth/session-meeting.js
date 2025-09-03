@@ -3,12 +3,13 @@ import { DatabaseAgent } from '#database/database-agent.js';
 
 /**
  * Creates a meeting for a web session and returns the meeting_id
- * @param {Object} pool - Database connection pool (kept for backward compatibility)
- * @param {number} user_id - User ID
- * @param {number} client_id - Client ID
+ * @param {Object} options
+ * @param {Object} [options.pool] - Database connection pool (kept for backward compatibility)
+ * @param {number} options.userId - User ID who is starting the session
+ * @param {number} options.clientId - Client ID for the session meeting
  * @returns {Promise<string>} meeting_id
  */
-export async function createSessionMeeting(pool, user_id, client_id) {
+export async function createSessionMeeting({ pool, userId, clientId }) {
   const dbAgent = new DatabaseAgent();
   await dbAgent.connect();
   
@@ -21,8 +22,8 @@ export async function createSessionMeeting(pool, user_id, client_id) {
       name: `Web Session ${sessionTime}`,
       description: `Cogito web conversation session started at ${sessionTime}`,
       meeting_type: 'cogito_web',
-      created_by_user_id: user_id,
-      client_id: client_id,
+      created_by_user_id: userId,
+      client_id: clientId,
       metadata: { 
         created_by: 'cogito_web_session',
         session_start: sessionTime,

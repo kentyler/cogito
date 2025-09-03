@@ -3,6 +3,8 @@
  */
 import express from 'express';
 import { DatabaseAgent } from '#database/database-agent.js';
+import { ApiResponses } from '#server/api/api-responses.js';
+import { EventLogger, extractRequestContext } from '#server/events/event-logger.js';
 
 const router = express.Router();
 
@@ -31,7 +33,7 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
       
       const setting = await dbAgent.clientSettings.getClientSetting(parseInt(clientId), 'temperature');
       
-      res.json({
+      return ApiResponses.success(res, {
         success: true,
         setting: setting
       });
@@ -41,10 +43,13 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
     
   } catch (error) {
     console.error('Error getting client temperature:', error);
-    res.status(500).json({ 
-      error: 'Failed to get temperature setting',
-      message: error.message 
-    });
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('client_temperature_get_error', error, context);
+    
+    return ApiResponses.internalError(res, 'Failed to get temperature setting');
   }
 });
 
@@ -118,7 +123,7 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
         console.error('Failed to log temperature change:', logError);
       }
       
-      res.json({
+      return ApiResponses.success(res, {
         success: true,
         message: 'Temperature setting updated',
         setting: setting
@@ -129,10 +134,13 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
     
   } catch (error) {
     console.error('Error updating client temperature:', error);
-    res.status(500).json({ 
-      error: 'Failed to update temperature setting',
-      message: error.message 
-    });
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('client_temperature_update_error', error, context);
+    
+    return ApiResponses.internalError(res, 'Failed to update temperature setting');
   }
 });
 

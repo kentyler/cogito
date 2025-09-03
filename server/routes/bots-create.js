@@ -40,6 +40,16 @@ router.post('/create-bot', requireAuth, async (req, res) => {
       });
     } catch (error) {
       console.error('Failed to create Recall bot:', error);
+      
+      // Check for specific Recall.ai API errors
+      if (error.message.includes('403')) {
+        return res.status(503).json({ 
+          error: 'Bot creation service temporarily unavailable', 
+          details: 'The Recall.ai service is currently blocking requests. This may be due to rate limiting or service issues. Please try again later.',
+          technicalDetails: error.message.substring(0, 200) 
+        });
+      }
+      
       return res.status(500).json({ 
         error: 'Failed to create bot', 
         details: error.message 

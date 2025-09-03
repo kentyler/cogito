@@ -36,7 +36,12 @@ router.post('/select-client', async (req, res) => {
     }
     // Setup client session with mini-horde support
     try {
-      const sessionResult = await setupClientSession(req, user_id, email, client_id);
+      const sessionResult = await setupClientSession({
+        req,
+        userId: user_id,
+        email,
+        clientId: client_id
+      });
       const { client, parent_client_id } = sessionResult;
       
       // Determine event type before clearing pendingUser
@@ -54,12 +59,17 @@ router.post('/select-client', async (req, res) => {
         
         // Log client selection event
         const eventType = isInitialSelection ? 'initial_client_selection' : 'client_selection';
-        await logClientSelectionEvent(user_id, client, eventType, {
+        await logClientSelectionEvent({
           userId: user_id,
-          sessionId: req.sessionID,
-          endpoint: `${req.method} ${req.path}`,
-          ip: req.ip || req.connection?.remoteAddress,
-          userAgent: req.get('User-Agent')
+          client,
+          eventType,
+          requestInfo: {
+            userId: user_id,
+            sessionId: req.sessionID,
+            endpoint: `${req.method} ${req.path}`,
+            ip: req.ip || req.connection?.remoteAddress,
+            userAgent: req.get('User-Agent')
+          }
         });
         
         return ApiResponses.successMessage(res, 'Client selected successfully', {

@@ -61,7 +61,12 @@ router.get('/callback/:provider', async (req, res) => {
     return res.status(404).json({ error: `OAuth provider ${providerName} not configured` });
   }
   
-  await handleOAuthCallback(req, res, provider, providerName);
+  await handleOAuthCallback({
+    req,
+    res,
+    provider,
+    providerName
+  });
 });
 
 export default router;

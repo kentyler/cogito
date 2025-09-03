@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import { DatabaseAgent } from '#database/database-agent.js';
+import { EventLogger } from '#server/events/event-logger.js';
 
 // WebSocket service for handling real-time transcription from Recall.ai
 export class WebSocketService {
@@ -8,6 +9,7 @@ export class WebSocketService {
     this.pool = dependencies.pool; // Keep for legacy compatibility
     this.dbAgent = new DatabaseAgent();
     this.dbAgentConnected = false;
+    this.eventLogger = new EventLogger(this.pool);
     this.appendToConversation = dependencies.appendToConversation;
     this.processTranscriptChunk = dependencies.processTranscriptChunk;
     this.completeMeetingByInactivity = dependencies.completeMeetingByInactivity;
@@ -34,6 +36,10 @@ export class WebSocketService {
           
         } catch (error) {
           console.error('❌ Error processing transcript:', error);
+          await this.eventLogger.logError('websocket_transcript_processing_error', error, {
+            component: 'WebSocketService',
+            method: 'message_handler'
+          });
         }
       });
       
@@ -42,8 +48,12 @@ export class WebSocketService {
         await this.handleWebSocketClose(currentBotId);
       });
       
-      ws.on('error', (error) => {
+      ws.on('error', async (error) => {
         console.error('❌ WebSocket error:', error);
+        await this.eventLogger.logError('websocket_connection_error', error, {
+          component: 'WebSocketService',
+          method: 'error_handler'
+        });
       });
     });
   }

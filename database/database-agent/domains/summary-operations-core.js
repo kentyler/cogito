@@ -13,7 +13,7 @@ export class SummaryCore {
    * Get turns for a specific date range
    */
   async getTurnsForDateRange(startDate, endDate, client_id) {
-    const { turnsQuery, queryParams } = SummaryUtils.buildTurnsQuery(startDate, endDate, client_id);
+    const { turnsQuery, queryParams } = SummaryUtils.buildTurnsQuery({ startDate, endDate, clientId: client_id });
     
     try {
       const result = await this.connector.query(turnsQuery, queryParams);
@@ -63,7 +63,7 @@ Keep it concise (2-3 sentences maximum):
 Conversations:
 ${formattedTurns}`;
 
-          const summary = await SummaryUtils.generateAISummary(anthropic, prompt, 300);
+          const summary = await SummaryUtils.generateAISummary({ anthropic, prompt, maxTokens: 300 });
           
           summaries[date] = {
             summary,
@@ -123,7 +123,7 @@ Include:
 Conversations:
 ${formattedTurns}`;
 
-      const summary = await SummaryUtils.generateAISummary(anthropic, prompt, 500);
+      const summary = await SummaryUtils.generateAISummary({ anthropic, prompt, maxTokens: 500 });
       
       return {
         date,
@@ -173,7 +173,7 @@ Include:
 Daily summaries:
 ${dailySummariesText}`;
 
-          const monthSummary = await SummaryUtils.generateAISummary(anthropic, prompt, 600);
+          const monthSummary = await SummaryUtils.generateAISummary({ anthropic, prompt, maxTokens: 600 });
           
           summaries[monthKey] = {
             summary: monthSummary,

@@ -31,7 +31,7 @@ export async function uploadFiles(req, res) {
     // Process each uploaded file
     for (const file of req.files) {
       try {
-        const result = await processFile(db, file, clientId, userId, meetingId);
+        const result = await processFile({ db, file, clientId, userId, meetingId });
         results.push(result);
       } catch (error) {
         console.error(`❌ Error processing file ${file.originalname}:`, error);

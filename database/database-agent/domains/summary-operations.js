@@ -20,20 +20,20 @@ export class SummaryOperations {
     return SummaryUtils.getUserContext(req);
   }
 
-  buildTurnsQuery(startDate, endDate, client_id) {
-    return SummaryUtils.buildTurnsQuery(startDate, endDate, client_id);
+  buildTurnsQuery({ startDate, endDate, clientId }) {
+    return SummaryUtils.buildTurnsQuery({ startDate, endDate, clientId });
   }
 
   formatTurnsForAI(turns) {
     return SummaryUtils.formatTurnsForAI(turns);
   }
 
-  async generateAISummary(anthropic, prompt, maxTokens = 300) {
+  async generateAISummary({ anthropic, prompt, maxTokens = 300 }) {
     if (!anthropic) {
       return 'AI summary generation not available - Claude API not configured.';
     }
     
-    return SummaryUtils.generateAISummary(anthropic, prompt, maxTokens);
+    return SummaryUtils.generateAISummary({ anthropic, prompt, maxTokens });
   }
 
   // Delegate core operations to SummaryCore

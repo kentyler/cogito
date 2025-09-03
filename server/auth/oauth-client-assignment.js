@@ -5,12 +5,13 @@
 
 /**
  * Handle client assignment for OAuth users
- * @param {Object} dbAgent - Database agent instance
- * @param {Object} user - User object
- * @param {boolean} isGoldenHordeInterface - Whether this is Golden Horde interface OAuth
- * @returns {Array} Array of client objects
+ * @param {Object} options
+ * @param {Object} options.dbAgent - Database agent instance
+ * @param {Object} options.user - User object with id property
+ * @param {boolean} [options.isGoldenHordeInterface=false] - Whether this is Golden Horde interface OAuth
+ * @returns {Promise<Array>} Array of client objects with client_id, client_name, and role
  */
-export async function handleClientAssignment(dbAgent, user, isGoldenHordeInterface = false) {
+export async function handleClientAssignment({ dbAgent, user, isGoldenHordeInterface = false }) {
   // Get existing client associations
   // Available methods: getUserClients returns array of client objects with client_id field
   let clients = await dbAgent.users.getUserClients(user.id);

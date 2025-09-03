@@ -27,8 +27,16 @@ export async function loadCurrentTemperature(clientId) {
     }
 }
 
-// Update temperature setting
-export async function updateTemperature(temperature, clientId, onSuccess, onError) {
+/**
+ * Update temperature setting
+ * @param {Object} options
+ * @param {number} options.temperature - Temperature value (0-1)
+ * @param {string} options.clientId - Client identifier
+ * @param {Function} [options.onSuccess] - Success callback function
+ * @param {Function} [options.onError] - Error callback function
+ * @returns {Promise<boolean>} True if temperature was updated successfully
+ */
+export async function updateTemperature({ temperature, clientId, onSuccess, onError }) {
     try {
         // Validate temperature range
         const tempValue = parseFloat(temperature);

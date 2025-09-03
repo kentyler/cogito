@@ -5,6 +5,7 @@
 
 import { isValidLLM, updateUserSelectedLLM } from '#server/conversations/llm-config.js';
 import { ApiResponses } from '#server/api/api-responses.js';
+import { EventLogger, extractRequestContext } from '#server/events/event-logger.js';
 
 export async function handleLLMPreferenceUpdate(req, res) {
   try {
@@ -25,7 +26,7 @@ export async function handleLLMPreferenceUpdate(req, res) {
     
     await updateUserSelectedLLM(req.pool, userId, llm_id);
     
-    res.json({ 
+    return ApiResponses.success(res, { 
       success: true, 
       message: 'LLM preference updated successfully',
       llm_id: llm_id
@@ -33,9 +34,12 @@ export async function handleLLMPreferenceUpdate(req, res) {
     
   } catch (error) {
     console.error('Error updating LLM preference:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update LLM preference' 
-    });
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('llm_preference_update_error', error, context);
+    
+    return ApiResponses.internalError(res, 'Failed to update LLM preference');
   }
 }

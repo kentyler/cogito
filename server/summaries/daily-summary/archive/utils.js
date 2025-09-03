@@ -20,7 +20,15 @@ export function getUserContext(req) {
   return { user_id, client_id, client_name };
 }
 
-export function buildTurnsQuery(startDate, endDate, client_id) {
+/**
+ * Build SQL query for fetching turns within date range
+ * @param {Object} options
+ * @param {string} options.startDate - Start date in YYYY-MM-DD format
+ * @param {string} options.endDate - End date in YYYY-MM-DD format
+ * @param {number|null} [options.clientId] - Client ID for filtering, null for all clients
+ * @returns {Object} Object with turnsQuery and queryParams
+ */
+export function buildTurnsQuery({ startDate, endDate, clientId }) {
   let turnsQuery = `
     SELECT t.id, t.content, t.source_type, t.created_at, t.metadata,
            u.email
@@ -32,9 +40,9 @@ export function buildTurnsQuery(startDate, endDate, client_id) {
   
   let queryParams = [startDate, endDate];
   
-  if (client_id) {
+  if (clientId) {
     turnsQuery += ` AND t.client_id = $3`;
-    queryParams.push(client_id);
+    queryParams.push(clientId);
   }
   
   turnsQuery += ` ORDER BY t.created_at ASC`;
@@ -55,7 +63,15 @@ export function formatTurnsForAI(turns) {
   }).join('\n');
 }
 
-export async function generateAISummary(anthropic, prompt, maxTokens = 300) {
+/**
+ * Generate AI summary using Anthropic API
+ * @param {Object} options
+ * @param {Object} options.anthropic - Anthropic API client instance
+ * @param {string} options.prompt - The prompt to send to the AI
+ * @param {number} [options.maxTokens=300] - Maximum tokens for the response
+ * @returns {Promise<string>} Generated AI summary text
+ */
+export async function generateAISummary({ anthropic, prompt, maxTokens = 300 }) {
   if (!anthropic) {
     return 'AI summary generation not available - Claude API not configured.';
   }

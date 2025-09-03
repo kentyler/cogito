@@ -25,10 +25,18 @@
             })
         });
 
-        const data = await response.json();
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            data = { error: 'Server error', details: text };
+        }
         
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to create bot');
+            throw new Error(data.details || data.error || 'Failed to create bot');
         }
         
         return data;

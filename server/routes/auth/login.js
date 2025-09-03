@@ -6,6 +6,7 @@
 import { createSessionMeeting } from '#server/auth/session-meeting.js';
 import { DatabaseAgent } from '#database/database-agent.js';
 import { ApiResponses } from '#server/api/api-responses.js';
+import { EventLogger, extractRequestContext } from '#server/events/event-logger.js';
 
 export async function handleLogin(req, res) {
   let dbAgent;
@@ -36,23 +37,52 @@ export async function handleLogin(req, res) {
     
     if (clients.length === 1) {
       // Auto-select the only client and create session meeting
-      await handleSingleClientLogin(req, res, authenticatedUser, clients[0]);
+      await handleSingleClientLogin({
+        req,
+        res, 
+        user: authenticatedUser,
+        client: clients[0]
+      });
     } else {
       // Multiple clients - need selection
-      handleMultiClientLogin(req, res, authenticatedUser, clients);
+      handleMultiClientLogin({
+        req,
+        res,
+        user: authenticatedUser,
+        clients
+      });
     }
     
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('auth_login_error', error, context);
+    
     return ApiResponses.internalError(res, 'Login failed');
   } finally {
     await dbAgent?.close();
   }
 }
 
-async function handleSingleClientLogin(req, res, user, client) {
+/**
+ * Handle single client login workflow
+ * @param {Object} options
+ * @param {Object} options.req - Express request object
+ * @param {Object} options.res - Express response object  
+ * @param {Object} options.user - Authenticated user object with id and email
+ * @param {Object} options.client - Client object with client_id, client_name, and role
+ * @returns {Promise<void>} Resolves when login is complete
+ */
+async function handleSingleClientLogin({ req, res, user, client }) {
   try {
-    const meeting_id = await createSessionMeeting(req.db, user.id, client.client_id);
+    const meeting_id = await createSessionMeeting({ 
+      pool: req.db, 
+      userId: user.id, 
+      clientId: client.client_id 
+    });
     
     req.session.user = {
       user_id: user.id,
@@ -78,11 +108,26 @@ async function handleSingleClientLogin(req, res, user, client) {
     });
   } catch (meetingError) {
     console.error('Failed to create session meeting:', meetingError);
+    
+    // Log error as event to database
+    const eventLogger = new EventLogger(req.pool);
+    const context = extractRequestContext(req);
+    await eventLogger.logError('session_meeting_creation_error', meetingError, context);
+    
     return ApiResponses.internalError(res, 'Failed to initialize session');
   }
 }
 
-function handleMultiClientLogin(req, res, user, clients) {
+/**
+ * Handle multi-client login workflow
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with session
+ * @param {Object} options.res - Express response object
+ * @param {Object} options.user - Authenticated user object with id and email
+ * @param {Array<Object>} options.clients - Array of client objects user has access to
+ * @returns {void} Sends response requiring client selection
+ */
+function handleMultiClientLogin({ req, res, user, clients }) {
   req.session.pendingUser = {
     user_id: user.id,
     email: user.email

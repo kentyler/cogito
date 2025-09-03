@@ -7,13 +7,14 @@ import { DatabaseAgent } from '#database/database-agent.js';
 
 /**
  * Setup user session with client selection and mini-horde support
- * @param {Object} req - Express request object
- * @param {number} userId - User ID
- * @param {string} email - User email
- * @param {number} clientId - Selected client ID
- * @returns {Object} Session setup result
+ * @param {Object} options
+ * @param {Object} options.req - Express request object with session
+ * @param {number} options.userId - User ID from authentication
+ * @param {string} options.email - User email address
+ * @param {number} options.clientId - Selected client ID
+ * @returns {Promise<Object>} Session setup result with success status
  */
-export async function setupClientSession(req, userId, email, clientId) {
+export async function setupClientSession({ req, userId, email, clientId }) {
   const dbAgent = new DatabaseAgent();
   await dbAgent.connect();
   
@@ -59,12 +60,14 @@ export async function setupClientSession(req, userId, email, clientId) {
 
 /**
  * Log client selection event
- * @param {number} userId - User ID
- * @param {Object} client - Client object
- * @param {string} eventType - Event type
- * @param {Object} requestInfo - Request context
+ * @param {Object} options
+ * @param {number} options.userId - User ID
+ * @param {Object} options.client - Client object with client_id, client_name, and role
+ * @param {string} options.eventType - Event type (e.g., 'client_selected', 'client_switched')
+ * @param {Object} options.requestInfo - Request context with userId, sessionId, ip
+ * @returns {Promise<void>} Resolves when event is logged
  */
-export async function logClientSelectionEvent(userId, client, eventType, requestInfo) {
+export async function logClientSelectionEvent({ userId, client, eventType, requestInfo }) {
   try {
     const dbAgent = new DatabaseAgent();
     await dbAgent.connect();

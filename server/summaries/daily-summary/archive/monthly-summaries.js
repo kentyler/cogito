@@ -25,7 +25,7 @@ export async function generateMonthlySummaries(req, res) {
       const startDate = `${date} 00:00:00`;
       const endDate = `${date} 23:59:59`;
       
-      const { turnsQuery, queryParams } = buildTurnsQuery(startDate, endDate, client_id);
+      const { turnsQuery, queryParams } = buildTurnsQuery({ startDate, endDate, clientId: client_id });
       
       try {
         const turnsResult = await req.pool.query(turnsQuery, queryParams);
@@ -46,7 +46,11 @@ Keep it concise (2-3 sentences maximum):
 Conversations:
 ${formattedTurns}`;
 
-          const summary = await generateAISummary(req.anthropic, prompt, 300);
+          const summary = await generateAISummary({ 
+            anthropic: req.anthropic, 
+            prompt, 
+            maxTokens: 300 
+          });
           
           summaries[date] = {
             summary,

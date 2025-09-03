@@ -100,15 +100,15 @@ export async function updateTemperatureSetting(temperature, settingsState) {
     updateTemperatureDisplay(temperature);
     
     const { updateTemperature: updateTempSetting } = await import('./temperature-settings.js');
-    const success = await updateTempSetting(
-        temperature, 
-        settingsState.currentClient,
-        (newTemp) => {
+    const success = await updateTempSetting({
+        temperature,
+        clientId: settingsState.currentClient,
+        onSuccess: (newTemp) => {
             settingsState.currentTemperature = newTemp;
         },
-        () => {
+        onError: () => {
             // Revert display on error
             updateTemperatureDisplay(settingsState.currentTemperature);
         }
-    );
+    });
 }

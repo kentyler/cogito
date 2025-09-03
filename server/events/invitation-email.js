@@ -1,6 +1,14 @@
 import { getEmailTransporter } from '../config/email.js';
 
-export async function sendInvitationEmail(email, inviterEmail, invitationToken) {
+/**
+ * Send invitation email to new user
+ * @param {Object} options
+ * @param {string} options.email - Recipient's email address
+ * @param {string} options.inviterEmail - Email of person sending invitation
+ * @param {string} options.invitationToken - Unique token for invitation acceptance
+ * @returns {Promise<Object>} Email send result from transporter
+ */
+export async function sendInvitationEmail({ email, inviterEmail, invitationToken }) {
   const invitationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/invitation/${invitationToken}`;
   const transporter = await getEmailTransporter();
   

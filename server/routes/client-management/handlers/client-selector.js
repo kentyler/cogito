@@ -42,19 +42,33 @@ export async function handleClientSelection(req, res) {
     }
     
     // Set up client session
-    await setupClientSession(req, user_id, email, client_id);
+    await setupClientSession({
+      req,
+      userId: user_id,
+      email,
+      clientId: client_id
+    });
     
     // Create a new session meeting for this client context
-    const meeting_id = await createSessionMeeting(req.db, user_id, client_id);
+    const meeting_id = await createSessionMeeting({ 
+      pool: req.db, 
+      userId: user_id, 
+      clientId: client_id 
+    });
     req.session.meeting_id = meeting_id;
     
     // Log client selection event
-    await logClientSelectionEvent(user_id, client, 'client_selected', {
+    await logClientSelectionEvent({
       userId: user_id,
-      sessionId: req.sessionID,
-      endpoint: `${req.method} ${req.path}`,
-      ip: req.ip || req.connection?.remoteAddress,
-      userAgent: req.get('User-Agent')
+      client,
+      eventType: 'client_selected',
+      requestInfo: {
+        userId: user_id,
+        sessionId: req.sessionID,
+        endpoint: `${req.method} ${req.path}`,
+        ip: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('User-Agent')
+      }
     });
     
     await dbAgent.close();

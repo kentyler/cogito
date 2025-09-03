@@ -17,7 +17,7 @@ export async function generateDailySummary(req, res) {
     const startDate = `${date} 00:00:00`;
     const endDate = `${date} 23:59:59`;
     
-    const { turnsQuery, queryParams } = buildTurnsQuery(startDate, endDate, client_id);
+    const { turnsQuery, queryParams } = buildTurnsQuery({ startDate, endDate, clientId: client_id });
     const turnsResult = await req.pool.query(turnsQuery, queryParams);
     
     if (turnsResult.rows.length === 0) {
@@ -40,7 +40,11 @@ ${formattedTurns}
 
 Provide a well-structured summary in 2-3 paragraphs that captures the essence of the day's discussions.`;
 
-    const summary = await generateAISummary(req.anthropic, prompt, 800);
+    const summary = await generateAISummary({ 
+      anthropic: req.anthropic, 
+      prompt, 
+      maxTokens: 800 
+    });
     res.json({ summary });
     
   } catch (error) {
