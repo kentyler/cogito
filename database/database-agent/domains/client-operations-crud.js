@@ -85,13 +85,11 @@ export class ClientOperationsCRUD {
       throw new Error('No update fields provided');
     }
     
-    updateFields.push('updated_at = NOW()');
-    
     const query = `
       UPDATE client_mgmt.clients 
       SET ${updateFields.join(', ')}
       WHERE id = $1
-      RETURNING id, name, story, metadata, current_llm_id, parent_client_id, created_at, updated_at
+      RETURNING id, name, story, metadata, current_llm_id, parent_client_id, created_at
     `;
     
     const result = await this.connector.query(query, params);

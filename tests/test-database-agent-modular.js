@@ -2,7 +2,7 @@
  * Test the modular database agent to ensure it works correctly
  */
 
-import { DatabaseAgent } from '../lib/database-agent-modular.js';
+import { DatabaseAgent } from '../database/database-agent.js';
 
 async function testModularDatabaseAgent() {
   console.log('🧪 Testing modular DatabaseAgent...');

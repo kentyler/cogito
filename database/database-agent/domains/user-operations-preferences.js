@@ -1,6 +1,6 @@
 /**
  * User Preferences Operations - Database operations for user preferences
- * Handles user preferences for avatars, LLMs, and clients
+ * Handles user preferences for LLMs and clients (avatar system removed)
  */
 
 export class UserOperationsPreferences {
@@ -9,13 +9,13 @@ export class UserOperationsPreferences {
   }
 
   /**
-   * Get user preferences (avatar, LLM, client)
+   * Get user preferences (LLM, client) - avatar system removed
    * @param {number} userId - User ID
    * @returns {Object|null} User preferences
    */
   async getUserPreferences(userId) {
     const query = `
-      SELECT last_llm_id, last_client_id, last_avatar_id
+      SELECT last_llm_id, last_client_id
       FROM client_mgmt.users 
       WHERE id = $1
     `;
@@ -26,11 +26,11 @@ export class UserOperationsPreferences {
   /**
    * Get specific user preference field
    * @param {number} userId - User ID
-   * @param {string} field - Field name (last_avatar_id, last_llm_id, last_client_id)
+   * @param {string} field - Field name (last_llm_id, last_client_id) - avatar system removed
    * @returns {any} Field value or null
    */
   async getUserPreference(userId, field) {
-    const allowedFields = ['last_avatar_id', 'last_llm_id', 'last_client_id'];
+    const allowedFields = ['last_llm_id', 'last_client_id']; // avatar system removed
     if (!allowedFields.includes(field)) {
       throw new Error(`Invalid preference field: ${field}`);
     }
@@ -47,12 +47,12 @@ export class UserOperationsPreferences {
   /**
    * Update user preference
    * @param {number} userId - User ID
-   * @param {string} field - Field name (last_avatar_id, last_llm_id, last_client_id)
+   * @param {string} field - Field name (last_llm_id, last_client_id) - avatar system removed
    * @param {any} value - New value
    * @returns {Object} Updated user preferences
    */
   async updateUserPreference(userId, field, value) {
-    const allowedFields = ['last_avatar_id', 'last_llm_id', 'last_client_id'];
+    const allowedFields = ['last_llm_id', 'last_client_id']; // avatar system removed
     if (!allowedFields.includes(field)) {
       throw new Error(`Invalid preference field: ${field}`);
     }
@@ -61,7 +61,7 @@ export class UserOperationsPreferences {
       UPDATE client_mgmt.users 
       SET ${field} = $1, updated_at = NOW()
       WHERE id = $2
-      RETURNING last_llm_id, last_client_id, last_avatar_id
+      RETURNING last_llm_id, last_client_id
     `;
     const result = await this.connector.query(query, [value, userId]);
     return result.rows[0];

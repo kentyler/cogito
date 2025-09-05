@@ -177,6 +177,44 @@ export class DatabaseAgent {
     });
   }
 
+  // Debug/inspection methods for troubleshooting
+  async debugMeeting(meetingId) {
+    // Call the database function that returns a table
+    const result = await this.query(
+      'SELECT * FROM meetings.debug_meeting($1)',
+      [meetingId]
+    );
+    
+    // Format the results nicely
+    console.log('\n========================================');
+    console.log(`Debug info for meeting: ${meetingId}`);
+    console.log('========================================');
+    
+    result.rows.forEach(row => {
+      if (row.info_type === 'ERROR') {
+        console.log(`❌ ${row.info_value}`);
+      } else if (row.info_type.startsWith('TURN_')) {
+        console.log(`  📝 ${row.info_type}: ${row.info_value}`);
+      } else if (row.info_type.startsWith('TRANSCRIPT_')) {
+        console.log(`  📄 ${row.info_type}: ${row.info_value}`);
+      } else {
+        console.log(`  ${row.info_type}: ${row.info_value}`);
+      }
+    });
+    
+    console.log('========================================\n');
+    return result.rows;
+  }
+  
+  async inspectMeeting(meetingId) {
+    // Call the void function that prints with RAISE NOTICE
+    // Note: This will print to console automatically if client supports it
+    await this.query(
+      'SELECT meetings.inspect_meeting($1)',
+      [meetingId]
+    );
+  }
+
   // Convenience method to get access to specialized modules
   get modules() {
     return {

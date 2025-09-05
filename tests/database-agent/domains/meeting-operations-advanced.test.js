@@ -42,8 +42,8 @@ export async function runAdvancedMeetingOperationsTests() {
       logTest(testResults, 'listWithStats() includes embedded_count', typeof ourMeeting?.embedded_count === 'number');
       logTest(testResults, 'listWithStats() includes participant_count', typeof ourMeeting?.participant_count === 'number');
       logTest(testResults, 'listWithStats() includes participant_names', Array.isArray(ourMeeting?.participant_names));
-      logTest(testResults, 'listWithStats() includes meeting_start_time', ourMeeting?.Object.prototype.hasOwnProperty.call('meeting_start_time'));
-      logTest(testResults, 'listWithStats() includes meeting_end_time', ourMeeting?.Object.prototype.hasOwnProperty.call('meeting_end_time'));
+      logTest(testResults, 'listWithStats() includes meeting_start_time', Object.prototype.hasOwnProperty.call(ourMeeting || {}, 'meeting_start_time'));
+      logTest(testResults, 'listWithStats() includes meeting_end_time', Object.prototype.hasOwnProperty.call(ourMeeting || {}, 'meeting_end_time'));
       
       // Test with pagination
       const limitedMeetings = await dbAgent.meetings.listWithStats(clientId, { limit: 1, offset: 0 });
@@ -124,9 +124,10 @@ export async function runAdvancedMeetingOperationsTests() {
       const testData = await TestFixtures.createTestMeeting(dbAgent);
       const meetingId = testData.meeting.id;
       
-      // Test getting transcript (should be null initially)
+      // Test getting transcript (should have null full_transcript initially)
       const transcript = await dbAgent.meetings.getTranscript(meetingId);
-      logTest(testResults, 'getTranscript() returns null for empty transcript', transcript === null);
+      logTest(testResults, 'getTranscript() returns meeting with null transcript', 
+        transcript && transcript.full_transcript === null);
       
       // Add a transcript (JSONB format)
       const transcriptData = { content: 'This is a test transcript content', turns: [] };
@@ -137,7 +138,8 @@ export async function runAdvancedMeetingOperationsTests() {
       
       const updatedTranscript = await dbAgent.meetings.getTranscript(meetingId);
       logTest(testResults, 'getTranscript() returns transcript content', 
-        updatedTranscript && updatedTranscript.content === 'This is a test transcript content');
+        updatedTranscript && updatedTranscript.full_transcript && 
+        JSON.parse(updatedTranscript.full_transcript).content === 'This is a test transcript content');
       
       // Test mark email sent
       const emailResult = await dbAgent.meetings.markEmailSent(meetingId);

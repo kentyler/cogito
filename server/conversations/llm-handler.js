@@ -13,13 +13,11 @@ export async function generateLLMResponse(req, {
   context,
   gameState,
   clientId,
-  userId = null,
-  avatarId = null 
+  userId = null
 }) {
   try {
-    // Check if this is a Golden Horde request (avatar, path-based, or context-based)
-    const isGoldenHorde = avatarId === 'golden_horde_collective' || 
-                          req.originalUrl?.includes('/goldenhorde/') ||
+    // Check if this is a Golden Horde request (path-based or context-based)
+    const isGoldenHorde = req.originalUrl?.includes('/goldenhorde/') ||
                           context === 'golden-horde-interface';
     
     let llmConfig;
@@ -94,8 +92,8 @@ export async function generateLLMResponse(req, {
       gameState,
       clientId,
       pool: req.pool,
-      userId,
-      avatarId
+      userId
+      // avatarId removed - avatar system eliminated
     });
     
     console.log('🔍 STEP 8: Sending prompt to LLM');

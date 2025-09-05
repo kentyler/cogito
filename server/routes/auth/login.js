@@ -11,6 +11,11 @@ import { EventLogger, extractRequestContext } from '#server/events/event-logger.
 export async function handleLogin(req, res) {
   let dbAgent;
   try {
+    // Validate request body exists
+    if (!req.body) {
+      return ApiResponses.badRequest(res, 'Request body required');
+    }
+    
     const { email, password } = req.body;
     
     if (!email || !password) {

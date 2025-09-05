@@ -1,7 +1,7 @@
 /**
  * Builds the LLM prompt for conversational REPL responses
  */
-import { selectAvatar, loadAvatar, processAvatarTemplate } from '#server/clients/avatar-system.js';
+// Avatar system removed - using default conversational prompt
 
 /**
  * Builds game state context information for the prompt
@@ -55,10 +55,10 @@ Please acknowledge our working approach before proceeding with the response.`;
 }
 
 /**
- * Build the full prompt combining avatar instructions with shared components
+ * Build the full prompt with default conversational instructions
  */
-function buildFullPrompt(avatarInstructions, { clientName, conversationContext, content, contextualResponse, gameStateContext }) {
-  return `${avatarInstructions}
+function buildFullPrompt(defaultInstructions, { clientName, conversationContext, content, contextualResponse, gameStateContext }) {
+  return `${defaultInstructions}
 
 ${gameStateContext}
 
@@ -139,30 +139,41 @@ CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory tex
  * @param {string} options.clientId - Client ID for avatar selection
  * @param {Object} options.pool - Database connection pool
  * @param {string} [options.userId] - User ID for avatar preference
- * @param {string} [options.avatarId] - Specific avatar ID to use
+ * Avatar system removed - no longer accepts avatarId parameter
  * @returns {Promise<string>} Complete conversational prompt
  */
-export async function buildConversationalPrompt({ clientName, conversationContext, content, context, gameState, clientId, pool, userId = null, avatarId = null }) {
+export async function buildConversationalPrompt({ clientName, conversationContext, content, context, gameState, clientId, pool, userId = null }) {
   const contextualResponse = context && context.responding_to_alternative ? 
     `CONTEXT: User is responding to alternative "${context.responding_to_alternative.alternative_summary}" (${context.responding_to_alternative.alternative_id}) from a previous response set.` : 
     '';
 
-  // Select and load avatar from database
-  const avatar = await selectAvatar({ 
-    databasePool: pool,
-    clientId, 
-    userId, 
-    avatarId, 
-    selectionContext: 'general' 
-  });
-  
-  // Process avatar template with variables
-  const avatarInstructions = processAvatarTemplate(avatar, {
-    clientName: clientName
-  });
+  // Default conversational instructions (avatar system removed)
+  const defaultInstructions = `You are powering a Conversational REPL that generates executable UI components.
 
-  // Build the full prompt with avatar instructions and shared components
-  return buildFullPrompt(avatarInstructions, {
+CRITICAL SOURCE ATTRIBUTION RULES:
+You have access to two types of contextual information:
+1. PAST DISCUSSIONS from ${clientName} - marked with [REF-n] references
+2. UPLOADED FILES from ${clientName} - also marked with [REF-n] references
+3. Your general knowledge - NOT from the organization's context
+
+MANDATORY CITATION REQUIREMENTS:
+- When using information from past discussions or uploaded files, ALWAYS cite using [REF-n]
+- Clearly distinguish between:
+  * Information from your organization's discussions/files (cite with [REF-n])
+  * Information from your general knowledge (explicitly state "from general knowledge" or "from my training")
+- If mixing sources, be explicit: "According to your team's discussion [REF-1]..." vs "In general practice..."
+- When explaining concepts mentioned in uploaded files, cite the file reference
+
+CONTEXTUAL AWARENESS:
+You have access to semantically similar past conversations from ${clientName}. Use this context to:
+- Build upon previous discussions and topics within this organization that are similar to the current topic
+- Reference earlier points when they're directly relevant to the current conversation [with citations]
+- Maintain conversational continuity by connecting to related past themes
+- Avoid repeating information already covered in similar discussions
+- Connect new responses to ongoing themes that are semantically related`;
+
+  // Build the full prompt with default instructions and shared components
+  return buildFullPrompt(defaultInstructions, {
     clientName,
     conversationContext,
     content,

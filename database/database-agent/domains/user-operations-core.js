@@ -102,7 +102,7 @@ export class UserOperationsCore {
     const passwordHash = await bcrypt.hash(password, 10);
     
     const query = `
-      INSERT INTO client_mgmt.users (email, password_hash: _password_hash, metadata, created_at, updated_at)
+      INSERT INTO client_mgmt.users (email, password_hash, metadata, created_at, updated_at)
       VALUES ($1, $2, $3, NOW(), NOW())
       RETURNING id, email, created_at, metadata
     `;

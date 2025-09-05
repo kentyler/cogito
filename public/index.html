@@ -99,16 +99,6 @@
                                     </select>
                                 </div>
                                 
-                                <!-- Avatar Selection -->
-                                <div class="mb-4">
-                                    <label for="settingsAvatar" class="block text-sm font-medium text-gray-700 mb-2">AI Persona:</label>
-                                    <select id="settingsAvatar" class="w-full p-2 border border-gray-300 rounded-md text-sm" 
-                                            onchange="updateAvatar(this.value)">
-                                        <!-- Avatar options will be populated here -->
-                                    </select>
-                                    <p class="text-xs text-gray-500 mt-1">Choose how the AI communicates with you</p>
-                                </div>
-                                
                                 <!-- LLM Selection -->
                                 <div class="mb-4">
                                     <label for="settingsLLM" class="block text-sm font-medium text-gray-700 mb-2">AI Engine:</label>
@@ -161,7 +151,7 @@
                 <div class="flex px-6">
                     <button class="tab-button px-4 py-2 border-b-2 border-blue-500 text-blue-600"
                             onclick="showTab('meetings')" id="meetings-tab">
-                        Meetings
+                        Conversations
                     </button>
                     <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
                             onclick="showTab('bot-creation')">
@@ -188,13 +178,13 @@
 
             <!-- Tab Content Areas -->
             <div id="tab-content">
-                <!-- Meetings Tab (Active) -->
+                <!-- Conversations Tab (Active) -->
                 <div id="meetings-content" class="tab-content">
                     <div class="flex gap-6">
                         <!-- Left sidebar with meetings list -->
                         <div class="w-1/3 bg-white rounded-lg shadow p-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-lg font-semibold">Meetings</h2>
+                                <h2 class="text-lg font-semibold">Conversations</h2>
                                 <button onclick="createNewMeeting()" 
                                         class="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
                                     New
@@ -271,6 +261,7 @@
 
     <!-- JavaScript modules -->
     <script src="js/ui-components/navigation.js"></script>
+    <script src="js/ui-components/ui-utils.js"></script>
     <script src="js/client-management/client-selection-ui.js"></script>
     <script src="js/client-management/client-switcher.js"></script>
     <script src="js/auth/oauth-auth.js"></script>
@@ -279,8 +270,12 @@
     <script src="js/auth/auth.js"></script>
     <script type="module" src="js/meetings/daily-summary.js"></script>
     <script src="js/meetings/monthly-summary.js"></script>
+    <script src="js/edn-parser.js"></script>
+    <script src="js/ui-components/tabbed-responses.js"></script>
     <script src="js/ui-components/content-renderer.js"></script>
     <script src="js/meetings/meeting-ui.js"></script>
+    <script src="js/meetings/meeting-content.js"></script>
+    <script src="js/meetings/meeting-management.js"></script>
     <script src="js/meetings/meetings.js"></script>
     <script src="js/bot-creation/bot-creation-api.js"></script>
     <script src="js/bot-creation/bot-creation-state.js"></script>
@@ -341,9 +336,7 @@
             // Update client indicator immediately
             updateClientIndicator();
         };
-        window.updateAvatar = function(avatarId) {
-            console.log('Settings module loading...');
-        };
+        // Avatar update function removed - avatar system eliminated
         window.updateLLM = function(llmId) {
             console.log('Settings module loading...');
         };

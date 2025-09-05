@@ -1,18 +1,18 @@
-// Settings dropdown functionality for client, avatar, and LLM selection
+// Settings dropdown functionality for client and LLM selection (avatar system removed)
 // Available methods: getElementById, getItem, setItem - verified DOM and localStorage APIs
 import { loadCurrentTemperature, updateTemperatureDisplay } from './temperature-settings.js';
-import { loadAvailableClients, loadAvailableAvatars, loadAvailableLLMs } from './settings-data-loader.js';
+import { loadAvailableClients, loadAvailableLLMs } from './settings-data-loader.js';
 import { updateSettingsForm } from './settings-form-updater.js';
-import { updateClientSetting, updateAvatarSetting, updateLLMSetting, updateTemperatureSetting } from './settings-updaters.js';
+import { updateClientSetting, updateLLMSetting, updateTemperatureSetting } from './settings-updaters.js';
 
 // Settings dropdown state
 let settingsState = {
     currentClient: null,
-    currentAvatar: null,
+    // currentAvatar removed - avatar system eliminated
     currentLLM: 'claude-3-5-sonnet',
     currentTemperature: 0.7,
     availableClients: [],
-    availableAvatars: [],
+    // availableAvatars removed - avatar system eliminated
     availableLLMs: [
         { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
     ]
@@ -68,7 +68,7 @@ async function populateSettingsForm() {
             console.log('User preferences from server:', prefsData);
             if (prefsData.success && prefsData.preferences) {
                 settingsState.currentClient = prefsData.preferences.client_id;
-                settingsState.currentAvatar = prefsData.preferences.avatar_id;
+                // Avatar preference removed - avatar system eliminated
                 settingsState.currentLLM = prefsData.preferences.llm_id || 'claude-3-5-sonnet';
             }
         }
@@ -85,9 +85,7 @@ async function populateSettingsForm() {
         if (!settingsState.currentClient && user.client_id) {
             settingsState.currentClient = user.client_id;
         }
-        if (!settingsState.currentAvatar && user.last_avatar_id) {
-            settingsState.currentAvatar = user.last_avatar_id;
-        }
+        // Avatar preference removed - avatar system eliminated
         if (!settingsState.currentLLM && user.last_llm_id) {
             settingsState.currentLLM = user.last_llm_id;
         }
@@ -103,7 +101,7 @@ async function populateSettingsForm() {
         
         console.log('Current settings state:', {
             client: settingsState.currentClient,
-            avatar: settingsState.currentAvatar,
+            // avatar removed - system eliminated
             llm: settingsState.currentLLM,
             temperature: settingsState.currentTemperature
         });
@@ -111,10 +109,7 @@ async function populateSettingsForm() {
         // Load available clients
         settingsState.availableClients = await loadAvailableClients();
         
-        // Load available avatars for current client
-        if (settingsState.currentClient) {
-            settingsState.availableAvatars = await loadAvailableAvatars(settingsState.currentClient);
-        }
+        // Avatar loading removed - avatar system eliminated
         
         // Load available LLMs from server
         settingsState.availableLLMs = await loadAvailableLLMs();
@@ -133,9 +128,7 @@ window.updateClient = async function(clientId) {
     await updateClientSetting(clientId, settingsState);
 };
 
-window.updateAvatar = async function(avatarId) {
-    await updateAvatarSetting(avatarId, settingsState);
-};
+// Avatar update function removed - avatar system eliminated
 
 window.updateLLM = async function(llmId) {
     await updateLLMSetting(llmId, settingsState);

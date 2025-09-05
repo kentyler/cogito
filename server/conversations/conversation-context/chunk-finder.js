@@ -2,7 +2,7 @@
  * Find similar file chunks using embedding similarity
  * Supports mini-horde inheritance: searches own client + parent client data
  * @param {Object} options
- * @param {Object} options.pool - Database connection pool
+ * @param {Object} options.pool - Database connection pool (deprecated, will use DatabaseAgent)
  * @param {Object} options.embeddingService - Embedding service instance
  * @param {string} options.content - Content to find similar chunks for
  * @param {string} options.clientId - Client ID to search within
@@ -11,6 +11,8 @@
  * @param {string|null} [options.parentClientId=null] - Parent client ID for mini-horde support
  * @returns {Promise<Array<Object>>} Array of similar chunks
  */
+
+import { DatabaseAgent } from '#database/database-agent.js';
 export async function findSimilarChunks({ pool, embeddingService, content, clientId, limit = 5, minSimilarity = 0.6, parentClientId = null }) {
   try {
     // Validate content before generating embedding
@@ -57,7 +59,12 @@ export async function findSimilarChunks({ pool, embeddingService, content, clien
       LIMIT ${parentClientId ? '$5' : '$4'}
     `;
     
-    const result = await pool.query(query, queryParams);
+    const dbAgent = new DatabaseAgent();
+    await dbAgent.connect();
+    
+    const result = await dbAgent.query(query, queryParams);
+    await dbAgent.close();
+    
     return result.rows;
   } catch (error) {
     console.error('Error finding similar chunks:', error);

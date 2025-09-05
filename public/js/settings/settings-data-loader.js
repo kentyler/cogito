@@ -22,21 +22,11 @@ export async function loadAvailableClients() {
     }
 }
 
-// Load available avatars for a client
+// DEPRECATED: Avatar loading removed - avatar system eliminated
+// This function is kept for compatibility but returns empty array
 export async function loadAvailableAvatars(clientId) {
-    try {
-        const response = await fetch(`/api/clients/${clientId}/avatars`, {
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            return data.avatars || [];
-        }
-    } catch (error) {
-        console.error('Error loading avatars:', error);
-        return [];
-    }
+    console.log('Avatar system has been deprecated - returning empty array');
+    return [];
 }
 
 // Load available LLMs from the server

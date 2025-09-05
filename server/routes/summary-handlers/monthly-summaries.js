@@ -25,18 +25,21 @@ export async function handleMonthlyGeneration(req, res) {
     await db.connect();
     
     // Generate monthly summaries using DatabaseAgent
-    const result = await db.summaries.generateMonthlySummariesForPeriod({
-      year: parseInt(year),
-      month: parseInt(month),
+    const result = await db.summaries.generateMonthlySummaries(
+      parseInt(year),
+      parseInt(month),
       client_id,
-      user_id
-    });
+      client_name,
+      req.anthropic
+    );
     
     return ApiResponses.success(res, {
       message: 'Monthly summaries generated successfully',
-      summaries_created: result.summariesCreated || 0,
+      summaries_created: Object.keys(result.summaries).length,
       period: `${year}-${month.toString().padStart(2, '0')}`,
-      client_name
+      client_name,
+      summaries: result.summaries,
+      monthName: result.monthName
     });
     
   } catch (error) {

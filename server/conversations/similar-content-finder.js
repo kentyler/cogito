@@ -42,7 +42,7 @@ export class SimilarContentFinder {
     console.log('🔍 Looking for similar file chunks for client:', clientId);
     try {
       const similarChunks = await findSimilarChunks({
-        pool: req.pool,
+        pool: req.pool, // deprecated - findSimilarChunks now uses DatabaseAgent internally
         embeddingService: req.turnProcessor.embeddingService,
         content: userTurn.content,
         clientId,

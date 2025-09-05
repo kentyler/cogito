@@ -24,17 +24,19 @@ export async function handleYearlyGeneration(req, res) {
     
     await db.connect();
     
-    const result = await db.summaries.generateYearlySummariesForYear({
-      year: parseInt(year),
+    const result = await db.summaries.generateYearlySummaries(
+      parseInt(year),
       client_id,
-      user_id
-    });
+      client_name,
+      req.anthropic
+    );
     
     return ApiResponses.success(res, {
       message: 'Yearly summaries generated successfully',
-      summaries_created: result.summariesCreated || 0,
+      summaries_created: Object.keys(result.summaries).length,
       year,
-      client_name
+      client_name,
+      summaries: result.summaries
     });
     
   } catch (error) {

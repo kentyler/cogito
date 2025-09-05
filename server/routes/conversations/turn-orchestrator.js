@@ -51,7 +51,7 @@ export async function processConversationalTurn({ expressRequest, conversationCo
   
   // Build conversation context
   console.log('🔍 STEP 7: Building conversation context');
-  const contextResult = await buildConversationContext({ expressRequest, userTurn, clientId });
+  const contextResult = await buildConversationContext({ req: expressRequest, userTurn, clientId });
   const builtContext = contextResult.context || contextResult;
   const sources = contextResult.sources || [];
   
@@ -70,19 +70,7 @@ export async function processConversationalTurn({ expressRequest, conversationCo
     userId: user_id
   });
   
-  // Handle avatar selection and updates
-  const { selectAvatar, updateUserLastAvatar } = await import('../../lib/avatar-operations/index.js');
-  const usedAvatar = await selectAvatar({ 
-    databasePool: expressRequest.pool,
-    clientId, 
-    userId: user_id, 
-    selectionContext: 'general' 
-  });
-  
-  // Update user's last used avatar
-  if (user_id && usedAvatar) {
-    await updateUserLastAvatar({ pool: expressRequest.pool, userId: user_id, avatarId: usedAvatar.id });
-  }
+  // Avatar system removed - no longer tracking avatar selection
   
   // Create LLM turn
   const llmTurn = await createLLMTurn(expressRequest, {
@@ -90,7 +78,7 @@ export async function processConversationalTurn({ expressRequest, conversationCo
     llmResponse: llmResponseResult,
     userTurn,
     meetingId: effectiveMeetingId,
-    avatarId: usedAvatar.id
+    // avatarId removed - no longer tracking avatars in turns
   });
   
   return {

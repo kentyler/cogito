@@ -6,6 +6,7 @@
 import { isValidLLM, updateUserSelectedLLM } from '#server/conversations/llm-config.js';
 import { ApiResponses } from '#server/api/api-responses.js';
 import { EventLogger, extractRequestContext } from '#server/events/event-logger.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 export async function handleLLMPreferenceUpdate(req, res) {
   try {
@@ -20,11 +21,11 @@ export async function handleLLMPreferenceUpdate(req, res) {
       return ApiResponses.error(res, 400, 'LLM ID is required');
     }
     
-    if (!(await isValidLLM(llm_id, req.pool))) {
+    if (!(await isValidLLM(llm_id))) {
       return ApiResponses.error(res, 400, 'Invalid LLM ID');
     }
     
-    await updateUserSelectedLLM(req.pool, userId, llm_id);
+    await updateUserSelectedLLM(null, userId, llm_id);
     
     return ApiResponses.success(res, { 
       success: true, 
@@ -35,10 +36,15 @@ export async function handleLLMPreferenceUpdate(req, res) {
   } catch (error) {
     console.error('Error updating LLM preference:', error);
     
-    // Log error as event to database
-    const eventLogger = new EventLogger(req.pool);
-    const context = extractRequestContext(req);
-    await eventLogger.logError('llm_preference_update_error', error, context);
+    // Log error as event to database using DatabaseAgent
+    try {
+      const dbAgent = new DatabaseAgent();
+      await dbAgent.connect();
+      await dbAgent.logError('llm_preference_update_error', error, extractRequestContext(req));
+      await dbAgent.close();
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
     
     return ApiResponses.internalError(res, 'Failed to update LLM preference');
   }

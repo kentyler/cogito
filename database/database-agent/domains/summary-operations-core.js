@@ -159,7 +159,7 @@ ${formattedTurns}`;
         if (Object.keys(monthSummaries.summaries).length > 0) {
           const dailySummariesText = Object.entries(monthSummaries.summaries)
             .map(([date, data]) => `${date}: ${data.summary}`)
-            .join('\n');
+            .join('\n\n');
           
           const prompt = `Please create a monthly summary for ${monthName} ${year} from ${client_name} based on these daily summaries.
 

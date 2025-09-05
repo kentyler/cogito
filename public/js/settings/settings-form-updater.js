@@ -20,27 +20,11 @@ export function updateSettingsForm(settingsState, updateTemperatureDisplay) {
         }
     }
     
-    // Update avatar dropdown
+    // Avatar dropdown removed - avatar system eliminated
     const avatarSelect = document.getElementById('settingsAvatar');
     if (avatarSelect) {
-        avatarSelect.innerHTML = '';
-        settingsState.availableAvatars.forEach(avatar => {
-            const option = document.createElement('option');
-            option.value = avatar.id;
-            option.textContent = avatar.name;
-            // Compare as numbers to handle type mismatches
-            option.selected = avatar.id == settingsState.currentAvatar;
-            avatarSelect.appendChild(option);
-            
-            // Add description as title
-            if (avatar.description) {
-                option.title = avatar.description;
-            }
-        });
-        // If current avatar wasn't found in the list, still select it if we have a value
-        if (avatarSelect.value != settingsState.currentAvatar && settingsState.currentAvatar) {
-            avatarSelect.value = settingsState.currentAvatar;
-        }
+        avatarSelect.innerHTML = '<option value="">Avatar system deprecated</option>';
+        avatarSelect.disabled = true;
     }
     
     // Update LLM dropdown

@@ -4,6 +4,7 @@
  */
 
 import { LLM_CONFIGS, DEFAULT_LLM } from './llm-configurations.js';
+import { DatabaseAgent } from '#database/database-agent.js';
 
 /**
  * Get LLM configuration by ID
@@ -32,16 +33,18 @@ export function getAllLLMConfigs() {
 /**
  * Get available LLMs (site-wide from database)
  * @param {Object} options
- * @param {Object} options.pool - Database connection pool
+ * @param {Object} [options.pool] - Database connection pool (deprecated, will use DatabaseAgent instead)
  * @param {string|null} [options.clientId=null] - Client ID for client-specific models
  * @param {string|null} [options.userId=null] - User ID for user preferences
  * @returns {Promise<Array<Object>>} Array of available LLM configurations
  */
-export async function getAvailableLLMs({ pool, clientId = null, userId = null }) {
-  const { getAvailableModels } = await import('./llm-database-operations.js');
+export async function getAvailableLLMs({ pool = null, clientId = null, userId = null }) {
+  const dbAgent = new DatabaseAgent();
   
   try {
-    const dbModels = await getAvailableModels(pool);
+    await dbAgent.connect();
+    const dbModels = await dbAgent.llms.getAvailableModels();
+    await dbAgent.close();
     
     if (dbModels.length === 0) {
       return getAllLLMConfigs();
@@ -64,29 +67,28 @@ export async function isValidLLM(llmId, pool = null) {
     return true;
   }
   
-  if (pool) {
-    try {
-      const { getLLMByModel } = await import('./llm-database-operations.js');
-      const dbLLM = await getLLMByModel({ pool, modelId: llmId });
-      return !!dbLLM;
-    } catch (error) {
-      console.error('Error validating LLM against database:', error);
-      return false;
-    }
-  }
+  const dbAgent = new DatabaseAgent();
   
-  return false;
+  try {
+    await dbAgent.connect();
+    const dbLLM = await dbAgent.llms.getLLMByModel(llmId);
+    await dbAgent.close();
+    return !!dbLLM;
+  } catch (error) {
+    console.error('Error validating LLM against database:', error);
+    return false;
+  }
 }
 
 /**
  * Get user's selected LLM from database (with client-specific API keys)
  * @param {Object} options
- * @param {Object} options.pool - Database connection pool
+ * @param {Object} [options.pool] - Database connection pool (deprecated, will use DatabaseAgent instead)
  * @param {string} options.userId - User ID
  * @param {string|null} [options.clientId=null] - Client ID for API key context
  * @returns {Promise<Object|null>} User's selected LLM configuration or null
  */
-export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
+export async function getUserSelectedLLM({ pool = null, userId, clientId = null }) {
   try {
     if (!userId) {
       const defaultConfig = getLLMConfig(DEFAULT_LLM);
@@ -104,27 +106,27 @@ export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
       return defaultConfig;
     }
     
-    const userResult = await pool.query(
-      'SELECT last_llm_id, client_id FROM client_mgmt.users WHERE id = $1',
-      [userId]
-    );
+    const dbAgent = new DatabaseAgent();
+    await dbAgent.connect();
     
-    if (userResult.rows.length === 0) {
+    const userPrefs = await dbAgent.users.getUserPreferences(userId);
+    
+    if (!userPrefs) {
+      await dbAgent.close();
       return getLLMConfig(DEFAULT_LLM);
     }
     
-    const user = userResult.rows[0];
-    const userLLMId = user.last_llm_id;
-    const userClientId = clientId || user.client_id;
+    const userLLMId = userPrefs.last_llm_id;
+    const userClientId = clientId || userPrefs.last_client_id;
     
     if (userLLMId) {
-      const { getLLMByModel } = await import('./llm-database-operations.js');
-      const dbLLM = await getLLMByModel({ pool, modelId: userLLMId });
+      const dbLLM = await dbAgent.llms.getLLMByModel(userLLMId);
       
       if (dbLLM) {
         const { loadClientTemperature } = await import('./client-temperature-loader.js');
         const clientTemperature = await loadClientTemperature(userClientId) || dbLLM.temperature || 0.7;
         
+        await dbAgent.close();
         return {
           id: dbLLM.model,
           name: dbLLM.name,
@@ -138,6 +140,8 @@ export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
         };
       }
     }
+    
+    await dbAgent.close();
     
     const staticConfig = getLLMConfig(userLLMId);
     
@@ -163,19 +167,23 @@ export async function getUserSelectedLLM({ pool, userId, clientId = null }) {
  * Update user's selected LLM
  */
 export async function updateUserSelectedLLM(pool, userId, llmId) {
+  const dbAgent = new DatabaseAgent();
+  
   try {
-    if (!(await isValidLLM(llmId, pool))) {
+    if (!(await isValidLLM(llmId))) {
       throw new Error(`Invalid LLM ID: ${llmId}`);
     }
     
-    const result = await pool.query(
-      'UPDATE client_mgmt.users SET last_llm_id = $2 WHERE id = $1 RETURNING last_llm_id',
-      [userId, llmId]
-    );
+    await dbAgent.connect();
+    const result = await dbAgent.users.updateUserPreference(userId, 'last_llm_id', llmId);
+    await dbAgent.close();
     
-    return result.rows[0];
+    return { last_llm_id: llmId };
   } catch (error) {
     console.error('Error updating user selected LLM:', error);
+    if (dbAgent.connector && dbAgent.connector.pool) {
+      await dbAgent.close();
+    }
     throw error;
   }
 }

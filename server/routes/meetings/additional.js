@@ -34,12 +34,11 @@ router.get('/admin/meetings/:meetingId/turns-direct', async (req, res) => {
       return ApiResponses.forbidden(res, 'Admin access required');
     }
     
-    // Use DatabaseAgent instead of direct SQL
-    const turns = await dbAgent.turns.getTurnsByMeeting(meetingId);
-    const turnsResult = { rows: turns };
+    // Use DatabaseAgent's turns module to get turns
+    const turns = await dbAgent.turns.getByMeetingId(meetingId);
     
     res.json({
-      turns: turnsResult.rows,
+      turns: turns,
       meeting_id: meetingId,
       query_type: 'direct'
     });

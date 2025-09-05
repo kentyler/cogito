@@ -18,11 +18,11 @@ export async function resolveMeetingId(req, meeting_id) {
     }
     
     // Create the meeting now that we actually need it
-    effectiveMeetingId = await createSessionMeeting(
-      req.pool, 
-      req.session.user.user_id || req.session.user.id, 
-      req.session.user.client_id
-    );
+    effectiveMeetingId = await createSessionMeeting({
+      pool: req.pool, // deprecated - createSessionMeeting uses DatabaseAgent internally
+      userId: req.session.user.user_id || req.session.user.id, 
+      clientId: req.session.user.client_id
+    });
     
     // Store in session for subsequent turns
     req.session.meeting_id = effectiveMeetingId;

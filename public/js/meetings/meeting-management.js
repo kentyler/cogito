@@ -1,11 +1,11 @@
 // Meeting list management functions
 
 window.loadMeetingsList = async function() {
-    window.setMeetingsStatus('Loading meetings...', 'info');
+    window.setMeetingsStatus('Loading conversations...', 'info');
     document.getElementById('meetings-list').innerHTML = '';
 
     try {
-        console.log('🔍 Fetching meetings list');
+        console.log('🔍 Fetching conversations list');
         const response = await fetch('/api/meetings', {
             credentials: 'include'
         });
@@ -23,10 +23,10 @@ window.loadMeetingsList = async function() {
         }
 
         const meetings = await response.json();
-        console.log('📥 Meetings response:', meetings);
+        console.log('📥 Conversations response:', meetings);
 
         if (meetings && meetings.length > 0) {
-            window.setMeetingsStatus(`Found ${meetings.length} meetings`, 'success');
+            window.setMeetingsStatus(`Found ${meetings.length} conversations`, 'success');
             
             let html = '';
             meetings.forEach(meeting => {
@@ -52,11 +52,11 @@ window.loadMeetingsList = async function() {
             
             document.getElementById('meetings-list').innerHTML = html;
         } else {
-            window.setMeetingsStatus('No meetings found', 'info');
+            window.setMeetingsStatus('No conversations found', 'info');
         }
 
     } catch (error) {
-        console.error('❌ Error loading meetings:', error);
+        console.error('❌ Error loading conversations:', error);
         window.setMeetingsStatus(`Error: ${error.message}`, 'error');
     }
 }
@@ -104,12 +104,12 @@ window.deleteMeeting = async function(meetingId, meetingName) {
         if (currentMeetingId === meetingId) {
             document.getElementById('meetingId').value = '';
             document.getElementById('content').innerHTML = '';
-            setStatus('Meeting deleted', 'info');
+            window.setStatus('Meeting deleted', 'info');
         }
 
-        // Update the meetings count
+        // Update the conversations count
         const remainingMeetings = document.querySelectorAll('.meeting-item').length;
-        window.setMeetingsStatus(`${remainingMeetings} meetings remaining`, 'success');
+        window.setMeetingsStatus(`${remainingMeetings} conversations remaining`, 'success');
 
     } catch (error) {
         console.error('❌ Delete error:', error);
@@ -147,7 +147,7 @@ window.createNewMeeting = async function() {
         const meetingName = prompt(`Enter meeting name:`, defaultTitle);
         if (!meetingName) return; // User cancelled
         
-        window.setMeetingsStatus('Creating new meeting...', 'info');
+        window.setMeetingsStatus('Creating new conversation...', 'info');
         
         const response = await fetch('/api/meetings/create', {
             method: 'POST',
@@ -168,7 +168,7 @@ window.createNewMeeting = async function() {
         const newMeeting = await response.json();
         console.log('✅ New meeting created:', newMeeting);
         
-        // Refresh meetings list
+        // Refresh conversations list
         await loadMeetingsList();
         
         // Auto-select the new meeting
@@ -181,3 +181,17 @@ window.createNewMeeting = async function() {
         window.setMeetingsStatus(`Error: ${error.message}`, 'error');
     }
 }
+
+// Initialize meetings list on page load if user is authenticated
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait a bit for auth to complete, then check if user is authenticated
+    setTimeout(() => {
+        const user = localStorage.getItem('user');
+        if (user) {
+            console.log('🚀 Loading conversations list on page load - user authenticated');
+            window.loadMeetingsList();
+        } else {
+            console.log('⏳ User not authenticated yet, skipping conversations load');
+        }
+    }, 500); // Small delay to ensure auth check has completed
+});

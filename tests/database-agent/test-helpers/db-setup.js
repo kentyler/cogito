@@ -4,7 +4,7 @@
  */
 
 import 'dotenv/config';
-import { DatabaseAgent } from '../../../lib/database-agent.js';
+import { DatabaseAgent } from '../../../database/database-agent.js';
 import { TestFixtures } from './fixtures.js';
 
 /**

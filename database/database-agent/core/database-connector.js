@@ -12,8 +12,9 @@ import { EventLogger } from '#server/events/event-logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables from the correct location
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Load environment variables from the project root
+const projectRoot = path.resolve(__dirname, '../../../');
+dotenv.config({ path: path.join(projectRoot, '.env') });
 
 export class DatabaseConnector {
   constructor() {

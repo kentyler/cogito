@@ -1,12 +1,12 @@
 /**
- * Settings Update Functions - Handle client, avatar, LLM, and temperature updates
- * Available methods: updateClientSetting, updateAvatarSetting, updateLLMSetting, updateTemperatureSetting
+ * Settings Update Functions - Handle client, LLM, and temperature updates (avatar system removed)
+ * Available methods: updateClientSetting, updateLLMSetting, updateTemperatureSetting (avatar functions removed)
  * Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
  */
 
 // Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
-// Schema verified: avatar_id from avatars table, last_avatar_id from users table, llm_id from llms table
-import { loadAvailableAvatars } from './settings-data-loader.js';
+// Schema verified: llm_id from llms table (avatar schema removed)
+// Avatar imports removed - avatar system eliminated
 import { updateSettingsForm } from './settings-form-updater.js';
 import { loadCurrentTemperature, updateTemperatureDisplay } from './temperature-settings.js';
 
@@ -17,8 +17,7 @@ export async function updateClientSetting(clientId, settingsState) {
             await window.switchClient(clientId);
             settingsState.currentClient = clientId;
             
-            // Reload avatars for new client
-            settingsState.availableAvatars = await loadAvailableAvatars(clientId);
+            // Avatar reloading removed - avatar system eliminated
             
             // Reload temperature setting for new client
             settingsState.currentTemperature = await loadCurrentTemperature(clientId);
@@ -39,32 +38,10 @@ export async function updateClientSetting(clientId, settingsState) {
     }
 }
 
+// DEPRECATED: Avatar update function removed - avatar system eliminated
 export async function updateAvatarSetting(avatarId, settingsState) {
-    try {
-        const response = await fetch('/api/user/avatar-preference', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ avatar_id: avatarId })
-        });
-        
-        if (response.ok) {
-            settingsState.currentAvatar = avatarId;
-            
-            // Update local storage
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            user.last_avatar_id = avatarId;
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            console.log('✅ Avatar preference updated:', avatarId);
-        } else {
-            console.error('Failed to update avatar preference');
-        }
-    } catch (error) {
-        console.error('Error updating avatar:', error);
-    }
+    console.log('Avatar system has been deprecated - no action taken');
+    // Function kept for compatibility but does nothing
 }
 
 export async function updateLLMSetting(llmId, settingsState) {
