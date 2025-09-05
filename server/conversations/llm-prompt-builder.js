@@ -1,208 +1,86 @@
 /**
- * Builds the LLM prompt for conversational REPL responses
+ * Builds the LLM prompt for conversational REPL responses - Refactored
  */
-// Avatar system removed - using default conversational prompt
+
+import { withDbAgent } from './lib/db-wrapper.js';
+import { buildFullPrompt, buildGameStateContext, DEFAULT_INSTRUCTIONS } from './lib/prompt-templates.js';
 
 /**
- * Builds game state context information for the prompt
- */
-function buildGameStateContext(gameState) {
-  if (!gameState) {
-    return '';
-  }
-
-  if (gameState.needsStateDeclaration) {
-    return `GAME STATE ALERT:
-${gameState.message}
-
-Please acknowledge our working approach before proceeding with the response.`;
-  }
-
-  if (gameState.stateChanged && gameState.currentState) {
-    let context = 'DESIGN GAME STATE:\n';
-    
-    if (gameState.currentState.type === 'identified') {
-      context += `🎮 ACTIVE GAME: "${gameState.currentState.displayName}"\n`;
-      context += `Cards and design patterns are being tracked for this game.\n`;
-      
-      if (gameState.relevantCards && Object.keys(gameState.relevantCards).length > 0) {
-        context += `Available cards from this game:\n`;
-        Object.entries(gameState.relevantCards).forEach(([key, card]) => {
-          context += `- ${key}: ${card.pattern} (${card.suit})\n`;
-        });
-      }
-    } else if (gameState.currentState.type === 'unidentified') {
-      context += `🔍 UNIDENTIFIED MODE: Working without a specific design game framework.\n`;
-      context += `Design decisions will be made contextually rather than following established patterns.\n`;
-    }
-    
-    return context;
-  }
-
-  if (gameState.currentState && gameState.currentState.type !== 'undeclared') {
-    let context = 'CURRENT DESIGN GAME STATE:\n';
-    
-    if (gameState.currentState.type === 'identified') {
-      context += `🎮 Playing: "${gameState.currentState.displayName}"\n`;
-    } else {
-      context += `🔍 Mode: Unidentified exploration\n`;
-    }
-    
-    return context;
-  }
-
-  return '';
-}
-
-/**
- * Build the full prompt with default conversational instructions
- */
-function buildFullPrompt(defaultInstructions, { clientName, conversationContext, content, contextualResponse, gameStateContext }) {
-  return `${defaultInstructions}
-
-${gameStateContext}
-
-RESPONSE DEPTH AND DETAIL:
-IMPORTANT: You have a 4000 token limit - use it effectively. Provide comprehensive, thoughtful responses that:
-- Explore the topic in sufficient depth and nuance (500-800 words when warranted)
-- Connect ideas and provide relevant examples with specific details
-- Offer practical insights and actionable information with clear steps
-- Build upon the specific context from the organization's discussions and files
-- Are substantive enough to be genuinely helpful - DO NOT give brief or superficial answers
-- Include analysis, implications, and connections between concepts
-- When referencing past discussions, explain what they contain and why they're relevant
-
-CONVERSATIONAL TOPOLOGY ASSESSMENT:
-Consider multiple response alternatives ONLY when there are genuinely different philosophical or strategic approaches. Present multiple responses when:
-- Fundamentally different paradigms or frameworks apply (e.g., tactical vs strategic, individual vs systemic approaches)
-- The alternatives represent truly different schools of thought or methodologies
-- The unstated possibilities would lead to completely different outcomes
-
-Present single, detailed response when:
-- The query has a clear primary direction (most cases)
-- Multiple aspects can be covered within one comprehensive response
-- The alternatives would be variations on the same theme
-
-When responding, output valid EDN/ClojureScript data structures.
-
-IMPORTANT: ALL strings MUST be double-quoted. This includes strings in vectors/lists.
-
-SINGLE RESPONSE (most cases):
-{:response-type :text
- :content "Your response here with [REF-1] citations when using context"}
-
-MULTIPLE RESPONSES (when genuine alternatives exist):
-{:response-type :response-set
- :alternatives [{:id "implementation"
-                 :summary "Direct implementation approach"
-                 :response-type :text
-                 :content "Based on your team's discussion [REF-1], here's how to implement..."}
-                {:id "exploration"
-                 :summary "Research and analysis approach"
-                 :response-type :list
-                 :items ["First examine the concept from [REF-2]..." "Then investigate (from general knowledge)..." "Finally implement as discussed in [REF-3]..."]}
-                {:id "clarification"
-                 :summary "Clarifying questions approach"
-                 :response-type :text
-                 :content "Before proceeding, I need to understand..."}]}
-
-REFERENCE FORMAT REQUIREMENTS:
-When citing sources, make [REF-n] labels meaningful by explaining:
-- What type of content it is (discussion, document, meeting notes)
-- When it occurred (approximate date if available) 
-- Who was involved (if it's a discussion)
-- What specific topic or aspect it covers
-This helps users understand why each reference is relevant and what they can expect if they look it up.
-
-Other available response types: :list, :spreadsheet, :diagram, :email
-Remember: Every string value must be wrapped in double quotes!
-
-${conversationContext}
-
-Current user prompt: "${content}"
-
-${contextualResponse}
-
-Assess whether multiple conversation territories exist, then respond appropriately. Use the conversation context to inform your response and maintain continuity with previous discussions.
-
-CRITICAL: Return ONLY the EDN data structure. Do not include any explanatory text before or after the data structure.`;
-}
-
-/**
- * Build conversational prompt with avatar instructions and context
- * @param {Object} options
- * @param {string} options.clientName - Client name for personalization
- * @param {string} options.conversationContext - Previous conversation context
- * @param {string} options.content - User's current message content
- * @param {Object} options.context - Additional context information
- * @param {Object} options.gameState - Current game state if applicable
- * @param {string} options.clientId - Client ID for avatar selection
- * @param {Object} options.pool - Database connection pool
- * @param {string} [options.userId] - User ID for avatar preference
- * Avatar system removed - no longer accepts avatarId parameter
- * @returns {Promise<string>} Complete conversational prompt
+ * Build the main conversational prompt with context
+ * @param {Object} options - Prompt building options
+ * @returns {Promise<string>} Complete prompt for LLM
  */
 export async function buildConversationalPrompt({ clientName, conversationContext, content, context, gameState, clientId, pool, userId = null }) {
-  const contextualResponse = context && context.responding_to_alternative ? 
-    `CONTEXT: User is responding to alternative "${context.responding_to_alternative.alternative_summary}" (${context.responding_to_alternative.alternative_id}) from a previous response set.` : 
-    '';
+  // Build game state context
+  const gameStateContext = buildGameStateContext(gameState);
+  
+  // Build contextual response section
+  let contextualResponse = '';
+  if (context && context.length > 0) {
+    contextualResponse = 'CONTEXTUAL INFORMATION:\nThe following information from your files and previous conversations may be relevant:\n\n';
+    context.forEach((item, index) => {
+      contextualResponse += `[REF-${index + 1}] ${item.content}\n\n`;
+    });
+  }
 
-  // Default conversational instructions (avatar system removed)
-  const defaultInstructions = `You are powering a Conversational REPL that generates executable UI components.
+  // Get client instructions from database
+  let defaultInstructions = DEFAULT_INSTRUCTIONS;
+  if (clientId) {
+    const clientInstructions = await withDbAgent(async (dbAgent) => {
+      return await dbAgent.clients.getClientInstructions(clientId);
+    });
+    
+    if (clientInstructions) {
+      defaultInstructions = clientInstructions;
+    }
+  }
 
-CRITICAL SOURCE ATTRIBUTION RULES:
-You have access to two types of contextual information:
-1. PAST DISCUSSIONS from ${clientName} - marked with [REF-n] references
-2. UPLOADED FILES from ${clientName} - also marked with [REF-n] references
-3. Your general knowledge - NOT from the organization's context
-
-MANDATORY CITATION REQUIREMENTS:
-- When using information from past discussions or uploaded files, ALWAYS cite using [REF-n]
-- Clearly distinguish between:
-  * Information from your organization's discussions/files (cite with [REF-n])
-  * Information from your general knowledge (explicitly state "from general knowledge" or "from my training")
-- If mixing sources, be explicit: "According to your team's discussion [REF-1]..." vs "In general practice..."
-- When explaining concepts mentioned in uploaded files, cite the file reference
-
-CONTEXTUAL AWARENESS:
-You have access to semantically similar past conversations from ${clientName}. Use this context to:
-- Build upon previous discussions and topics within this organization that are similar to the current topic
-- Reference earlier points when they're directly relevant to the current conversation [with citations]
-- Maintain conversational continuity by connecting to related past themes
-- Avoid repeating information already covered in similar discussions
-- Connect new responses to ongoing themes that are semantically related`;
-
-  // Build the full prompt with default instructions and shared components
   return buildFullPrompt(defaultInstructions, {
     clientName,
     conversationContext,
     content,
     contextualResponse,
-    gameStateContext: buildGameStateContext(gameState)
+    gameStateContext
   });
 }
 
 /**
- * Processes LLM response to extract EDN data structure
+ * Process and format LLM response
+ * @param {string} responseText - Raw response from LLM
+ * @returns {Object} Parsed and formatted response
  */
 export function processLLMResponse(responseText) {
-  // Try to extract EDN data structure from response
-  const startIdx = responseText.indexOf('{');
-  const endIdx = responseText.lastIndexOf('}');
-  
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    const ednStr = responseText.substring(startIdx, endIdx + 1).trim();
-    
-    // Check if it's a valid response structure with :response-type
-    if (ednStr.includes(':response-type')) {
-      return ednStr;
-    } else {
-      // It's EDN but missing :response-type, wrap the entire structure
-      // This handles cases like {:date "..." :summary "..."}
-      return `{:response-type :text :content ${ednStr}}`;
+  try {
+    // Simple EDN-like parsing for response structure
+    if (responseText.includes(':response-type :text')) {
+      const contentMatch = responseText.match(/:content\s+"([^"]+)"/);
+      if (contentMatch) {
+        return {
+          type: 'text',
+          content: contentMatch[1]
+        };
+      }
     }
+    
+    if (responseText.includes(':response-type :response-set')) {
+      // Handle multiple responses - simplified parsing
+      return {
+        type: 'response-set',
+        content: responseText,
+        alternatives: [] // Would need more complex parsing for full functionality
+      };
+    }
+    
+    // Fallback - return as plain text
+    return {
+      type: 'text',
+      content: responseText
+    };
+  } catch (error) {
+    console.error('Error processing LLM response:', error);
+    return {
+      type: 'text',
+      content: responseText
+    };
   }
-  
-  // No EDN structure found, wrap as plain text
-  return `{:response-type :text :content "${responseText.replace(/"/g, '\\"')}"}`;
 }

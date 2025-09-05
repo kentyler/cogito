@@ -25,6 +25,10 @@ import DesignGamesOperations from './database-agent/domains/design-games-operati
 import { SummaryOperations } from './database-agent/domains/summary-operations.js';
 import { LLMOperations } from './database-agent/domains/llm-operations.js';
 
+// Import utility methods
+import { debugMeeting, inspectMeeting } from './database-agent/utils/debug-methods.js';
+import { logEvent, logError, logAuthEvent, logClientEvent, logDatabaseEvent } from './database-agent/utils/logging-methods.js';
+
 export class DatabaseAgent {
   constructor() {
     // Initialize core
@@ -101,118 +105,64 @@ export class DatabaseAgent {
     return await this.searchAnalyzer.searchTranscripts(searchTerm, options);
   }
 
+  async searchFiles(searchTerm, options = {}) {
+    return await this.searchAnalyzer.searchFiles(searchTerm, options);
+  }
+
+  async searchContext(searchTerm, clientId, options = {}) {
+    return await this.searchAnalyzer.searchContext(searchTerm, clientId, options);
+  }
+
+  // User statistics
   async getUserStats(userId) {
-    return await this.searchAnalyzer.getUserStats(userId);
+    const stats = await this.query(`
+      SELECT 
+        COUNT(*) as total_turns,
+        COUNT(DISTINCT meeting_id) as total_meetings,
+        MIN(created_at) as first_turn,
+        MAX(created_at) as last_turn,
+        AVG(LENGTH(content::text)) as avg_turn_length
+      FROM meetings.turns 
+      WHERE user_id = $1
+    `, [userId]);
+
+    return stats.rows[0] || {
+      total_turns: 0,
+      total_meetings: 0,
+      first_turn: null,
+      last_turn: null,
+      avg_turn_length: 0
+    };
   }
 
-  // Meeting-related operations
-  async getMeetingByBotId(botId, excludeStatuses = ['completed', 'inactive']) {
-    const query = `
-      SELECT * FROM meetings.meetings 
-      WHERE recall_bot_id = $1 
-      AND status NOT IN (${excludeStatuses.map((_, i) => `$${i + 2}`).join(', ')})
-    `;
-    const params = [botId, ...excludeStatuses];
-    const result = await this.connector.query(query, params);
-    return result.rows[0] || null;
-  }
-
-  // Get event logger for error tracking
-  getEventLogger() {
-    return this.connector.getEventLogger();
-  }
-
-  // Centralized event logging methods
-  async logEvent(eventName, eventData, context = {}) {
-    const eventLogger = this.getEventLogger();
-    if (eventLogger) {
-      return await eventLogger.logEvent(eventName, eventData, context);
-    }
-    return null;
-  }
-
-  async logError(eventName, error, context = {}) {
-    const eventLogger = this.getEventLogger();
-    if (eventLogger) {
-      return await eventLogger.logError(eventName, error, context);
-    }
-    return null;
-  }
-
-  // Application-specific event helpers
-  async logAuthEvent(eventType, userData, context = {}) {
-    return await this.logEvent(eventType, {
-      user_id: userData.user_id || userData.id,
-      email: userData.email,
-      client_id: userData.client_id,
-      client_name: userData.client_name,
-      timestamp: new Date().toISOString()
-    }, {
-      ...context,
-      severity: context.severity || 'info',
-      component: context.component || 'Authentication'
-    });
-  }
-
-  async logClientEvent(eventType, clientData, context = {}) {
-    return await this.logEvent(eventType, {
-      client_id: clientData.client_id || clientData.id,
-      client_name: clientData.client_name || clientData.name,
-      timestamp: new Date().toISOString()
-    }, {
-      ...context,
-      severity: context.severity || 'info',
-      component: context.component || 'ClientManagement'
-    });
-  }
-
-  async logDatabaseEvent(eventType, operationData, context = {}) {
-    return await this.logEvent(eventType, {
-      ...operationData,
-      timestamp: new Date().toISOString()
-    }, {
-      ...context,
-      severity: context.severity || 'info',
-      component: context.component || 'DatabaseOperations'
-    });
-  }
-
-  // Debug/inspection methods for troubleshooting
+  // Debug/inspection methods using imported utilities
   async debugMeeting(meetingId) {
-    // Call the database function that returns a table
-    const result = await this.query(
-      'SELECT * FROM meetings.debug_meeting($1)',
-      [meetingId]
-    );
-    
-    // Format the results nicely
-    console.log('\n========================================');
-    console.log(`Debug info for meeting: ${meetingId}`);
-    console.log('========================================');
-    
-    result.rows.forEach(row => {
-      if (row.info_type === 'ERROR') {
-        console.log(`❌ ${row.info_value}`);
-      } else if (row.info_type.startsWith('TURN_')) {
-        console.log(`  📝 ${row.info_type}: ${row.info_value}`);
-      } else if (row.info_type.startsWith('TRANSCRIPT_')) {
-        console.log(`  📄 ${row.info_type}: ${row.info_value}`);
-      } else {
-        console.log(`  ${row.info_type}: ${row.info_value}`);
-      }
-    });
-    
-    console.log('========================================\n');
-    return result.rows;
+    return await debugMeeting(this, meetingId);
   }
   
   async inspectMeeting(meetingId) {
-    // Call the void function that prints with RAISE NOTICE
-    // Note: This will print to console automatically if client supports it
-    await this.query(
-      'SELECT meetings.inspect_meeting($1)',
-      [meetingId]
-    );
+    return await inspectMeeting(this, meetingId);
+  }
+
+  // Logging methods using imported utilities
+  async logEvent(eventType, eventData, context = {}) {
+    return await logEvent(this, eventType, eventData, context);
+  }
+
+  async logError(errorType, error, context = {}) {
+    return await logError(this, errorType, error, context);
+  }
+
+  async logAuthEvent(eventType, userData, context = {}) {
+    return await logAuthEvent(this, eventType, userData, context);
+  }
+
+  async logClientEvent(eventType, clientData, context = {}) {
+    return await logClientEvent(this, eventType, clientData, context);
+  }
+
+  async logDatabaseEvent(eventType, operationData, context = {}) {
+    return await logDatabaseEvent(this, eventType, operationData, context);
   }
 
   // Convenience method to get access to specialized modules
