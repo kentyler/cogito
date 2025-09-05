@@ -1,5 +1,42 @@
 # Claude Code Session Management
 
+## 🚨 FILE SIZE ENFORCEMENT - READ THIS FIRST! 🚨
+
+**CRITICAL**: Before creating ANY new file, follow these rules to prevent size violations:
+
+### File Size Limits (ENFORCED by pre-commit hook)
+- **Code files**: Maximum 200 lines
+- **Test files**: Maximum 300 lines  
+- **Target size**: ~100 lines for optimal AI comprehension
+
+### Prevention Strategies (USE THESE ALWAYS)
+1. **Before writing a large function**: Break it into smaller functions first
+2. **Before creating a new file**: Ask yourself: "Can this be split into 2-3 focused modules?"
+3. **When approaching 150 lines**: Stop and refactor into separate modules
+4. **Use existing utilities**: Check `lib/`, `utils/`, `helpers/` folders for reusable code
+5. **Extract common patterns**: Create utility functions instead of copying code
+
+### Quick Module Structure Patterns
+```
+# Instead of one large file:
+large-handler.js (250 lines) ❌
+
+# Use focused modules:
+handlers/
+  main-handler.js (80 lines) ✅
+  validators.js (60 lines) ✅
+  lib/
+    common-utils.js (40 lines) ✅
+```
+
+### Emergency Prevention Command
+If file is getting large during development:
+```bash
+wc -l filename.js  # Check line count immediately
+```
+
+**REMEMBER**: It's 10x easier to write small files than to refactor large ones later!
+
 ## Auto-Loading Session Context (DEPRECATED)
 <!-- DEPRECATED: MCP server functionality replaced by Claude Projects built-in context management
 **COGITO AUTO-LOAD**: Session context is automatically loaded on startup when enabled.
@@ -261,3 +298,5 @@ Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+🚨 CRITICAL FILE SIZE RULE: Before creating ANY file, ensure it will be under 200 lines. If approaching this limit, STOP and split into multiple focused modules. Use utility functions and existing patterns to prevent violations.

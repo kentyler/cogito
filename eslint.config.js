@@ -23,7 +23,8 @@ export default [
       }
     },
     rules: {
-      // File size enforcement - prevent files from getting too large
+      // 🚨 CRITICAL FILE SIZE ENFORCEMENT 🚨
+      // These rules prevent the creation of large files that break AI comprehension
       'max-lines': [
         'error', 
         {

@@ -16,6 +16,8 @@
     "lint": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ scripts/ tests/",
     "lint:fix": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ scripts/ tests/ --fix",
     "lint:check-sizes": "eslint database/ ai-agents/ services/ uploads/ classification/ integrations/ server/ --rule '{\"max-lines\": [\"error\", {\"max\": 200}]}'",
+    "check-size": "node scripts/check-file-size.js",
+    "pre-write-check": "node scripts/pre-write-check.js",
     "mcp-server": "node mcp-game-state-server.js",
     "prod-db": "node scripts/run-on-prod.js"
   },
