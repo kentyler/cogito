@@ -35,16 +35,16 @@ export class LLMOperationsExtended {
    * @returns {Object} Created LLM configuration
    */
   async createSiteLLM(llmData) {
-    const { name, provider, model, apiKey, temperature = 0.7, maxTokens = 4000, additionalConfig = null } = llmData;
+    const { provider, apiKey, additionalConfig = null, subdomain = null } = llmData;
     
     try {
       const query = `
-        INSERT INTO client_mgmt.llms (name, provider, model, api_key, temperature, max_tokens, additional_config)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO client_mgmt.llms (provider, api_key, additional_config, subdomain)
+        VALUES ($1, $2, $3, $4)
         RETURNING *
       `;
       const result = await this.connector.query(query, 
-        [name, provider, model, apiKey, temperature, maxTokens, additionalConfig]);
+        [provider, apiKey, additionalConfig, subdomain]);
       
       return result.rows[0];
     } catch (error) {

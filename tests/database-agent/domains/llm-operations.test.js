@@ -157,13 +157,10 @@ async function runLLMOperationsTests() {
     try {
       // Create a test LLM
       const testLLMData = {
-        name: 'Test LLM ' + Date.now(),
         provider: 'test_provider',
-        model: 'test-model-1',
-        api_key: 'test-api-key-' + Date.now(),
-        temperature: 0.8,
-        max_tokens: 2000,
-        additional_config: { test: true }
+        apiKey: 'test-api-key-' + Date.now(),
+        additionalConfig: { test: true, model: 'test-model-1', temperature: 0.8, max_tokens: 2000 },
+        subdomain: 'test-subdomain'
       };
       
       const createdLLM = await dbAgent.llms.createSiteLLM(testLLMData);
@@ -176,12 +173,12 @@ async function runLLMOperationsTests() {
       // Update the test LLM
       if (testLLMId) {
         const updatedLLM = await dbAgent.llms.updateSiteLLM(testLLMId, {
-          temperature: 0.9,
-          max_tokens: 3000
+          api_key: 'updated-api-key-' + Date.now(),
+          subdomain: 'updated-subdomain'
         });
         
         logTest('updateSiteLLM() updates LLM', 
-          updatedLLM?.temperature === 0.9);
+          updatedLLM?.subdomain === 'updated-subdomain');
         
         // Delete the test LLM
         const deletedLLM = await dbAgent.llms.deleteSiteLLM(testLLMId);

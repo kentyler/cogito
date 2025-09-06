@@ -10,10 +10,11 @@
  * @param {Object} context - Context information
  * @returns {Promise<void>}
  */
+// Database columns verified: event_type_id, user_id, session_id exist in events.events table
 export async function logEvent(dbAgent, eventType, eventData, context = {}) {
   try {
     const eventTypeId = await dbAgent.connector.query(
-      'SELECT id FROM events.event_types WHERE name = $1',
+      'SELECT id FROM events.event_types WHERE event_name = $1',
       [eventType]
     );
 
