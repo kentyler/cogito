@@ -19,24 +19,75 @@ async function runTest(testFile, description) {
   
   return new Promise((resolve, reject) => {
     const testPath = join(__dirname, testFile);
+    let output = '';
+    let errors = '';
+    
     const child = spawn('node', [testPath], {
-      stdio: 'inherit',
+      stdio: 'pipe',
       env: { ...process.env, NODE_ENV: 'test' }
     });
     
+    child.stdout.on('data', (data) => {
+      const chunk = data.toString();
+      console.log(chunk);
+      output += chunk;
+    });
+    
+    child.stderr.on('data', (data) => {
+      const chunk = data.toString();
+      console.error(chunk);
+      errors += chunk;
+    });
+    
     child.on('close', (code) => {
+      const result = {
+        testName: description,
+        testFile,
+        output,
+        errors,
+        exitCode: code,
+        success: code === 0
+      };
+      
       if (code === 0) {
         console.log(`\n✅ ${description} completed successfully\n`);
-        resolve();
+        resolve(result);
       } else {
         console.log(`\n❌ ${description} failed with code ${code}\n`);
-        reject(new Error(`Test failed with code ${code}`));
+        
+        // Analyze for critical errors
+        const combinedOutput = output + errors;
+        const isTableFieldError = combinedOutput.includes('column') && combinedOutput.includes('does not exist');
+        const isParameterError = combinedOutput.includes('arguments') || 
+                                combinedOutput.includes('parameter') || 
+                                combinedOutput.includes('is not a function');
+        
+        if (isTableFieldError) {
+          console.error(`🔴 CRITICAL TABLE FIELD ERROR detected in ${description}`);
+          result.errorType = 'TABLE_FIELD';
+        } else if (isParameterError) {
+          console.error(`🔴 CRITICAL PARAMETER ERROR detected in ${description}`);
+          result.errorType = 'PARAMETER';
+        } else {
+          result.errorType = 'OTHER';
+        }
+        
+        reject(result);
       }
     });
     
     child.on('error', (error) => {
       console.log(`\n💥 ${description} error:`, error.message, '\n');
-      reject(error);
+      reject({
+        testName: description,
+        testFile,
+        output: '',
+        errors: error.message,
+        exitCode: 1,
+        success: false,
+        error: error.message,
+        errorType: 'OTHER'
+      });
     });
   });
 }
@@ -49,13 +100,15 @@ async function main() {
   
   let passed = 0;
   let failed = 0;
+  const failedTests = [];
   
   for (const [testFile, description] of tests) {
     try {
       await runTest(testFile, description);
       passed++;
-    } catch (error) {
+    } catch (testResult) {
       failed++;
+      failedTests.push(testResult);
       console.error(`Failed: ${description}`);
     }
   }
@@ -65,6 +118,40 @@ async function main() {
   console.log(`   ✅ Passed: ${passed}`);
   console.log(`   ❌ Failed: ${failed}`);
   console.log(`   📈 Total:  ${passed + failed}`);
+  
+  // Critical Error Analysis
+  const tableFieldErrors = failedTests.filter(t => t.errorType === 'TABLE_FIELD');
+  const parameterErrors = failedTests.filter(t => t.errorType === 'PARAMETER');
+  const criticalErrors = tableFieldErrors.length + parameterErrors.length;
+  
+  if (criticalErrors > 0) {
+    console.log('\n🚨 CRITICAL CODE ERRORS FOUND:');
+    console.log('================================');
+    
+    if (tableFieldErrors.length > 0) {
+      console.log(`\n🔴 TABLE FIELD ERRORS (${tableFieldErrors.length}):`);
+      tableFieldErrors.forEach(error => {
+        console.log(`   ❌ ${error.testName}: Column does not exist`);
+        if (error.errors) {
+          const errorMsg = error.errors.substring(0, 80);
+          console.log(`      Error: ${errorMsg}${error.errors.length > 80 ? '...' : ''}`);
+        }
+      });
+    }
+    
+    if (parameterErrors.length > 0) {
+      console.log(`\n🔴 PARAMETER ERRORS (${parameterErrors.length}):`);
+      parameterErrors.forEach(error => {
+        console.log(`   ❌ ${error.testName}: Function call mismatch`);
+        if (error.errors) {
+          const errorMsg = error.errors.substring(0, 80);
+          console.log(`      Error: ${errorMsg}${error.errors.length > 80 ? '...' : ''}`);
+        }
+      });
+    }
+    
+    console.log(`\n⚠️  MUST FIX ${criticalErrors} CRITICAL ERRORS BEFORE MERGE!`);
+  }
   
   if (failed > 0) {
     console.log('\n❌ Some tests failed. Check output above for details.');

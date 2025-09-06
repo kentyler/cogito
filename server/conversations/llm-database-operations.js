@@ -1,6 +1,10 @@
 /**
  * LLM Database Operations - Refactored for file size compliance
  * Works with the existing client_mgmt.llms table to manage site-wide API keys
+ * 
+ * Available methods verified: getAllLLMs, getLLMByProvider, getLLMByModel, 
+ * getAvailableModels, siteHasProvider, createSiteLLM, updateSiteLLM, 
+ * deleteSiteLLM, updateUserSelectedLLM exist in dbAgent.llms
  */
 
 import { withDbAgent } from './lib/db-wrapper.js';

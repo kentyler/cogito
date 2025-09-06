@@ -114,6 +114,7 @@ export class DatabaseAgent {
   }
 
   // User statistics
+  // Database columns verified: meeting_id, user_id exist in meetings.turns table
   async getUserStats(userId) {
     const stats = await this.query(`
       SELECT 

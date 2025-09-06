@@ -40,6 +40,7 @@ export class ApiTestFramework {
       active: true
     };
     
+    // Available methods: create, update, delete - verified in DatabaseAgent users domain
     const user = await this.dbAgent.users.create({ ...defaultUser, ...userData });
     this.testUsers.push(user);
     return user;
@@ -52,6 +53,7 @@ export class ApiTestFramework {
       story: 'Test client for API testing'
     };
     
+    // Available methods: createClient, updateClient, deleteClient - verified in DatabaseAgent clients domain
     const client = await this.dbAgent.clients.createClient({ ...defaultClient, ...clientData });
     this.testClients.push(client);
     return client;
@@ -70,8 +72,8 @@ export class ApiTestFramework {
       description: 'Test meeting for API testing',
       meeting_type: 'manual',
       status: 'active',
-      client_id: this.testClients[0].id,
-      created_by_user_id: this.testUsers[0].id,
+      client_id: this.testClients[0].id, // Database field - verified in meetings schema
+      created_by_user_id: this.testUsers[0].id, // Database field - verified in meetings schema
       metadata: { test: true }
     };
     

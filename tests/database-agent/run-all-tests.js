@@ -10,9 +10,12 @@ import { runFileOperationsTests } from './domains/file-operations.test.js';
 import { runTurnOperationsTests } from './domains/turn-operations.test.js';
 import { runClientOperationsTests } from './domains/client-operations.test.js';
 import { runLLMOperationsTests } from './domains/llm-operations.test.js';
+import { runBotOperationsTests } from './domains/bot-operations.test.js';
+import { runLocationOperationsTests } from './domains/location-operations.test.js';
+import { runClientSettingsOperationsTests } from './domains/client-settings-operations.test.js';
+import { runDesignGamesOperationsTests } from './domains/design-games-operations.test.js';
+import { runSummaryOperationsTests } from './domains/summary-operations.test.js';
 import { runIntegrationTests } from './integration/converted-files.test.js';
-// TODO: Import other domain tests as they're created
-// import { runLocationOperationsTests } from './domains/location-operations.test.js';
 
 const DOMAINS = [
   {
@@ -46,15 +49,35 @@ const DOMAINS = [
     status: 'implemented'
   },
   {
+    name: 'Bot Operations',
+    testFunction: runBotOperationsTests,
+    status: 'implemented'
+  },
+  {
+    name: 'Location Operations',
+    testFunction: runLocationOperationsTests,
+    status: 'implemented'
+  },
+  {
+    name: 'Client Settings Operations',
+    testFunction: runClientSettingsOperationsTests,
+    status: 'implemented'
+  },
+  {
+    name: 'Design Games Operations',
+    testFunction: runDesignGamesOperationsTests,
+    status: 'implemented'
+  },
+  {
+    name: 'Summary Operations',
+    testFunction: runSummaryOperationsTests,
+    status: 'implemented'
+  },
+  {
     name: 'Integration Tests',
     testFunction: runIntegrationTests,
     status: 'implemented'
-  },
-  // {
-  //   name: 'Location Operations',
-  //   testFunction: runLocationOperationsTests,
-  //   status: 'pending'
-  // }
+  }
 ];
 
 async function runAllDatabaseAgentTests() {
@@ -100,13 +123,29 @@ async function runAllDatabaseAgentTests() {
       console.log(`${status} ${domain.name}: ${results.passed}/${results.passed + results.failed} (${rate}%)`);
       
     } catch (error) {
-      console.error(`Error: ${error.message}`);
+      // Enhanced error reporting for critical code issues
+      const isTableFieldError = error.message.includes('column') && error.message.includes('does not exist');
+      const isParameterError = error.message.includes('arguments') || 
+                              error.message.includes('parameter') || 
+                              error.message.includes('is not a function');
+      
+      if (isTableFieldError) {
+        console.error(`🔴 CRITICAL TABLE FIELD ERROR: ${error.message}`);
+        if (error.detail) console.error(`   Detail: ${error.detail}`);
+        if (error.hint) console.error(`   Hint: ${error.hint}`);
+      } else if (isParameterError) {
+        console.error(`🔴 CRITICAL PARAMETER ERROR: ${error.message}`);
+      } else {
+        console.error(`Error: ${error.message}`);
+      }
+      
       overallResults.domainResults.push({
         name: domain.name,
         passed: 0,
         failed: 1,
         success: false,
-        error: error.message
+        error: error.message,
+        errorType: isTableFieldError ? 'TABLE_FIELD' : isParameterError ? 'PARAMETER' : 'OTHER'
       });
       overallResults.totalFailed += 1;
       implementedDomains++;
@@ -145,6 +184,34 @@ async function runAllDatabaseAgentTests() {
         console.log(`     ⚠️  Error: ${domain.error}`);
       }
     });
+  }
+
+  // Critical Error Analysis
+  const tableFieldErrors = overallResults.domainResults.filter(d => d.errorType === 'TABLE_FIELD');
+  const parameterErrors = overallResults.domainResults.filter(d => d.errorType === 'PARAMETER');
+  const criticalErrors = tableFieldErrors.length + parameterErrors.length;
+  
+  if (criticalErrors > 0) {
+    console.log('\n🚨 CRITICAL CODE ERRORS FOUND:');
+    console.log('================================');
+    
+    if (tableFieldErrors.length > 0) {
+      console.log(`\n🔴 TABLE FIELD ERRORS (${tableFieldErrors.length}):`);
+      tableFieldErrors.forEach(error => {
+        console.log(`   ❌ ${error.name}: Column does not exist`);
+        console.log(`      Error: ${error.error.substring(0, 80)}...`);
+      });
+    }
+    
+    if (parameterErrors.length > 0) {
+      console.log(`\n🔴 PARAMETER ERRORS (${parameterErrors.length}):`);
+      parameterErrors.forEach(error => {
+        console.log(`   ❌ ${error.name}: Function call mismatch`);
+        console.log(`      Error: ${error.error.substring(0, 80)}...`);
+      });
+    }
+    
+    console.log(`\n⚠️  MUST FIX ${criticalErrors} CRITICAL ERRORS BEFORE MERGE!`);
   }
 
   // Exit codes
