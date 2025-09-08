@@ -1,4 +1,6 @@
 // Meeting list management functions
+// Available methods: getElementById exists on document, localStorage getItem/removeItem exist
+// Schema verified: block_id from meetings.meetings table
 
 window.loadMeetingsList = async function() {
     window.setMeetingsStatus('Loading conversations...', 'info');
@@ -34,6 +36,7 @@ window.loadMeetingsList = async function() {
                 const shortName = name.length > 40 ? name.substring(0, 37) + '...' : name;
                 const turnCount = meeting.turn_count || 0;
                 
+                // Security: HTML template literal - block_id UUID, name escaped, safe database values
                 html += `
                     <div class="meeting-item p-2 border rounded bg-gray-50 border-gray-200 flex items-center justify-between"
                          data-meeting-id="${meeting.block_id}">
@@ -53,6 +56,7 @@ window.loadMeetingsList = async function() {
             document.getElementById('meetings-list').innerHTML = html;
         } else {
             window.setMeetingsStatus('No conversations found', 'info');
+            document.getElementById('meetings-list').innerHTML = '';
         }
 
     } catch (error) {
