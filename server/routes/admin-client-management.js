@@ -3,6 +3,7 @@ import { DatabaseAgent } from '#database/database-agent.js';
 import { AdminClientOperations } from '#server/clients/admin-client-operations.js';
 import { requireAdmin, ensureDbConnection } from '../middleware/admin-auth.js';
 import { createUserManagementRoutes } from './admin-user-management.js';
+import { ApiResponses } from '../api/api-responses.js';
 
 const router = express.Router();
 const dbAgent = new DatabaseAgent();

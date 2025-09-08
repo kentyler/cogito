@@ -72,7 +72,50 @@ export function createUserManagementRoutes(dbAgent) {
     }
   });
 
-  // Add a user to a client
+  // Get all available users (not in current client)
+  router.get('/users/available', requireAdmin, async (req, res) => {
+    try {
+      // Get all users from the database
+      const allUsers = await dbAgent.users.getAllUsers();
+      return ApiResponses.success(res, allUsers || []);
+    } catch (error) {
+      console.error('Get available users error:', error);
+      return ApiResponses.internalError(res, 'Failed to load available users');
+    }
+  });
+
+  // Add existing user to a client
+  router.post('/clients/:id/users/existing', requireAdmin, async (req, res) => {
+    try {
+      const clientId = parseInt(req.params.id);
+      const { userId, role } = req.body;
+      
+      // Validate input
+      if (!userId || !role) {
+        return res.status(400).json({ error: 'User ID and role are required' });
+      }
+      
+      // Check if user-client association already exists
+      const existingAssociation = await dbAgent.clients.checkUserClientAssociation(userId, clientId);
+      if (existingAssociation) {
+        return res.status(400).json({ error: 'User is already associated with this client' });
+      }
+      
+      // Add user to client
+      await dbAgent.clients.addUserToClient(userId, clientId, role);
+      
+      res.json({ 
+        success: true, 
+        message: 'User added to client successfully',
+        userId 
+      });
+    } catch (error) {
+      console.error('Add existing user to client error:', error);
+      return ApiResponses.internalError(res, 'Failed to add user to client');
+    }
+  });
+
+  // Add a new user to a client (create user and associate)
   router.post('/clients/:id/users', requireAdmin, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);

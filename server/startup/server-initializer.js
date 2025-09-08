@@ -71,8 +71,8 @@ export function mountRoutes(app) {
   app.use('/search', searchRoutes);
   
   // Admin routes
-  app.use('/admin', adminClientManagementRoutes);
-  app.use('/admin', adminUserManagementRoutes);
+  app.use('/api/admin', adminClientManagementRoutes);
+  app.use('/api/admin', adminUserManagementRoutes);
   
   // Integrations
   app.use('/api', extensionApiRoutes);

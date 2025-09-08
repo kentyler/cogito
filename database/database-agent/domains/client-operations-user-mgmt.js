@@ -83,4 +83,20 @@ export class ClientOperationsUserMgmt {
     const result = await this.connector.query(query, [userId, clientId]);
     return result.rows.length > 0;
   }
+
+  /**
+   * Check if user-client association exists (active or inactive)
+   * @param {number} userId - User ID
+   * @param {number} clientId - Client ID
+   * @returns {Promise<boolean>} True if association exists, false otherwise
+   */
+  async checkUserClientAssociation(userId, clientId) {
+    const query = `
+      SELECT 1 FROM client_mgmt.user_clients 
+      WHERE user_id = $1 AND client_id = $2
+    `;
+    
+    const result = await this.connector.query(query, [userId, clientId]);
+    return result.rows.length > 0;
+  }
 }

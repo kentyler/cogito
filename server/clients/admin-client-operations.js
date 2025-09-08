@@ -49,18 +49,15 @@ export class AdminClientOperations {
     
     // Log successful creation
     const context = extractRequestContext(req);
-    const eventLogger = this.dbAgent.getEventLogger();
-    if (eventLogger) {
-      await eventLogger.logEvent('admin_client_created', {
-        client_id: client.id,
-        client_name: client.name,
-        admin_user_id: req.session.user.id
-      }, {
-        ...context,
-        severity: 'info',
-        component: 'ClientManagement'
-      });
-    }
+    await this.dbAgent.logEvent('admin_client_created', {
+      client_id: client.id,
+      client_name: client.name,
+      admin_user_id: req.session.user.id
+    }, {
+      ...context,
+      severity: 'info',
+      component: 'ClientManagement'
+    });
 
     return client;
   }
@@ -96,18 +93,15 @@ export class AdminClientOperations {
     
     // Log successful deletion
     const context = extractRequestContext(req);
-    const eventLogger = this.dbAgent.getEventLogger();
-    if (eventLogger) {
-      await eventLogger.logEvent('admin_client_deleted', {
-        client_id: clientId,
-        client_name: clientInfo.name,
-        admin_user_id: req.session.user.id
-      }, {
-        ...context,
-        severity: 'warning',
-        component: 'ClientManagement'
-      });
-    }
+    await this.dbAgent.logEvent('admin_client_deleted', {
+      client_id: clientId,
+      client_name: clientInfo.name,
+      admin_user_id: req.session.user.id
+    }, {
+      ...context,
+      severity: 'warning',
+      component: 'ClientManagement'
+    });
 
     return deletedClient;
   }

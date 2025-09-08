@@ -79,6 +79,21 @@ export class UserOperations {
     const result = await this.connector.query(query, [userId]);
     return result.rows[0] || null;
   }
+
+  /**
+   * Get all users in the system
+   * @returns {Array} Array of all users (without password hash)
+   */
+  async getAllUsers() {
+    const query = `
+      SELECT id, email, active, created_at, updated_at
+      FROM client_mgmt.users 
+      WHERE active = true
+      ORDER BY email
+    `;
+    const result = await this.connector.query(query);
+    return result.rows;
+  }
   // Preference operations delegation
   async getUserPreferences(userId) {
     return await this._preferences.getUserPreferences(userId);

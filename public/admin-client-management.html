@@ -61,6 +61,40 @@
             border-bottom: 2px solid #e0e0e0;
         }
 
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 8px 16px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .tab-button.active {
+            background: #007acc;
+            color: white;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: #d0d0d0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .create-form h3 {
             font-size: 14px;
             color: #555;
@@ -348,28 +382,60 @@
 
             <!-- Add User Form -->
             <div class="create-form" id="userFormSection" style="display: none;">
-                <h3>Add User to Client</h3>
+                <h3>Manage Users</h3>
                 <div id="userFormMessages"></div>
-                <form id="createUserForm">
-                    <div class="form-group">
-                        <label for="userEmail">Email Address *</label>
-                        <input type="email" id="userEmail" name="email" required placeholder="user@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="userPassword">Password *</label>
-                        <input type="password" id="userPassword" name="password" required placeholder="Enter password">
-                    </div>
-                    <div class="form-group">
-                        <label for="userRole">Role *</label>
-                        <select id="userRole" name="role" required>
-                            <option value="">Select role</option>
-                            <option value="admin">Admin</option>
-                            <option value="user">User</option>
-                            <option value="viewer">Viewer</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn">Add User</button>
-                </form>
+                
+                <!-- Tab buttons -->
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="new-user">Add New User</button>
+                    <button class="tab-button" data-tab="existing-user">Add Existing User</button>
+                </div>
+
+                <!-- Add New User Tab -->
+                <div class="tab-content active" id="newUserTab">
+                    <form id="createUserForm">
+                        <div class="form-group">
+                            <label for="userEmail">Email Address *</label>
+                            <input type="email" id="userEmail" name="email" required placeholder="user@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="userPassword">Password *</label>
+                            <input type="password" id="userPassword" name="password" required placeholder="Enter password">
+                        </div>
+                        <div class="form-group">
+                            <label for="userRole">Role *</label>
+                            <select id="userRole" name="role" required>
+                                <option value="">Select role</option>
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn">Create New User</button>
+                    </form>
+                </div>
+
+                <!-- Add Existing User Tab -->
+                <div class="tab-content" id="existingUserTab">
+                    <form id="addExistingUserForm">
+                        <div class="form-group">
+                            <label for="existingUserSelect">Select User *</label>
+                            <select id="existingUserSelect" name="userId" required>
+                                <option value="">Loading users...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="existingUserRole">Role *</label>
+                            <select id="existingUserRole" name="role" required>
+                                <option value="">Select role</option>
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn">Add User to Client</button>
+                    </form>
+                </div>
             </div>
 
             <!-- Users List -->
@@ -621,6 +687,59 @@
                     e.preventDefault();
                     await this.createUser(e.target);
                 });
+
+                // Add existing user form
+                document.getElementById('addExistingUserForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.addExistingUser(e.target);
+                });
+
+                // Tab switching
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        this.switchTab(e.target.dataset.tab);
+                    });
+                });
+            }
+
+            switchTab(tabName) {
+                // Update button states
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.tab === tabName);
+                });
+
+                // Update content visibility
+                document.getElementById('newUserTab').classList.toggle('active', tabName === 'new-user');
+                document.getElementById('existingUserTab').classList.toggle('active', tabName === 'existing-user');
+
+                // Load available users when switching to existing user tab
+                if (tabName === 'existing-user') {
+                    this.loadAvailableUsers();
+                }
+            }
+
+            async loadAvailableUsers() {
+                try {
+                    const response = await fetch('/api/admin/users/available');
+                    if (!response.ok) throw new Error('Failed to load users');
+                    
+                    const users = await response.json();
+                    const select = document.getElementById('existingUserSelect');
+                    
+                    if (users.length === 0) {
+                        select.innerHTML = '<option value="">No available users</option>';
+                        return;
+                    }
+
+                    select.innerHTML = '<option value="">Select a user</option>' + 
+                        users.map(user => 
+                            `<option value="${user.id}">${this.escapeHtml(user.email)}</option>`
+                        ).join('');
+                } catch (error) {
+                    console.error('Error loading available users:', error);
+                    document.getElementById('existingUserSelect').innerHTML = 
+                        '<option value="">Error loading users</option>';
+                }
             }
 
             async createClient(form) {
@@ -686,12 +805,52 @@
                         return;
                     }
                     
-                    this.showMessage('userFormMessages', 'User added successfully!', 'success');
+                    this.showMessage('userFormMessages', 'User created successfully!', 'success');
                     form.reset();
                     await this.loadUsers(this.selectedClientId);
                     
                 } catch (error) {
                     console.error('Error creating user:', error);
+                    this.showMessage('userFormMessages', 'Failed to add user', 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            }
+
+            async addExistingUser(form) {
+                if (!this.selectedClientId) {
+                    this.showMessage('userFormMessages', 'Please select a client first', 'error');
+                    return;
+                }
+
+                const btn = form.querySelector('button[type="submit"]');
+                btn.disabled = true;
+                
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch(`/api/admin/clients/${this.selectedClientId}/users/existing`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId: formData.get('userId'),
+                            role: formData.get('role')
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        this.showMessage('userFormMessages', data.error || 'Failed to add user', 'error');
+                        return;
+                    }
+                    
+                    this.showMessage('userFormMessages', 'User added to client successfully!', 'success');
+                    form.reset();
+                    await this.loadUsers(this.selectedClientId);
+                    this.loadAvailableUsers(); // Reload available users
+                    
+                } catch (error) {
+                    console.error('Error adding existing user:', error);
                     this.showMessage('userFormMessages', 'Failed to add user', 'error');
                 } finally {
                     btn.disabled = false;

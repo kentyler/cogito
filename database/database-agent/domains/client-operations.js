@@ -65,4 +65,8 @@ export class ClientOperations {
   async checkUserClientAccess(userId, clientId) {
     return await this._userMgmt.checkUserClientAccess(userId, clientId);
   }
+
+  async checkUserClientAssociation(userId, clientId) {
+    return await this._userMgmt.checkUserClientAssociation(userId, clientId);
+  }
 }
