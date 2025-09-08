@@ -34,9 +34,9 @@ window.switchClient = async function(clientId) {
         window.currentClient = newClient;
         localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Update UI
+        // Update UI - just show email since client is shown in header
         // Security: Using textContent prevents XSS - safe to use template literal
-        document.getElementById('userInfo').textContent = `Logged in as: ${data.user.email}`;
+        document.getElementById('userInfo').textContent = data.user.email;
         
         // Update client indicator in header
         if (window.updateClientIndicator) {
@@ -52,7 +52,8 @@ window.switchClient = async function(clientId) {
         // Restore previous selection
         document.getElementById('clientSelector').value = window.currentClient?.client_id;
         // Security: Using textContent prevents XSS - safe to use template literal
-        document.getElementById('userInfo').textContent = `Logged in as: ${JSON.parse(localStorage.getItem('user')).email}`;
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        document.getElementById('userInfo').textContent = user.email || 'User';
         // Security: alert() automatically escapes content - safe string concatenation
         alert('Failed to switch client: ' + error.message);
     }

@@ -32,6 +32,9 @@ export async function setupClientSession({ req, userId, email, clientId }) {
       throw new Error('Access denied to selected client');
     }
 
+    // Update user's last_client_id in database for persistence
+    await dbAgent.users.updateUserPreference(userId, 'last_client_id', clientId);
+
     // Don't create meeting eagerly - wait for first turn
     // Meeting will be created lazily when the first conversation turn happens
     
