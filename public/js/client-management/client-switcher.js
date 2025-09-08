@@ -4,12 +4,20 @@
 
 // Switch client function for dropdown
 window.switchClient = async function(clientId) {
+    console.log('switchClient called with:', clientId);
     const clients = JSON.parse(localStorage.getItem('availableClients') || '[]');
     const newClient = clients.find(c => c.client_id == clientId);
     
-    if (!newClient || newClient.client_id == window.currentClient?.client_id) {
-        return; // No change needed
+    console.log('Current client:', window.currentClient);
+    console.log('New client:', newClient);
+    
+    if (!newClient) {
+        console.log('New client not found in available clients');
+        return;
     }
+    
+    // Always proceed with the switch - don't check if it's the same
+    // The server needs to update the session even if it looks the same
     
     try {
         // Show loading state
@@ -44,8 +52,16 @@ window.switchClient = async function(clientId) {
         }
         
         // Reload meetings for new client
-        window.setMeetingsStatus('Loading meetings for new client...', 'info');
-        window.loadMeetingsList();
+        console.log('About to reload meetings list');
+        if (window.setMeetingsStatus) {
+            window.setMeetingsStatus('Loading meetings for new client...', 'info');
+        }
+        if (window.loadMeetingsList) {
+            console.log('Calling loadMeetingsList');
+            window.loadMeetingsList();
+        } else {
+            console.error('loadMeetingsList function not found');
+        }
         
     } catch (error) {
         console.error('Client switch error:', error);
