@@ -32,13 +32,20 @@ export async function loadAvailableAvatars(clientId) {
 // Load available LLMs from the server
 export async function loadAvailableLLMs() {
     try {
-        const response = await fetch('/api/llms', {
+        const response = await fetch('/settings/llms', {
             credentials: 'include'
         });
         
         if (response.ok) {
             const data = await response.json();
+            console.log('Loaded LLMs from server:', data.llms);
             return data.llms || [];
+        } else {
+            console.error('Failed to load LLMs, status:', response.status);
+            // Fall back to static list
+            return [
+                { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
+            ];
         }
     } catch (error) {
         console.error('Error loading LLMs:', error);
