@@ -32,7 +32,7 @@ export async function loadAvailableAvatars(clientId) {
 // Load available LLMs from the server
 export async function loadAvailableLLMs() {
     try {
-        const response = await fetch('/api/llms', {
+        const response = await fetch('/settings/llms', {
             credentials: 'include'
         });
         

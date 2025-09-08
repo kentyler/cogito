@@ -59,7 +59,7 @@ function handleClickOutside(event) {
 async function populateSettingsForm() {
     try {
         // Get current user preferences from server
-        const prefsResponse = await fetch('/api/user/preferences', {
+        const prefsResponse = await fetch('/settings/user/preferences', {
             credentials: 'include'
         });
         
