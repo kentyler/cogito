@@ -6,18 +6,18 @@
 window.switchClient = async function(clientId) {
     console.log('switchClient called with:', clientId);
     const clients = JSON.parse(localStorage.getItem('availableClients') || '[]');
+    console.log('Available clients:', clients);
+    
+    // Find by client_id field (the actual field from the database)
     const newClient = clients.find(c => c.client_id == clientId);
     
     console.log('Current client:', window.currentClient);
     console.log('New client:', newClient);
     
     if (!newClient) {
-        console.log('New client not found in available clients');
+        console.error('Client not found in available clients:', clientId);
         return;
     }
-    
-    // Always proceed with the switch - don't check if it's the same
-    // The server needs to update the session even if it looks the same
     
     try {
         // Show loading state
@@ -48,7 +48,7 @@ window.switchClient = async function(clientId) {
         
         // Update client indicator in header
         if (window.updateClientIndicator) {
-            window.updateClientIndicator(newClient.client_name || newClient.name);
+            window.updateClientIndicator(newClient.client_name);
         }
         
         // Reload meetings for new client
