@@ -21,49 +21,18 @@ process.on('unhandledRejection', (reason, promise) => {
 import { initializeDatabase, databaseMiddleware } from './server/config/database.js';
 import { initializeEmail } from './server/config/email.js';
 import { initializeLLMProviders } from './server/config/llm-providers.js';
-import { setupMiddleware } from './server/config/middleware.js';
 
 // Import services
 import { MeetingService } from './server/services/meeting-service.js';
 import { WebSocketService } from './server/services/websocket-service.js';
 
-// Import routes (organized by domain)
-// Auth routes
-import authRoutes from './server/routes/auth/index.js';
-import authSessionRoutes from './server/routes/auth/session-management.js';
-import authOAuthRoutes from './server/routes/auth/oauth.js';
-
-// Client management routes
-import clientManagementRoutes from './server/routes/client-management/index.js';
-
-// Meeting routes
-import meetingsCrudRoutes from './server/routes/meetings/crud.js';
-import meetingsAdditionalRoutes from './server/routes/meetings/additional.js';
-
-// Settings routes
-import settingsRoutes from './server/routes/settings/index.js';
-
-// Other routes
-import chatInterfaceRoutes from './server/routes/chat-interface.js';
-import adminClientManagementRoutes from './server/routes/admin-client-management.js';
-import conversationRoutes from './server/routes/conversations.js';
-import searchRoutes from './server/routes/search.js';
-import browserCaptureRoutes from './server/routes/browser-capture.js';
-import botsCreateRoutes from './server/routes/bots-create.js';
-import botsManagementRoutes from './server/routes/bots-management.js';
-import webhookChatRoutes from './server/routes/webhook-chat.js';
-import extensionApiRoutes from './server/routes/extension-api.js';
-import summaryRoutes from './server/routes/summary-routes.js';
-import uploadFilesRoutes from './server/routes/upload-files.js';
-import invitationsRoutes from './server/routes/invitations.js';
-import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
+// Import server initializer
+import { createExpressApp, setupAppMiddleware, mountRoutes } from './server/startup/server-initializer.js';
 
 // Import core services
 import { createTurnProcessor } from '#ai-agents/turn-processor.js';
 import { FileUploadService } from '#uploads/file-upload.js';
 import { EventLogger } from '#server/events/event-logger.js';
-
-const app = express();
 
 // Global state
 let turnProcessor = null;
@@ -83,6 +52,9 @@ async function startServer() {
   try {
     // Initialize database and core services
     const pool = await initializeDatabase();
+    
+    // Create Express app using server-initializer
+    const app = createExpressApp();
     const { getEmailTransporter } = await initializeEmail();
     const llmProviders = await initializeLLMProviders(pool);
     const fileUploadService = new FileUploadService(pool);
@@ -94,8 +66,8 @@ async function startServer() {
     });
     console.log('✅ Turn processor initialized with embedding support');
     
-    // Configure middleware and inject dependencies
-    setupMiddleware(app, pool);
+    // Setup middleware and database connections
+    setupAppMiddleware(app, pool);
     app.use(databaseMiddleware);
     app.use((req, res, next) => {
       req.pool = pool;
@@ -138,39 +110,11 @@ async function startServer() {
       res.json({ status: 'healthy', service: 'conversational-repl' });
     });
     
-    // Public routes (no auth required)
-    app.use(invitationGatewayRoutes);
-    
-    // Mount route handlers with /api prefix for auth routes
-    // Auth routes (organized)
-    app.use('/api', authRoutes);
-    app.use('/api', authSessionRoutes);
-    app.use('/auth/oauth', authOAuthRoutes);
-    
-    // Client management routes (organized)
-    app.use('/api', clientManagementRoutes);
-    app.use('/api/admin', adminClientManagementRoutes);
-    
-    // Meeting routes (organized)
-    app.use('/api', meetingsCrudRoutes);
-    app.use('/api', meetingsAdditionalRoutes);
-    
-    // Settings routes (organized)
-    app.use('/api', settingsRoutes);
-    
-    // Other routes
-    app.use('/api', conversationRoutes);
-    app.use(searchRoutes);
-    app.use(browserCaptureRoutes);
-    app.use('/api', botsCreateRoutes);
-    app.use('/api', botsManagementRoutes);
-    app.use(webhookChatRoutes);
-    app.use('/api', extensionApiRoutes);
-    app.use('/api', summaryRoutes);
-    app.use('/api/upload-files', uploadFilesRoutes);
-    app.use('/api/invitations', invitationsRoutes);
+    // Mount all routes using server initializer
+    mountRoutes(app);
     
     // Create HTTP server
+    // Available methods: createServer - verified Node.js http module method
     const server = http.createServer(app);
     
     // Initialize WebSocket service for real-time transcription

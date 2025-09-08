@@ -35,44 +35,42 @@ import browserCaptureRoutes from '../routes/browser-capture.js';
 import webhookChatRoutes from '../routes/webhook-chat.js';
 import uploadFilesRoutes from '../routes/upload-files.js';
 import summaryHandlersRoutes from '../routes/summary-routes.js';
-import meetingSummariesRoutes from '../routes/meeting-summaries.js';
-import adminUserManagementRoutes from '../routes/admin-user-management.js';
 
 export function createExpressApp() {
   const app = express();
-  
-  // Setup middleware
-  setupMiddleware(app);
-  
   return app;
+}
+
+export function setupAppMiddleware(app, pool) {
+  // Setup middleware with pool for session store
+  setupMiddleware(app, pool);
 }
 
 export function mountRoutes(app) {
   // Mount routes with appropriate prefixes
   
   // Auth routes
-  app.use('/', authRoutes);
-  app.use('/auth', authSessionRoutes);
-  app.use('/auth', authOAuthRoutes);
+  app.use('/api', authRoutes);
+  app.use('/api', authSessionRoutes);
+  app.use('/auth/oauth', authOAuthRoutes);
   
   // Client management
-  app.use('/client-management', clientManagementRoutes);
+  app.use('/api', clientManagementRoutes);
   
   // Meetings
-  app.use('/meetings', meetingsCrudRoutes);
-  app.use('/meetings', meetingsAdditionalRoutes);
+  app.use('/api', meetingsCrudRoutes);
+  app.use('/api', meetingsAdditionalRoutes);
   
   // Settings
   app.use('/settings', settingsRoutes);
   
   // Core functionality
   app.use('/', chatInterfaceRoutes);
-  app.use('/conversations', conversationRoutes);
-  app.use('/search', searchRoutes);
+  app.use('/api', conversationRoutes);
+  app.use('/', searchRoutes);
   
   // Admin routes
   app.use('/api/admin', adminClientManagementRoutes);
-  app.use('/api/admin', adminUserManagementRoutes);
   
   // Integrations
   app.use('/api', extensionApiRoutes);
@@ -80,17 +78,16 @@ export function mountRoutes(app) {
   app.use('/browser-capture', browserCaptureRoutes);
   
   // Bot management
-  app.use('/bots', botsManagementRoutes);
-  app.use('/bots', botsCreateRoutes);
+  app.use('/api', botsManagementRoutes);
+  app.use('/api', botsCreateRoutes);
   
   // File operations
-  app.use('/upload', uploadFilesRoutes);
+  app.use('/api/upload-files', uploadFilesRoutes);
   
   // Summary and reporting
-  app.use('/summaries', summaryHandlersRoutes);
-  app.use('/meeting-summaries', meetingSummariesRoutes);
+  app.use('/api', summaryHandlersRoutes);
   
   // Invitation system
-  app.use('/invitations', invitationRoutes);
-  app.use('/invite', invitationGatewayRoutes);
+  app.use('/api/invitations', invitationRoutes);
+  app.use('/', invitationGatewayRoutes);
 }

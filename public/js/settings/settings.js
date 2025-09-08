@@ -59,7 +59,7 @@ function handleClickOutside(event) {
 async function populateSettingsForm() {
     try {
         // Get current user preferences from server
-        const prefsResponse = await fetch('/api/user/preferences', {
+        const prefsResponse = await fetch('/settings/user/preferences', {
             credentials: 'include'
         });
         
@@ -69,7 +69,7 @@ async function populateSettingsForm() {
             if (prefsData.success && prefsData.preferences) {
                 settingsState.currentClient = prefsData.preferences.client_id;
                 // Avatar preference removed - avatar system eliminated
-                settingsState.currentLLM = prefsData.preferences.llm_id || 'claude-3-5-sonnet';
+                settingsState.currentLLM = prefsData.preferences.llm_id;
             }
         }
         
