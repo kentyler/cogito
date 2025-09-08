@@ -136,7 +136,6 @@ export class LLMOperations {
         FROM client_mgmt.llm_models m
         JOIN client_mgmt.llms l ON m.llm_id = l.id
         WHERE m.is_active = true
-        AND l.api_key NOT IN ('YOUR_ANTHROPIC_API_KEY', 'YOUR_OPENAI_API_KEY')
         ORDER BY l.provider, m.name
       `;
       const result = await this.connector.query(query);
