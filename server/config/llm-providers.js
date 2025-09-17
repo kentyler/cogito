@@ -8,26 +8,31 @@ import { DatabaseProviderLoader } from './database-provider-loader.js';
 import { EnvironmentFallback } from './environment-fallback.js';
 
 /**
- * Initialize all available LLM providers from database
+ * Initialize all available LLM providers
+ * Priority: Environment variables (secure) -> Database preferences (models/settings)
  */
 export async function initializeLLMProviders(pool) {
   try {
-    const llmConfigs = await getAllLLMs(pool);
-    
-    let providers;
-    if (llmConfigs.length === 0) {
-      console.log('⚠️ No LLM configurations found in database - falling back to environment variables');
-      providers = EnvironmentFallback.initializeFromEnvironment();
-    } else {
-      providers = DatabaseProviderLoader.initializeFromDatabase(llmConfigs);
+    // ALWAYS initialize from environment variables first (secure API keys)
+    const providers = EnvironmentFallback.initializeFromEnvironment();
+
+    // Load model preferences and settings from database (not API keys)
+    try {
+      const llmConfigs = await getAllLLMs(pool);
+      if (llmConfigs.length > 0) {
+        console.log('📊 Loading LLM preferences from database (models, settings)');
+        // Could enhance providers with database preferences here
+        // but never override API keys from environment
+      }
+    } catch (dbError) {
+      console.log('ℹ️ Could not load LLM preferences from database:', dbError.message);
     }
-    
+
     console.log(`🤖 LLM Providers initialized: ${Object.keys(providers).join(', ') || 'none'}`);
     return providers;
-    
+
   } catch (error) {
-    console.error('❌ Error initializing LLM providers from database:', error);
-    console.log('⚠️ Falling back to environment variables');
-    return EnvironmentFallback.initializeFromEnvironment();
+    console.error('❌ Error initializing LLM providers:', error);
+    return {};
   }
 }
