@@ -24,7 +24,7 @@ export class TurnOperationsCore {
       content_embedding = null,
       meeting_id,
       client_id = null,
-      meeting_index = null,
+      turn_index = null,
       timestamp = new Date()
     } = turnData;
 
@@ -39,12 +39,12 @@ export class TurnOperationsCore {
         source_id, 
         metadata,
         content_embedding,
-        meeting_index,
+        turn_index,
         timestamp,
         created_at
       ) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW()) 
-      RETURNING id, created_at, metadata
+      RETURNING id, created_at, metadata, content, user_id, client_id, source_type
     `;
 
     const result = await this.connector.query(query, [
@@ -57,7 +57,7 @@ export class TurnOperationsCore {
       source_id,
       metadata,
       content_embedding,
-      meeting_index,
+      turn_index,
       timestamp
     ]);
     

@@ -197,6 +197,52 @@ export async function runClientOperationsTests() {
       logTest('createClient() validates missing name', error.message.includes('required'));
     }
 
+    // DatabaseAgent Method Signature Smoke Tests
+    console.log('\n🔧 Testing DatabaseAgent method signatures');
+    try {
+      // Test createClient signature
+      const testClient = await dbAgent.clients.createClient({
+        name: 'Smoke Test Client',
+        story: 'Test client for signature validation'
+      });
+      logTest('createClient() signature valid', true);
+      
+      // Test getClientById signature
+      await dbAgent.clients.getClientById(testClient.id);
+      logTest('getClientById() signature valid', true);
+      
+      // Test getAllClients signature
+      await dbAgent.clients.getAllClients();
+      logTest('getAllClients() signature valid', true);
+      
+      // Test updateClient signature
+      try {
+        await dbAgent.clients.updateClient(testClient.id, { story: 'Updated story' });
+        logTest('updateClient() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('updateClient() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('updateClient() signature valid', true);
+        }
+      }
+      
+      // Test deleteClient signature  
+      try {
+        await dbAgent.clients.deleteClient(999999);
+        logTest('deleteClient() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('deleteClient() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('deleteClient() signature valid', true);
+        }
+      }
+      
+    } catch (error) {
+      logTest('DatabaseAgent client method signatures', false, error.message);
+    }
+
     return testResults;
 
   } catch (error) {

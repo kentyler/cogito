@@ -1,4 +1,4 @@
-// Settings dropdown functionality for client and LLM selection (avatar system removed)
+// Settings dropdown functionality for client and LLM selection
 // Available methods: getElementById, getItem, setItem - verified DOM and localStorage APIs
 import { loadCurrentTemperature, updateTemperatureDisplay } from './temperature-settings.js';
 import { loadAvailableClients, loadAvailableLLMs } from './settings-data-loader.js';
@@ -8,11 +8,9 @@ import { updateClientSetting, updateLLMSetting, updateTemperatureSetting } from 
 // Settings dropdown state
 let settingsState = {
     currentClient: null,
-    // currentAvatar removed - avatar system eliminated
     currentLLM: 'claude-3-5-sonnet',
     currentTemperature: 0.7,
     availableClients: [],
-    // availableAvatars removed - avatar system eliminated
     availableLLMs: [
         { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
     ]
@@ -67,9 +65,9 @@ async function populateSettingsForm() {
             const prefsData = await prefsResponse.json();
             console.log('User preferences from server:', prefsData);
             if (prefsData.success && prefsData.preferences) {
-                settingsState.currentClient = prefsData.preferences.client_id;
-                // Avatar preference removed - avatar system eliminated
-                settingsState.currentLLM = prefsData.preferences.llm_id || 'claude-3-5-sonnet';
+                settingsState.currentClient = prefsData.preferences.last_client_id;
+                settingsState.currentLLM = prefsData.preferences.last_llm_id || '1';
+                console.log('✅ Loaded from server - Client:', settingsState.currentClient, 'LLM:', settingsState.currentLLM);
             }
         }
         
@@ -78,16 +76,23 @@ async function populateSettingsForm() {
             settingsState.currentTemperature = await loadCurrentTemperature(settingsState.currentClient);
         }
         
-        // Also update from local storage as fallback
+        // Use localStorage as fallback only if server data is missing
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         console.log('User from localStorage:', user);
         
         if (!settingsState.currentClient && user.client_id) {
             settingsState.currentClient = user.client_id;
+            console.log('📦 Using localStorage client:', user.client_id);
         }
-        // Avatar preference removed - avatar system eliminated
         if (!settingsState.currentLLM && user.last_llm_id) {
-            settingsState.currentLLM = user.last_llm_id;
+            // Only use localStorage LLM if it's in the new format (number)
+            if (String(user.last_llm_id).match(/^\d+$/)) {
+                settingsState.currentLLM = user.last_llm_id;
+                console.log('📦 Using localStorage LLM:', user.last_llm_id);
+            } else {
+                console.log('⚠️ Ignoring old format localStorage LLM:', user.last_llm_id);
+                settingsState.currentLLM = '1'; // Default to Claude 3.5 Sonnet
+            }
         }
         
         // If still no values, try to get from current session display
@@ -101,15 +106,12 @@ async function populateSettingsForm() {
         
         console.log('Current settings state:', {
             client: settingsState.currentClient,
-            // avatar removed - system eliminated
             llm: settingsState.currentLLM,
             temperature: settingsState.currentTemperature
         });
         
         // Load available clients
         settingsState.availableClients = await loadAvailableClients();
-        
-        // Avatar loading removed - avatar system eliminated
         
         // Load available LLMs from server
         settingsState.availableLLMs = await loadAvailableLLMs();
@@ -127,8 +129,6 @@ async function populateSettingsForm() {
 window.updateClient = async function(clientId) {
     await updateClientSetting(clientId, settingsState);
 };
-
-// Avatar update function removed - avatar system eliminated
 
 window.updateLLM = async function(llmId) {
     await updateLLMSetting(llmId, settingsState);

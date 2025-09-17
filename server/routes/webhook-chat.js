@@ -11,7 +11,14 @@ router.post('/webhook/chat', async (req, res) => {
   try {
     console.log('💬 Received chat webhook:', JSON.stringify(req.body, null, 2));
     
-    const webhookService = new WebhookService(req.db, req.anthropic, req.fileUploadService);
+    // Debug logging for LLM connection issues
+    console.log('🔍 Debug - req.anthropic status:', req.anthropic ? 'defined' : 'undefined');
+    console.log('🔍 Debug - ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? 'present' : 'missing');
+    if (req.anthropic) {
+      console.log('🔍 Debug - anthropic client type:', typeof req.anthropic);
+    }
+    
+    const webhookService = new WebhookService(req.db, req.anthropic, req.turnProcessor.embeddingService);
     
     // Extract and validate webhook data
     const { botId, messageText, senderName } = webhookService.extractWebhookData(req.body);

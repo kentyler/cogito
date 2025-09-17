@@ -3,10 +3,10 @@
 import { DatabaseAgent } from '#database/database-agent.js';
 
 export class WebhookService {
-  constructor(db, anthropic, fileUploadService) {
+  constructor(db, anthropic, embeddingService) {
     this.db = db; // Keep for legacy compatibility
     this.anthropic = anthropic;
-    this.fileUploadService = fileUploadService;
+    this.embeddingService = embeddingService; // Use embedding service instead of file upload service
     this.dbAgent = new DatabaseAgent();
     this.dbAgentConnected = false;
   }
@@ -94,32 +94,46 @@ export class WebhookService {
   async getRelevantFileContent(meetingId, question, clientId) {
     try {
       await this.ensureDbAgent();
-      // First check if there are any files associated with this meeting
-      // Standard database fields: file_id, meeting_id
-      const meetingFileIds = await this.dbAgent.query(`
-        SELECT file_id FROM meetings.meeting_files 
-        WHERE meeting_id = $1
+      
+      // Check if there are any file turns associated with this meeting
+      const meetingFileTurns = await this.dbAgent.connector.query(`
+        SELECT id, metadata->>'filename' as filename 
+        FROM meetings.turns 
+        WHERE meeting_id = $1 AND source_type = 'file_upload'
       `, [meetingId]);
       
-      // Only search files if there are files associated with this meeting
-      if (meetingFileIds.rows.length === 0) {
+      // Only search files if there are file turns associated with this meeting
+      if (meetingFileTurns.rows.length === 0) {
         return '';
       }
       
-      // Use FileUploadService for semantic search
-      const fileSearchResults = await this.fileUploadService.searchFileContent(question, clientId, 3);
+      // Generate embedding for the question
+      const questionEmbedding = await this.embeddingService.generateEmbedding(question);
+      const embeddingString = this.embeddingService.formatForDatabase(questionEmbedding);
       
-      const meetingFileIdSet = new Set(meetingFileIds.rows.map(row => row.file_id));
-      const relevantResults = fileSearchResults.filter(result => 
-        meetingFileIdSet.has(result.file_id)
-      );
+      // Search turn embeddings for similar content from file turns in this meeting
+      const fileSearchResults = await this.dbAgent.connector.query(`
+        SELECT 
+          te.content_text,
+          t.metadata->>'filename' as filename,
+          1 - (te.embedding_vector <=> $1::vector) as similarity
+        FROM meetings.turn_embeddings te
+        JOIN meetings.turns t ON te.turn_id = t.id
+        WHERE t.meeting_id = $2 
+          AND t.source_type = 'file_upload'
+          AND t.client_id = $3
+          AND te.embedding_vector IS NOT NULL
+          AND 1 - (te.embedding_vector <=> $1::vector) >= 0.6
+        ORDER BY similarity DESC
+        LIMIT 3
+      `, [embeddingString, meetingId, clientId]);
       
-      if (relevantResults.length === 0) {
+      if (fileSearchResults.rows.length === 0) {
         return '';
       }
       
       return '\n\nRELEVANT UPLOADED DOCUMENTS:\n' + 
-        relevantResults.map(result => 
+        fileSearchResults.rows.map(result => 
           `From ${result.filename}: ${result.content_text.substring(0, 500)}...`
         ).join('\n\n');
         
@@ -133,11 +147,12 @@ export class WebhookService {
   async getUploadedFilesContext(meetingId) {
     try {
       await this.ensureDbAgent();
-      const uploadedFiles = await this.dbAgent.query(`
-        SELECT f.filename, f.metadata->>'description' as description
-        FROM context.files f
-        JOIN meetings.meeting_files mf ON mf.file_id = f.id
-        WHERE mf.meeting_id = $1
+      const uploadedFiles = await this.dbAgent.connector.query(`
+        SELECT 
+          t.metadata->>'filename' as filename,
+          t.metadata->>'description' as description
+        FROM meetings.turns t
+        WHERE t.meeting_id = $1 AND t.source_type = 'file_upload'
       `, [meetingId]);
       
       if (uploadedFiles.rows.length === 0) {

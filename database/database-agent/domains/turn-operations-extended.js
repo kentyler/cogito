@@ -113,8 +113,8 @@ export class TurnOperationsExtended {
     
     if (meetingId) {
       query += `, AVG(LENGTH(content)) as avg_content_length,
-                MIN(meeting_index) as first_turn_index,
-                MAX(meeting_index) as last_turn_index
+                MIN(turn_index) as first_turn_index,
+                MAX(turn_index) as last_turn_index
                FROM meetings.turns WHERE meeting_id = $1`;
       params.push(meetingId);
     } else {

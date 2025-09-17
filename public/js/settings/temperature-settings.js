@@ -3,7 +3,7 @@
 // Load current temperature setting for client
 export async function loadCurrentTemperature(clientId) {
     try {
-        const response = await fetch(`/api/clients/${clientId}/settings/temperature`, {
+        const response = await fetch(`/settings/clients/${clientId}/settings/temperature`, {
             credentials: 'include'
         });
         
@@ -47,7 +47,7 @@ export async function updateTemperature({ temperature, clientId, onSuccess, onEr
         
         // Save to server if we have a client
         if (clientId) {
-            const response = await fetch(`/api/clients/${clientId}/settings/temperature`, {
+            const response = await fetch(`/settings/clients/${clientId}/settings/temperature`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

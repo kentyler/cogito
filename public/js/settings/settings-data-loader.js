@@ -1,6 +1,6 @@
 // Settings data loading functionality
 
-// Load available clients
+// Load available clients from database
 export async function loadAvailableClients() {
     try {
         const response = await fetch('/api/clients', {
@@ -10,7 +10,7 @@ export async function loadAvailableClients() {
         if (response.ok) {
             const data = await response.json();
             const clients = data.clients || [];
-            console.log('Loaded clients from API:', clients);
+            console.log('Loaded clients from database:', clients);
             return clients;
         } else {
             console.error('Failed to load clients:', response.status);
@@ -22,13 +22,6 @@ export async function loadAvailableClients() {
     }
 }
 
-// DEPRECATED: Avatar loading removed - avatar system eliminated
-// This function is kept for compatibility but returns empty array
-export async function loadAvailableAvatars(clientId) {
-    console.log('Avatar system has been deprecated - returning empty array');
-    return [];
-}
-
 // Load available LLMs from the server
 export async function loadAvailableLLMs() {
     try {
@@ -38,10 +31,17 @@ export async function loadAvailableLLMs() {
         
         if (response.ok) {
             const data = await response.json();
+            console.log('✅ Loaded LLMs from server:', data.llms);
             return data.llms || [];
+        } else {
+            console.error('❌ Failed to load LLMs:', response.status, response.statusText);
+            // Fall back to static list
+            return [
+                { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }
+            ];
         }
     } catch (error) {
-        console.error('Error loading LLMs:', error);
+        console.error('❌ Error loading LLMs:', error);
         // Fall back to static list
         return [
             { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' }

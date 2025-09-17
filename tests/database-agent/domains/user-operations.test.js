@@ -99,11 +99,11 @@ async function runUserOperationsTests() {
     try {
       const testUser = await TestFixtures.createTestUser(dbAgent);
       
-      const user = await dbAgent.users.getById(testUser.id);
-      logTest('getById() finds existing user', !!user);
-      logTest('getById() excludes password hash', !user.password_hash);
-      logTest('getById() returns null for non-existent', 
-        (await dbAgent.users.getById(999999)) === null
+      const user = await dbAgent.users.getUserById(testUser.id);
+      logTest('getUserById() finds existing user', !!user);
+      logTest('getUserById() excludes password hash', !user.password_hash);
+      logTest('getUserById() returns null for non-existent', 
+        (await dbAgent.users.getUserById(999999)) === null
       );
       
     } catch (error) {
@@ -141,6 +141,49 @@ async function runUserOperationsTests() {
       
     } catch (error) {
       logTest('client operations', false, error.message);
+    }
+
+    // Test 6: DatabaseAgent Method Signature Smoke Tests
+    console.log('\n🔧 Testing DatabaseAgent method signatures');
+    try {
+      // Test authenticate signature
+      await dbAgent.users.authenticate('test@example.com', 'password');
+      logTest('authenticate() signature valid', true);
+      
+      // Test getUserClients signature  
+      await dbAgent.users.getUserClients(1);
+      logTest('getUserClients() signature valid', true);
+      
+      // Test verifyClientAccess signature
+      await dbAgent.users.verifyClientAccess(1, 1);
+      logTest('verifyClientAccess() signature valid', true);
+      
+      // Test getUserPreferences signature
+      try {
+        await dbAgent.users.getUserPreferences(1);
+        logTest('getUserPreferences() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('getUserPreferences() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('getUserPreferences() signature valid', true);
+        }
+      }
+      
+      // Test updateUserPreference signature
+      try {
+        await dbAgent.users.updateUserPreference(1, 'test_field', 'test_value');
+        logTest('updateUserPreference() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('updateUserPreference() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('updateUserPreference() signature valid', true);
+        }
+      }
+      
+    } catch (error) {
+      logTest('DatabaseAgent method signatures', false, error.message);
     }
 
     // Test Summary

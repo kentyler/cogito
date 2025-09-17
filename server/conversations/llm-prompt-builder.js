@@ -23,17 +23,8 @@ export async function buildConversationalPrompt({ clientName, conversationContex
     });
   }
 
-  // Get client instructions from database
+  // Use default instructions (client-specific instructions not implemented yet)
   let defaultInstructions = DEFAULT_INSTRUCTIONS;
-  if (clientId) {
-    const clientInstructions = await withDbAgent(async (dbAgent) => {
-      return await dbAgent.clients.getClientInstructions(clientId);
-    });
-    
-    if (clientInstructions) {
-      defaultInstructions = clientInstructions;
-    }
-  }
 
   return buildFullPrompt(defaultInstructions, {
     clientName,

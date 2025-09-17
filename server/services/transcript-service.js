@@ -3,20 +3,17 @@ export class TranscriptService {
   constructor(pool) {
     this.pool = pool;
     this.meetingBuffers = new Map();
-    this.meetingSpeakerAgents = new Map();
     
     // Agent classes will be set by server initialization
     this.TranscriptBufferAgent = null;
     this.TurnEmbeddingAgent = null;
-    this.SpeakerProfileAgent = null;
     this.embeddingAgent = null;
   }
 
   // Initialize agent classes (called from server startup)
-  setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, SpeakerProfileAgent, embeddingAgent) {
+  setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, embeddingAgent) {
     this.TranscriptBufferAgent = TranscriptBufferAgent;
     this.TurnEmbeddingAgent = TurnEmbeddingAgent;
-    this.SpeakerProfileAgent = SpeakerProfileAgent;
     this.embeddingAgent = embeddingAgent;
   }
 
@@ -24,16 +21,7 @@ export class TranscriptService {
   async processTranscriptChunk(meeting, speakerName, text) {
     const meetingId = meeting.id;
     
-    // Get or create speaker profile agent for this meeting
-    let speakerAgent = this.meetingSpeakerAgents.get(meetingId);
-    if (!speakerAgent) {
-      speakerAgent = new this.SpeakerProfileAgent({
-        meetingUrl: meeting.meeting_url,
-        profileTurnLimit: 50
-      });
-      this.meetingSpeakerAgents.set(meetingId, speakerAgent);
-      console.log(`👥 Created speaker profile agent for meeting ${meetingId} with context: ${speakerAgent.context}`);
-    }
+    // Note: SpeakerProfileAgent removed - we now record speakers by name only
     
     // Get or create transcript buffer for this meeting
     let buffer = this.meetingBuffers.get(meetingId);
@@ -41,14 +29,8 @@ export class TranscriptService {
       buffer = new this.TranscriptBufferAgent({
         maxLength: 1000,
         onTurnReady: async (turn) => {
-          // Process speaker profile first to get user_id
-          const userId = await speakerAgent.processSpeaker(turn.speaker, turn.meetingId);
-          
-          // Add user_id to turn if speaker was identified
-          if (userId) {
-            turn.user_id = userId;
-            console.log(`[Transcript] Identified speaker ${turn.speaker} as user_id: ${userId}`);
-          }
+          // Record speakers by name only (no user mapping)
+          console.log(`[Transcript] Processing turn from speaker: ${turn.speaker}`);
           
           // Send to embedding agent for async processing
           await this.embeddingAgent.processTurn(turn);
@@ -94,11 +76,10 @@ export class TranscriptService {
     return summary;
   }
 
-  // Get buffer and speaker agent references for meeting service
+  // Get buffer references for meeting service
   getBuffers() {
     return {
-      meetingBuffers: this.meetingBuffers,
-      meetingSpeakerAgents: this.meetingSpeakerAgents
+      meetingBuffers: this.meetingBuffers
     };
   }
 }

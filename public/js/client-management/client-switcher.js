@@ -7,6 +7,7 @@ window.switchClient = async function(clientId) {
     console.log('switchClient called with:', clientId);
     const clients = JSON.parse(localStorage.getItem('availableClients') || '[]');
     console.log('Available clients:', clients);
+    console.log('Client IDs in available list:', clients.map(c => c.client_id));
     
     // Find by client_id field (the actual field from the database)
     const newClient = clients.find(c => c.client_id == clientId);
@@ -51,22 +52,22 @@ window.switchClient = async function(clientId) {
             window.updateClientIndicator(newClient.client_name);
         }
         
-        // Reload meetings for new client
-        console.log('About to reload meetings list');
-        if (window.setMeetingsStatus) {
-            window.setMeetingsStatus('Loading meetings for new client...', 'info');
-        }
-        if (window.loadMeetingsList) {
-            console.log('Calling loadMeetingsList');
-            window.loadMeetingsList();
+        // Refresh Talk tab for new client (meetings functionality removed)
+        console.log('🔄 Switching to new client - refreshing Talk tab for client:', newClient.client_name, 'ID:', newClient.client_id);
+        if (window.loadTalkTab) {
+            console.log('🔄 Calling loadTalkTab() for new client');
+            window.loadTalkTab();
         } else {
-            console.error('loadMeetingsList function not found');
+            console.error('❌ loadTalkTab function not available');
         }
         
     } catch (error) {
         console.error('Client switch error:', error);
-        // Restore previous selection
-        document.getElementById('clientSelector').value = window.currentClient?.client_id;
+        // Restore previous selection (safe access)
+        const clientSelector = document.getElementById('settingsClient');
+        if (clientSelector) {
+            clientSelector.value = window.currentClient?.client_id;
+        }
         // Security: Using textContent prevents XSS - safe to use template literal
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         document.getElementById('userInfo').textContent = user.email || 'User';

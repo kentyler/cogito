@@ -12,7 +12,7 @@ const router = express.Router();
 router.post('/create-bot', requireAuth, async (req, res) => {
   try {
     const { meeting_url, meeting_name } = req.body;
-    const user_id = req.session.user.user_id || req.session.user.id;
+    const user_id = req.session.user.user_id;
     let client_id = req.session.user.client_id;
     
     if (!meeting_url) {

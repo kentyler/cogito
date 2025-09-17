@@ -41,7 +41,6 @@ export async function setupClientSession({ req, userId, email, clientId }) {
     // Set up full session including parent_client_id for mini-horde support
     req.session.user = {
       user_id: userId,
-      id: userId,  // Some code uses .id
       email: email,
       client_id: client.client_id,
       client_name: client.client_name,

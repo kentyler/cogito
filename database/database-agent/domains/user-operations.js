@@ -20,6 +20,27 @@ export class UserOperations {
   }
 
   /**
+   * Get user by ID
+   * @param {number} userId - User ID
+   * @returns {Object|null} User object or null if not found
+   */
+  async getUserById(userId) {
+    const query = `
+      SELECT id, display_name as name, email, last_temperature, last_llm_id, last_client_id,
+             created_at, updated_at
+      FROM client_mgmt.users
+      WHERE id = $1
+    `;
+    const result = await this.connector.query(query, [userId]);
+    return result.rows[0] || null;
+  }
+
+  // Temperature preference delegation
+  async updateUserTemperature(userId, temperature) {
+    return await this._preferences.updateUserTemperature(userId, temperature);
+  }
+
+  /**
    * Get all active client associations for a user
    * @param {number} userId - User ID
    * @returns {Array} Array of client associations with roles
@@ -64,20 +85,6 @@ export class UserOperations {
   }
   async authenticate(email, password) {
     return await this._auth.authenticate(email, password);
-  }
-  /**
-   * Get user by ID
-   * @param {number} userId - User ID
-   * @returns {Object|null} User data (without password hash)
-   */
-  async getById(userId) {
-    const query = `
-      SELECT id, email, active, created_at, updated_at, metadata
-      FROM client_mgmt.users 
-      WHERE id = $1
-    `;
-    const result = await this.connector.query(query, [userId]);
-    return result.rows[0] || null;
   }
   // Preference operations delegation
   async getUserPreferences(userId) {

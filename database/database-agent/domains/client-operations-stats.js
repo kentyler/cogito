@@ -19,7 +19,7 @@ export class ClientOperationsStats {
         c.name,
         (SELECT COUNT(*) FROM client_mgmt.user_clients uc WHERE uc.client_id = c.id AND uc.is_active = true)::int as user_count,
         (SELECT COUNT(*) FROM meetings.meetings m WHERE m.client_id = c.id)::int as meeting_count,
-        (SELECT COUNT(*) FROM context.files f WHERE f.client_id = c.id)::int as file_count
+        (SELECT COUNT(*) FROM meetings.turns t WHERE t.client_id = c.id AND t.source_type = 'file_upload')::int as file_count
       FROM client_mgmt.clients c
       WHERE c.id = $1
     `;
@@ -50,7 +50,7 @@ export class ClientOperationsStats {
         c.story,
         (SELECT COUNT(*) FROM client_mgmt.user_clients uc WHERE uc.client_id = c.id AND uc.is_active = true)::int as user_count,
         (SELECT COUNT(*) FROM meetings.meetings m WHERE m.client_id = c.id)::int as meeting_count,
-        (SELECT COUNT(*) FROM context.files f WHERE f.client_id = c.id)::int as file_count
+        (SELECT COUNT(*) FROM meetings.turns t WHERE t.client_id = c.id AND t.source_type = 'file_upload')::int as file_count
       FROM client_mgmt.clients c
       ORDER BY c.name ASC
     `;

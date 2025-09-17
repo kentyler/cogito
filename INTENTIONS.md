@@ -1,6 +1,8 @@
-# Lib Folder Architecture
+# Cogito System Architecture
 
-**Purpose**: Core library modules and services for the Cogito system. Contains modular, focused components optimized for LLM-assisted development.
+**Purpose**: Conversational intelligence system evolving from traditional chat to reflexive knowledge generation through the Talk paradigm.
+
+**Core Evolution**: Moving from "meetings" metaphor to "talk" - an unordered collection of turns optimized for LLM comprehension and reflexive content generation.
 
 **Token Optimization**: 🎯 **~2,000 tokens** (down from ~8,000 in monolithic structure)
 
@@ -175,6 +177,64 @@ await db.users.getUserClients(userId);
 - **Debugging**: Easier to isolate issues in specific modules
 - **Maintenance**: Clear boundaries and responsibilities
 - **Testing**: Simplified unit testing with focused components
+
+---
+
+## 🚨 CRITICAL MIGRATION: Files-as-Turns Unification
+
+### Migration Overview
+**Status**: ✅ COMPLETED on dev database (2024-09-12)  
+**Purpose**: Unify all content into turns with unified embeddings system  
+**Impact**: Eliminates `context` schema, consolidates all searchable content into `meetings.turn_embeddings`
+
+### Migration Files (Execute in Order)
+```bash
+# Step 1: Create unified embeddings table
+psql -d cogito_development -f migrations/create_turn_embeddings_table.sql
+
+# Step 2: Migrate existing turn embeddings  
+psql -d cogito_development -f migrations/migrate_existing_turn_embeddings.sql
+
+# Step 3: Convert files to turns
+psql -d cogito_development -f migrations/convert_files_to_turns.sql
+
+# Step 4: Migrate file chunks to turn embeddings
+psql -d cogito_development -f migrations/migrate_context_chunks_to_turn_embeddings.sql
+```
+
+### Data Transformation Plan
+1. **meetings.turns.content_embedding** → **meetings.turn_embeddings** (chunk_index=0)
+2. **context.files** → **meetings.turns** (source_type='file_upload', content=extracted_text)
+3. **context.chunks** → **meetings.turn_embeddings** (chunk_index=1+, linked to file-turns)
+
+### Dev Migration Results ✅
+- **2687 turn embeddings** migrated from `meetings.turns.content_embedding`
+- **17 files** converted to turns with `source_type='file_upload'`  
+- **84 file chunks** migrated to `meetings.turn_embeddings` 
+- **Total: 2771 unified embeddings** in single searchable table
+- **Verification**: Search functionality working across all content types
+
+### Post-Migration Requirements  
+- [ ] Update TurnProcessor to use turn_embeddings table
+- [ ] Update context retrieval to search unified embeddings
+- [ ] Update file upload handlers to create turns directly
+- [ ] Test similarity search with unified embeddings
+- [ ] Drop context schema tables after verification
+
+### Production Migration Checklist
+- [ ] Backup database before migration
+- [ ] Run migrations during low-traffic window
+- [ ] Verify data integrity after each step
+- [ ] Test search functionality thoroughly
+- [ ] Monitor embedding search performance
+- [ ] Update application code before dropping old tables
+
+### Benefits After Migration
+- **Files as turns**: All content appears in conversation timeline
+- **Unified search**: Single embeddings table for all searchable content  
+- **Multiple embeddings**: Long content properly chunked for LLM context
+- **Clean data model**: No artificial distinction between messages and files
+- **Display flexibility**: 500-char truncation with "show more" for long content
 
 ---
 

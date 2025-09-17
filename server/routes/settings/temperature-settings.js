@@ -9,7 +9,7 @@ import { EventLogger, extractRequestContext } from '#server/events/event-logger.
 const router = express.Router();
 
 /**
- * Get client temperature setting
+ * Get user temperature setting
  */
 router.get('/clients/:clientId/settings/temperature', async (req, res) => {
   try {
@@ -31,30 +31,37 @@ router.get('/clients/:clientId/settings/temperature', async (req, res) => {
         return ApiResponses.error(res, 403, 'Access denied to client');
       }
       
-      const setting = await dbAgent.clientSettings.getClientSetting(parseInt(clientId), 'temperature');
+      // Get user's temperature preference
+      const user = await dbAgent.users.getUserById(userId);
+      const temperature = user?.last_temperature || 0.7;
       
       return ApiResponses.success(res, {
         success: true,
-        setting: setting
+        setting: {
+          setting_key: 'temperature',
+          setting_value: temperature.toString(),
+          setting_type: 'number',
+          parsed_value: temperature
+        }
       });
     } finally {
       await dbAgent.close();
     }
     
   } catch (error) {
-    console.error('Error getting client temperature:', error);
+    console.error('Error getting user temperature:', error);
     
     // Log error as event to database
     const eventLogger = new EventLogger(req.pool);
     const context = extractRequestContext(req);
-    await eventLogger.logError('client_temperature_get_error', error, context);
+    await eventLogger.logError('user_temperature_get_error', error, context);
     
     return ApiResponses.internalError(res, 'Failed to get temperature setting');
   }
 });
 
 /**
- * Update client temperature setting
+ * Update user temperature setting
  */
 router.post('/clients/:clientId/settings/temperature', async (req, res) => {
   try {
@@ -85,26 +92,22 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
       if (!hasAccess) {
         return ApiResponses.error(res, 403, 'Access denied to client');
       }
+      
       // Get previous temperature for logging
       let previousTemperature = null;
       try {
-        const previousSetting = await dbAgent.clientSettings.getClientSetting(parseInt(clientId), 'temperature');
-        if (previousSetting) {
-          previousTemperature = previousSetting.parsed_value;
-        }
+        const user = await dbAgent.users.getUserById(userId);
+        previousTemperature = user?.last_temperature || 0.7;
       } catch (error) {
         console.warn('Could not fetch previous temperature for logging:', error);
       }
       
-      const setting = await dbAgent.clientSettings.setClientTemperature(
-        parseInt(clientId), 
-        tempValue, 
-        userId
-      );
+      // Update user's temperature preference
+      const updated = await dbAgent.users.updateUserTemperature(userId, tempValue);
       
       // Log temperature change
       try {
-        await dbAgent.logEvent('client_temperature_changed', {
+        await dbAgent.logEvent('user_temperature_changed', {
           client_id: parseInt(clientId),
           user_id: userId,
           new_temperature: tempValue,
@@ -126,19 +129,24 @@ router.post('/clients/:clientId/settings/temperature', async (req, res) => {
       return ApiResponses.success(res, {
         success: true,
         message: 'Temperature setting updated',
-        setting: setting
+        setting: {
+          setting_key: 'temperature',
+          setting_value: tempValue.toString(),
+          setting_type: 'number',
+          parsed_value: tempValue
+        }
       });
     } finally {
       await dbAgent.close();
     }
     
   } catch (error) {
-    console.error('Error updating client temperature:', error);
+    console.error('Error updating user temperature:', error);
     
     // Log error as event to database
     const eventLogger = new EventLogger(req.pool);
     const context = extractRequestContext(req);
-    await eventLogger.logError('client_temperature_update_error', error, context);
+    await eventLogger.logError('user_temperature_update_error', error, context);
     
     return ApiResponses.internalError(res, 'Failed to update temperature setting');
   }

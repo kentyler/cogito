@@ -93,7 +93,6 @@ export async function generateLLMResponse(req, {
       clientId,
       pool: req.pool,
       userId
-      // avatarId removed - avatar system eliminated
     });
     
     console.log('🔍 STEP 8: Sending prompt to LLM');

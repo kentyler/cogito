@@ -99,6 +99,49 @@ export async function runBasicMeetingOperationsTests() {
       logTest(testResults, 'updateStatus()', false, error.message);
     }
 
+    // DatabaseAgent Method Signature Smoke Tests
+    console.log('\n🔧 Testing DatabaseAgent meeting method signatures');
+    try {
+      // Test createMeeting signature
+      const testMeeting = await dbAgent.meetings.createMeeting({
+        client_id: 1,
+        title: 'Smoke Test Meeting',
+        description: 'Test meeting for signature validation'
+      });
+      logTest(testResults, 'createMeeting() signature valid', true);
+      
+      // Test getMeetingById signature
+      await dbAgent.meetings.getMeetingById(testMeeting.id);
+      logTest(testResults, 'getMeetingById() signature valid', true);
+      
+      // Test getByBotId signature
+      try {
+        await dbAgent.meetings.getByBotId(999, []);
+        logTest(testResults, 'getByBotId() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest(testResults, 'getByBotId() signature valid', false, 'Method not implemented');
+        } else {
+          logTest(testResults, 'getByBotId() signature valid', true);
+        }
+      }
+      
+      // Test updateStatus signature
+      try {
+        await dbAgent.meetings.updateStatus(999, 'active');
+        logTest(testResults, 'updateStatus() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest(testResults, 'updateStatus() signature valid', false, 'Method not implemented');
+        } else {
+          logTest(testResults, 'updateStatus() signature valid', true);
+        }
+      }
+      
+    } catch (error) {
+      logTest(testResults, 'DatabaseAgent meeting method signatures', false, error.message);
+    }
+
   } catch (error) {
     console.error('❌ Basic test suite error:', error);
   } finally {

@@ -40,7 +40,6 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
           source_type: 'conversational-repl-llm',
           source_id: userTurn.id,
           meeting_id: meetingId,
-          // avatar_id removed - no longer tracking avatars in turns
           metadata: { 
             user_turn_id: userTurn.id,
             response_type: 'response-set',
@@ -59,7 +58,6 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
           source_type: 'conversational-repl-llm',
           source_id: userTurn.id,
           meeting_id: meetingId,
-          // avatar_id removed - no longer tracking avatars in turns
           metadata: { 
             user_turn_id: userTurn.id,
             response_type: 'clojure-data'
@@ -77,7 +75,6 @@ export async function createLLMTurn(req, { userId, llmResponse, userTurn, meetin
         source_type: 'conversational-repl-llm',
         source_id: userTurn.id,
         meeting_id: meetingId,
-        // avatar_id removed - no longer tracking avatars in turns
         metadata: { 
           user_turn_id: userTurn.id,
           response_type: 'clojure-data'

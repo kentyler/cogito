@@ -46,8 +46,7 @@ import settingsRoutes from './server/routes/settings/index.js';
 // Other routes
 import chatInterfaceRoutes from './server/routes/chat-interface.js';
 import adminClientManagementRoutes from './server/routes/admin-client-management.js';
-import conversationRoutes from './server/routes/conversations.js';
-import searchRoutes from './server/routes/search.js';
+import talkRoutes from './server/routes/talk.js';
 import browserCaptureRoutes from './server/routes/browser-capture.js';
 import botsCreateRoutes from './server/routes/bots-create.js';
 import botsManagementRoutes from './server/routes/bots-management.js';
@@ -60,7 +59,6 @@ import invitationGatewayRoutes from './server/routes/invitation-gateway.js';
 
 // Import core services
 import { createTurnProcessor } from '#ai-agents/turn-processor.js';
-import { FileUploadService } from '#uploads/file-upload.js';
 import { EventLogger } from '#server/events/event-logger.js';
 
 const app = express();
@@ -70,12 +68,11 @@ let turnProcessor = null;
 let meetingService = null;
 
 // Transcript processing agents
-let TranscriptBufferAgent, TurnEmbeddingAgent, SpeakerProfileAgent;
+let TranscriptBufferAgent, TurnEmbeddingAgent;
 let embeddingAgent = null;
 
 // Track active meetings and processing state
 const meetingBuffers = new Map();
-const meetingSpeakerAgents = new Map();
 const meetingLastActivity = new Map();
 
 // Initialize and start server
@@ -85,7 +82,6 @@ async function startServer() {
     const pool = await initializeDatabase();
     const { getEmailTransporter } = await initializeEmail();
     const llmProviders = await initializeLLMProviders(pool);
-    const fileUploadService = new FileUploadService(pool);
     const eventLogger = new EventLogger(pool);
     
     // Initialize processing services
@@ -104,7 +100,6 @@ async function startServer() {
       req.openai = llmProviders.openai;
       req.google = llmProviders.google;
       req.mistral = llmProviders.mistral;
-      req.fileUploadService = fileUploadService;
       req.turnProcessor = turnProcessor;
       req.logger = eventLogger;
       req.appendToConversation = (...args) => meetingService.appendToConversation(...args);
@@ -114,11 +109,9 @@ async function startServer() {
     // Import and initialize transcript processing agents
     const { TranscriptBufferAgent: TBA } = await import('#ai-agents/transcript-buffer-agent.js');
     const { TurnEmbeddingAgent: TEA } = await import('#ai-agents/turn-embedding-agent.js');
-    const { SpeakerProfileAgent: SPA } = await import('#ai-agents/speaker-profile-agent.js');
     
     TranscriptBufferAgent = TBA;
     TurnEmbeddingAgent = TEA;
-    SpeakerProfileAgent = SPA;
     embeddingAgent = new TurnEmbeddingAgent({ pool });
     console.log('✅ Transcript processing agents initialized');
     
@@ -127,10 +120,9 @@ async function startServer() {
       pool,
       getEmailTransporter,
       meetingBuffers,
-      meetingSpeakerAgents,
       meetingLastActivity
     });
-    meetingService.setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, SpeakerProfileAgent, embeddingAgent);
+    meetingService.setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, embeddingAgent);
     
 
     // Health check endpoint
@@ -156,11 +148,10 @@ async function startServer() {
     app.use('/api', meetingsAdditionalRoutes);
     
     // Settings routes (organized)
-    app.use('/api', settingsRoutes);
+    app.use('/settings', settingsRoutes);
     
     // Other routes
-    app.use('/api', conversationRoutes);
-    app.use(searchRoutes);
+    app.use('/api/talk', talkRoutes);
     app.use(browserCaptureRoutes);
     app.use('/api', botsCreateRoutes);
     app.use('/api', botsManagementRoutes);

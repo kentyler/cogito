@@ -104,8 +104,7 @@
                                     <label for="settingsLLM" class="block text-sm font-medium text-gray-700 mb-2">AI Engine:</label>
                                     <select id="settingsLLM" class="w-full p-2 border border-gray-300 rounded-md text-sm" 
                                             onchange="updateLLM(this.value)">
-                                        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                                        <!-- More LLM options will be added here -->
+                                        <!-- Options will be loaded dynamically -->
                                     </select>
                                     <p class="text-xs text-gray-500 mt-1">Select which AI model to use</p>
                                 </div>
@@ -150,24 +149,12 @@
             <div class="bg-white rounded-lg shadow mb-4 border-b border-gray-200">
                 <div class="flex px-6">
                     <button class="tab-button px-4 py-2 border-b-2 border-blue-500 text-blue-600"
-                            onclick="showTab('meetings')" id="meetings-tab">
-                        Conversations
+                            onclick="showTab('talk')" id="talk-tab">
+                        Talk
                     </button>
                     <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
                             onclick="showTab('bot-creation')">
                         Create Bot
-                    </button>
-                    <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
-                            onclick="showTab('upload-files')">
-                        Upload Files
-                    </button>
-                    <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
-                            onclick="showTab('daily-summary')">
-                        Daily Summary
-                    </button>
-                    <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
-                            onclick="showTab('monthly-summary')">
-                        Monthly Summary
                     </button>
                     <button class="tab-button px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700"
                             onclick="showTab('invitations')">
@@ -178,52 +165,40 @@
 
             <!-- Tab Content Areas -->
             <div id="tab-content">
-                <!-- Conversations Tab (Active) -->
-                <div id="meetings-content" class="tab-content">
-                    <div class="flex gap-6">
-                        <!-- Left sidebar with meetings list -->
-                        <div class="w-1/3 bg-white rounded-lg shadow p-4">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-lg font-semibold">Conversations</h2>
-                                <button onclick="createNewMeeting()" 
-                                        class="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">
-                                    New
-                                </button>
-                            </div>
-                            <div id="meetings-status" class="mb-2"></div>
-                            <div id="meetings-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+
+                <!-- Talk Tab (Active) -->
+                <div id="talk-content" class="tab-content">
+                    <div class="bg-white rounded-lg shadow">
+                        <!-- Talk Header -->
+                        <div class="p-4 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold">Talk</h2>
+                            <p class="text-sm text-gray-600 mt-1">
+                                Use <code class="bg-gray-100 px-1 rounded">@</code> to get Cogito's response, or just type to comment
+                            </p>
                         </div>
-                        
-                        <!-- Main content area -->
-                        <div class="flex-1 bg-white rounded-lg shadow p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h1 class="text-2xl font-bold">Simple Transcript Viewer</h1>
-                                <button id="scroll-to-bottom-btn" 
-                                        onclick="scrollToBottom()"
-                                        class="hidden w-10 h-10 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                        title="Scroll to bottom">
-                                    ↓
+
+                        <!-- Turn Display Area -->
+                        <div id="talk-turns" class="p-4 h-96 overflow-y-auto bg-gray-50">
+                            <div class="space-y-4" id="talk-turns-container">
+                                <!-- Turns will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Input Area -->
+                        <div class="p-4 border-t border-gray-200">
+                            <div class="flex gap-2">
+                                <input type="text" 
+                                       id="talk-input" 
+                                       class="flex-1 p-2 border border-gray-300 rounded-md"
+                                       placeholder="Type your message... Use @ to invoke Cogito"
+                                       onkeypress="handleTalkKeyPress(event)">
+                                <button onclick="sendTalkMessage()" 
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    Send
                                 </button>
                             </div>
-                    
-                    <input type="hidden" id="meetingId">
-                    
-                            <div id="status" class="mb-4"></div>
-                            <div id="content" class="space-y-4 mb-4 max-h-96 overflow-y-auto"></div>
-                            
-                            <!-- Prompt Input Form -->
-                            <div id="prompt-form" class="border-t pt-4 hidden">
-                                <div class="flex gap-2">
-                                    <textarea id="prompt-input" 
-                                              class="flex-1 p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                              placeholder="Enter your prompt..."
-                                              rows="3"></textarea>
-                                    <button id="submit-btn" 
-                                            onclick="submitPrompt()"
-                                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400">
-                                        Send
-                                    </button>
-                                </div>
+                            <div class="mt-2 text-xs text-gray-500">
+                                <span id="talk-addressing-hint"></span>
                             </div>
                         </div>
                     </div>
@@ -234,26 +209,9 @@
                     <!-- Bot creation component will be initialized here -->
                 </div>
 
-                <div id="upload-files-content" class="tab-content hidden">
-                    <!-- File upload interface will be initialized here by JavaScript -->
-                </div>
-
-                <div id="daily-summary-content" class="tab-content hidden">
-                    <!-- Daily Summary interface will be initialized here by JavaScript -->
-                </div>
-
-                <div id="monthly-summary-content" class="tab-content hidden">
-                    <div class="bg-white rounded-lg shadow p-6 text-center">
-                        <h2 class="text-xl font-semibold mb-4">Monthly Summary</h2>
-                        <p class="text-gray-600">Coming soon - monthly summary reports.</p>
-                    </div>
-                </div>
 
                 <div id="invitations-content" class="tab-content hidden">
-                    <div class="bg-white rounded-lg shadow p-6 text-center">
-                        <h2 class="text-xl font-semibold mb-4">Invitations</h2>
-                        <p class="text-gray-600">Coming soon - invitation management.</p>
-                    </div>
+                    <!-- Invitations UI will be initialized here -->
                 </div>
             </div>
         </div>
@@ -276,6 +234,7 @@
     <script src="js/meetings/meeting-ui.js"></script>
     <script src="js/meetings/meeting-content.js"></script>
     <script src="js/meetings/meeting-management.js"></script>
+    <script src="js/invitations/invitations-ui.js"></script>
     <script src="js/meetings/meetings.js"></script>
     <script src="js/bot-creation/bot-creation-api.js"></script>
     <script src="js/bot-creation/bot-creation-state.js"></script>
@@ -290,6 +249,7 @@
     <script src="js/file-upload/file-upload-text-creator.js"></script>
     <script src="js/file-upload/file-upload-right-pane.js"></script>
     <script src="js/file-upload/file-upload.js"></script>
+    <script src="js/talk/talk.js"></script>
     <script src="js/ui-components/conversation.js"></script>
     <script>
         // Update client indicator in header
@@ -336,7 +296,6 @@
             // Update client indicator immediately
             updateClientIndicator();
         };
-        // Avatar update function removed - avatar system eliminated
         window.updateLLM = function(llmId) {
             console.log('Settings module loading...');
         };
@@ -352,17 +311,23 @@
     <script>
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            // Initialize conversation features
-            initializeConversation();
-            
-            // Pre-populate with Conflict Club meeting ID for testing
-            document.getElementById('meetingId').value = 'bc52121f-0b6c-4e70-a2c0-f033a1a21c05';
+            // Initialize conversation features (legacy - may be removed)
+            if (typeof initializeConversation === 'function') {
+                initializeConversation();
+            }
             
             // Check authentication on page load
             checkAuth();
             
             // Initialize client indicator
             updateClientIndicator();
+            
+            // Initialize Talk tab by default
+            setTimeout(() => {
+                if (window.loadTalkTab) {
+                    window.loadTalkTab();
+                }
+            }, 1000); // Wait for auth to complete
         });
     </script>
 </body>

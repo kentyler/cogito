@@ -1,12 +1,7 @@
 /**
- * Settings Update Functions - Handle client, LLM, and temperature updates (avatar system removed)
- * Available methods: updateClientSetting, updateLLMSetting, updateTemperatureSetting (avatar functions removed)
+ * Settings Update Functions - Handle client, LLM, and temperature updates
  * Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
  */
-
-// Available methods: updateClientIndicator, getElementById, setItem, getItem - verified DOM and localStorage APIs
-// Schema verified: llm_id from llms table (avatar schema removed)
-// Avatar imports removed - avatar system eliminated
 import { updateSettingsForm } from './settings-form-updater.js';
 import { loadCurrentTemperature, updateTemperatureDisplay } from './temperature-settings.js';
 
@@ -16,8 +11,6 @@ export async function updateClientSetting(clientId, settingsState) {
         if (window.switchClient) {
             await window.switchClient(clientId);
             settingsState.currentClient = clientId;
-            
-            // Avatar reloading removed - avatar system eliminated
             
             // Reload temperature setting for new client
             settingsState.currentTemperature = await loadCurrentTemperature(clientId);
@@ -38,15 +31,9 @@ export async function updateClientSetting(clientId, settingsState) {
     }
 }
 
-// DEPRECATED: Avatar update function removed - avatar system eliminated
-export async function updateAvatarSetting(avatarId, settingsState) {
-    console.log('Avatar system has been deprecated - no action taken');
-    // Function kept for compatibility but does nothing
-}
-
 export async function updateLLMSetting(llmId, settingsState) {
     try {
-        const response = await fetch('/api/user/llm-preference', {
+        const response = await fetch('/settings/user/llm-preference', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

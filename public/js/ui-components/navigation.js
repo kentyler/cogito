@@ -34,30 +34,26 @@ window.showTab = function(tabName) {
         if (window.botCreation && window.botCreation.init) {
             window.botCreation.init();
         }
-    } else if (tabName === 'upload-files') {
-        // Initialize upload files component if it exists
-        if (window.fileUpload && window.fileUpload.init) {
-            window.fileUpload.init();
-        }
-    } else if (tabName === 'daily-summary') {
-        // Initialize daily summary component if it exists
-        console.log('Daily Summary tab selected');
-        if (window.DailySummary && window.DailySummary.render) {
-            console.log('Calling DailySummary.render()');
-            window.DailySummary.render();
+    } else if (tabName === 'talk') {
+        // Initialize Talk tab
+        console.log('Talk tab selected');
+        if (window.loadTalkTab) {
+            window.loadTalkTab();
         } else {
-            console.error('DailySummary not found or render method missing');
+            console.error('loadTalkTab function not found');
         }
-    } else if (tabName === 'monthly-summary') {
-        // Initialize monthly summary component if it exists
-        console.log('Monthly Summary tab selected');
-        if (window.MonthlySummary && window.MonthlySummary.render) {
-            console.log('Calling MonthlySummary.render()');
-            window.MonthlySummary.render();
-        } else {
-            console.error('MonthlySummary not found or render method missing');
+    } else if (tabName === 'invitations') {
+        console.log('Invitations tab selected');
+        // Initialize invitations UI if not already done
+        if (!window.invitationsUI) {
+            // Import and initialize the InvitationsUI class
+            if (window.InvitationsUI) {
+                window.invitationsUI = new window.InvitationsUI();
+            } else {
+                console.error('InvitationsUI class not found');
+            }
         }
-    } else if (tabName !== 'meetings') {
-        console.log(`Switched to ${tabName} tab (stub)`);
+    } else {
+        console.log(`Switched to ${tabName} tab`);
     }
 }

@@ -24,6 +24,7 @@ import { ClientSettingsOperations } from './database-agent/domains/client-settin
 import DesignGamesOperations from './database-agent/domains/design-games-operations.js';
 import { SummaryOperations } from './database-agent/domains/summary-operations.js';
 import { LLMOperations } from './database-agent/domains/llm-operations.js';
+import { InvitationOperations } from './database-agent/domains/invitation-operations.js';
 
 // Import utility methods
 import { debugMeeting, inspectMeeting } from './database-agent/utils/debug-methods.js';
@@ -47,6 +48,7 @@ export class DatabaseAgent {
     this.designGames = new DesignGamesOperations(this.connector);
     this.summaries = new SummaryOperations(this.connector);
     this.llms = new LLMOperations(this.connector);
+    this.invitations = new InvitationOperations(this.connector);
     
     // Initialize meetings last so it can reference turns
     this.meetings = new MeetingOperations(this.connector);

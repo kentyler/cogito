@@ -1,5 +1,5 @@
 /**
- * Find similar file chunks using embedding similarity
+ * Find similar content chunks using unified turn embeddings system
  * Supports mini-horde inheritance: searches own client + parent client data
  * @param {Object} options
  * @param {Object} options.pool - Database connection pool (deprecated, will use DatabaseAgent)
@@ -9,7 +9,7 @@
  * @param {number} [options.limit=5] - Maximum number of chunks to return
  * @param {number} [options.minSimilarity=0.6] - Minimum similarity threshold
  * @param {string|null} [options.parentClientId=null] - Parent client ID for mini-horde support
- * @returns {Promise<Array<Object>>} Array of similar chunks
+ * @returns {Promise<Array<Object>>} Array of similar content chunks from turns
  */
 
 import { DatabaseAgent } from '#database/database-agent.js';
@@ -29,32 +29,32 @@ export async function findSimilarChunks({ pool, embeddingService, content, clien
     let clientFilter, queryParams;
     if (parentClientId) {
       // Mini-horde: search both own client AND parent client data
-      clientFilter = `WHERE c.client_id IN ($2, $3)`;
+      clientFilter = `WHERE t.client_id IN ($2, $3)`;
       queryParams = [embeddingString, clientId, parentClientId, minSimilarity, limit];
     } else {
       // Regular client: search only own client data
-      clientFilter = `WHERE c.client_id = $2`;
+      clientFilter = `WHERE t.client_id = $2`;
       queryParams = [embeddingString, clientId, minSimilarity, limit];
     }
 
     const query = `
       SELECT 
-        c.id as chunk_id,
-        c.content,
-        f.filename,
-        f.source_type,
-        f.created_at,
-        c.client_id,
+        te.id as chunk_id,
+        te.content_text as content,
+        t.metadata->>'filename' as filename,
+        t.source_type,
+        t.created_at,
+        t.client_id,
         CASE 
-          WHEN c.client_id = $2 THEN 'own'
+          WHEN t.client_id = $2 THEN 'own'
           ELSE 'parent'
         END as data_source,
-        1 - (c.embedding_vector <=> $1) as similarity
-      FROM context.chunks c
-      JOIN context.files f ON c.file_id = f.id
+        1 - (te.embedding_vector <=> $1) as similarity
+      FROM meetings.turn_embeddings te
+      JOIN meetings.turns t ON te.turn_id = t.id
       ${clientFilter}
-      AND c.embedding_vector IS NOT NULL
-      AND 1 - (c.embedding_vector <=> $1) >= ${parentClientId ? '$4' : '$3'}
+      AND te.embedding_vector IS NOT NULL
+      AND 1 - (te.embedding_vector <=> $1) >= ${parentClientId ? '$4' : '$3'}
       ORDER BY similarity DESC
       LIMIT ${parentClientId ? '$5' : '$4'}
     `;

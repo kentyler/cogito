@@ -20,16 +20,12 @@ export function updateSettingsForm(settingsState, updateTemperatureDisplay) {
         }
     }
     
-    // Avatar dropdown removed - avatar system eliminated
-    const avatarSelect = document.getElementById('settingsAvatar');
-    if (avatarSelect) {
-        avatarSelect.innerHTML = '<option value="">Avatar system deprecated</option>';
-        avatarSelect.disabled = true;
-    }
-    
     // Update LLM dropdown
     const llmSelect = document.getElementById('settingsLLM');
     if (llmSelect) {
+        console.log('🔧 Populating LLM dropdown with:', settingsState.availableLLMs);
+        console.log('🎯 Current LLM to select:', settingsState.currentLLM, typeof settingsState.currentLLM);
+        
         llmSelect.innerHTML = '';
         settingsState.availableLLMs.forEach(llm => {
             const option = document.createElement('option');
@@ -37,13 +33,16 @@ export function updateSettingsForm(settingsState, updateTemperatureDisplay) {
             option.textContent = llm.name;
             // Compare with various possible ID fields
             const llmId = llm.id || llm.model_id || llm.model;
-            option.selected = llmId === settingsState.currentLLM;
+            option.selected = String(llmId) === String(settingsState.currentLLM);
+            console.log(`  📋 Adding option: ${option.value} (${typeof option.value}) = ${option.textContent} ${option.selected ? '✅ SELECTED' : ''}`);
             llmSelect.appendChild(option);
         });
         // If current LLM wasn't found in the list, still select it if we have a value
         if (llmSelect.value != settingsState.currentLLM && settingsState.currentLLM) {
+            console.log('⚠️ Current LLM not found in options, setting directly:', settingsState.currentLLM);
             llmSelect.value = settingsState.currentLLM;
         }
+        console.log('✅ Final LLM dropdown value:', llmSelect.value);
     }
     
     // Update temperature slider

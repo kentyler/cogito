@@ -24,15 +24,13 @@ export class MeetingService {
     // Expose buffers for backward compatibility
     const buffers = this.transcriptService.getBuffers();
     this.meetingBuffers = buffers.meetingBuffers;
-    this.meetingSpeakerAgents = buffers.meetingSpeakerAgents;
   }
 
   // Initialize agent classes (called from server startup)
-  setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, SpeakerProfileAgent, embeddingAgent) {
+  setAgentClasses(TranscriptBufferAgent, TurnEmbeddingAgent, embeddingAgent) {
     this.transcriptService.setAgentClasses(
       TranscriptBufferAgent, 
       TurnEmbeddingAgent, 
-      SpeakerProfileAgent, 
       embeddingAgent
     );
   }
@@ -67,8 +65,8 @@ export class MeetingService {
         content: content
       });
       
-      // Update the database using DatabaseAgent query method
-      await this.dbAgent.query(
+      // Update the database using DatabaseAgent connector query method
+      await this.dbAgent.connector.query(
         'UPDATE meetings.meetings SET full_transcript = $1, updated_at = NOW() WHERE id = $2',
         [JSON.stringify(transcript), meetingId]
       );

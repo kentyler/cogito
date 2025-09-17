@@ -47,12 +47,12 @@ export class UserOperationsPreferences {
   /**
    * Update user preference
    * @param {number} userId - User ID
-   * @param {string} field - Field name (last_llm_id, last_client_id) - avatar system removed
+   * @param {string} field - Field name (last_llm_id, last_client_id, last_temperature)
    * @param {any} value - New value
    * @returns {Object} Updated user preferences
    */
   async updateUserPreference(userId, field, value) {
-    const allowedFields = ['last_llm_id', 'last_client_id']; // avatar system removed
+    const allowedFields = ['last_llm_id', 'last_client_id', 'last_temperature'];
     if (!allowedFields.includes(field)) {
       throw new Error(`Invalid preference field: ${field}`);
     }
@@ -61,9 +61,30 @@ export class UserOperationsPreferences {
       UPDATE client_mgmt.users 
       SET ${field} = $1, updated_at = NOW()
       WHERE id = $2
-      RETURNING last_llm_id, last_client_id
+      RETURNING last_llm_id, last_client_id, last_temperature
     `;
     const result = await this.connector.query(query, [value, userId]);
+    return result.rows[0];
+  }
+
+  /**
+   * Update user temperature preference
+   * @param {number} userId - User ID
+   * @param {number} temperature - Temperature value (0.0 to 1.0)
+   * @returns {Object} Updated user object
+   */
+  async updateUserTemperature(userId, temperature) {
+    if (temperature < 0 || temperature > 1) {
+      throw new Error('Temperature must be between 0 and 1');
+    }
+    
+    const query = `
+      UPDATE client_mgmt.users 
+      SET last_temperature = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, last_temperature
+    `;
+    const result = await this.connector.query(query, [temperature, userId]);
     return result.rows[0];
   }
 

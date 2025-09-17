@@ -9,7 +9,7 @@ const dbAgent = new DatabaseAgent();
 // Get running bots endpoint
 router.get('/bots', requireAuth, async (req, res) => {
   try {
-    const user_id = req.session.user.user_id || req.session.user.id;
+    const user_id = req.session.user.user_id;
     
     // Ensure dbAgent is connected
     if (!dbAgent.connector.pool) {

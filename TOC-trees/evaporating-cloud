@@ -1,0 +1,113 @@
+{
+  "version": "1.0.0",
+  "prompt": "Build \"Evaporating Cloud — Runnable Document\" (single-file React + Tailwind). Version: 1.0.0. Brief: - Resolve conflicts using TOC Evaporating Cloud method. Visual cloud shows objective, needs, wants, and conflict. Challenge assumptions to find injections. Inputs: - entities: Array<{ id, name, type:\"objective\"|\"need\"|\"want\", x:number|null, y:number|null }> - connections: Array<{ from:id, to:id, logic:string }> - assumptions: Array<{ id, connection:string, assumption:string, challenged:boolean }> - injections: Array<{ id, description, benefit:1-5 }> UI: - Visual cloud (D3.js) with objective at top, needs in middle, wants at bottom - **Draggable nodes** with positions saved/restored - **Double-click nodes** to edit name inline - **Zoom/pan controls** (+/-, reset buttons) and mouse wheel/drag - **Larger boxes** (120x60px) with text wrapping - Click connections to view/edit logic - **Pastel colors** for entity types - Conflict line (dotted red) between contradictory wants - Assumptions panel with challenge checkboxes - Injections panel for breakthrough solutions - **Node positions** preserved in export (x, y coordinates) - **View state** saved (zoom level, pan position) Download Options: - **Download**: Downloads artifact file containing version, prompt, and current data as JSON - **Download to Database**: Downloads Node.js script that posts artifact to endpoint Database Endpoint: https://api.example.com/evaporating-clouds",
+  "data": {
+    "entities": [
+      {
+        "id": "objective",
+        "name": "Achieve business success",
+        "type": "objective",
+        "x": 400,
+        "y": 100
+      },
+      {
+        "id": "needA",
+        "name": "Ensure quality delivery",
+        "type": "need",
+        "x": 250,
+        "y": 200
+      },
+      {
+        "id": "needB",
+        "name": "Meet tight deadlines",
+        "type": "need",
+        "x": 550,
+        "y": 200
+      },
+      {
+        "id": "wantA",
+        "name": "Take time for thorough testing",
+        "type": "want",
+        "x": 150,
+        "y": 300
+      },
+      {
+        "id": "wantB",
+        "name": "Rush to market quickly",
+        "type": "want",
+        "x": 650,
+        "y": 300
+      }
+    ],
+    "connections": [
+      {
+        "from": "needA",
+        "to": "objective",
+        "logic": "In order to achieve business success, we need to ensure quality delivery"
+      },
+      {
+        "from": "needB",
+        "to": "objective",
+        "logic": "In order to achieve business success, we need to meet tight deadlines"
+      },
+      {
+        "from": "wantA",
+        "to": "needA",
+        "logic": "In order to ensure quality delivery, we want to take time for thorough testing"
+      },
+      {
+        "from": "wantB",
+        "to": "needB",
+        "logic": "In order to meet tight deadlines, we want to rush to market quickly"
+      }
+    ],
+    "assumptions": [
+      {
+        "id": "ass1",
+        "connection": "needA-objective",
+        "assumption": "Quality is the primary driver of business success",
+        "challenged": false
+      },
+      {
+        "id": "ass2",
+        "connection": "needB-objective",
+        "assumption": "Speed to market determines competitive advantage",
+        "challenged": false
+      },
+      {
+        "id": "ass3",
+        "connection": "wantA-needA",
+        "assumption": "Thorough testing is the only way to ensure quality",
+        "challenged": true
+      },
+      {
+        "id": "ass4",
+        "connection": "wantB-needB",
+        "assumption": "Rushing means cutting corners on quality",
+        "challenged": true
+      }
+    ],
+    "injections": [
+      {
+        "id": "inj1",
+        "description": "Implement automated testing pipeline",
+        "benefit": 4
+      },
+      {
+        "id": "inj2",
+        "description": "Adopt agile development methodology",
+        "benefit": 5
+      },
+      {
+        "id": "inj3",
+        "description": "Create parallel development tracks",
+        "benefit": 3
+      }
+    ],
+    "viewState": {
+      "zoom": 0.8,
+      "panX": 0,
+      "panY": 0
+    }
+  }
+}

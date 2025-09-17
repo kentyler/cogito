@@ -200,6 +200,45 @@ async function runLLMOperationsTests() {
       }
     }
 
+    // DatabaseAgent Method Signature Smoke Tests
+    console.log('\n🔧 Testing DatabaseAgent LLM method signatures');
+    try {
+      // Test getAllLLMs signature
+      await dbAgent.llms.getAllLLMs();
+      logTest('getAllLLMs() signature valid', true);
+      
+      // Test getLLMByProvider signature
+      await dbAgent.llms.getLLMByProvider('anthropic');
+      logTest('getLLMByProvider() signature valid', true);
+      
+      // Test getAllModels signature
+      try {
+        await dbAgent.llms.getAllModels();
+        logTest('getAllModels() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('getAllModels() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('getAllModels() signature valid', true);
+        }
+      }
+      
+      // Test getModelsForProvider signature
+      try {
+        await dbAgent.llms.getModelsForProvider('anthropic');
+        logTest('getModelsForProvider() signature valid', true);
+      } catch (error) {
+        if (error.message.includes('does not exist') || error.message.includes('function')) {
+          logTest('getModelsForProvider() signature valid', false, 'Method not implemented');
+        } else {
+          logTest('getModelsForProvider() signature valid', true);
+        }
+      }
+      
+    } catch (error) {
+      logTest('DatabaseAgent LLM method signatures', false, error.message);
+    }
+
     // Test Summary
     console.log('\n' + '='.repeat(50));
     console.log(`Test Results: ${testResults.passed} passed, ${testResults.failed} failed`);

@@ -91,7 +91,6 @@ async function handleSingleClientLogin({ req, res, user, client }) {
     
     req.session.user = {
       user_id: user.id,
-      id: user.id,  // Some code uses .id
       email: user.email,
       client_id: client.client_id,
       client_name: client.client_name,

@@ -5,7 +5,7 @@
  * 1. Generates embeddings using OpenAI
  * 2. Stores in turns table with proper metadata
  * 3. Handles retries and error cases
- * 4. Maintains async processing while preserving order via meeting_index
+ * 4. Maintains async processing while preserving order via turn_index
  */
 
 import { TurnStorage } from './turn-embedding-agent/turn-storage.js';

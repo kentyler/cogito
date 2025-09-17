@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0",
+  "prompt": "Build \"Current Reality Tree — Runnable Document\" (single-file React + Tailwind). Version: 1.0.0. Brief: - Map undesirable effects (UDEs) to root causes using if-then logic. Visual tree shows cause chains. Find core problems. Inputs: - udes: Array<{ id, description, severity:1-5 }> - connections: Array<{ from:id, to:id, logic:string }> - entities: Array<{ id, name, type:\"symptom\"|\"intermediate\"|\"root\", x:number|null, y:number|null }> - validation: { sufficientCause: boolean, // Does cause fully explain effect? necessaryCause: boolean, // Is cause required for effect? verified: boolean } UI: - Visual tree (D3.js) with UDEs at top, causes below - **Draggable nodes** with positions saved/restored - **Double-click nodes** to edit name inline - **Zoom/pan controls** (+/-, reset buttons) and mouse wheel/drag - **Larger boxes** (120x60px) with text wrapping - Click to add/edit connections with logic statements - Severity heatmap coloring - \"Find Core Problem\" analyzer - Categories of Legitimate Reservation (CLR) checklist - **Pastel colors** for all boxes to ensure text readability Logic: - Core problem = node with most paths leading to UDEs - Flag circular logic - Highlight sufficient vs contributing causes - Calculate \"pain score\" = sum(severity × paths through node) Tests: - No circular references in tree - All UDEs connected to at least one cause - Each connection has explicit logic - Core problems identified (>3 paths) Audit/Export: - Mermaid diagram of tree - Core problem analysis with pain scores - CLR validation summary Features: - **Node positions** preserved in export (x, y coordinates) - **View state** saved (zoom level, pan position) - **Auto-layout** for new nodes, custom positions for dragged nodes - **Real-time link updates** during drag - **White backgrounds** on link labels for readability - **Inline editing** of node names on double-click Download Options: - **Download**: Downloads artifact file containing version, prompt, and current data as JSON - **Download to Database**: Downloads Node.js script that posts artifact (version, prompt, data) to endpoint Upload Options: - **Upload**: Upload artifact file (JSON with version, prompt, and data) to restore complete session\n\nDatabase Endpoint: https://api.example.com/reality-trees",
+  "data": {
+    "udes": [
+      {
+        "id": "ude1",
+        "description": "Low customer satisfaction",
+        "severity": 4
+      },
+      {
+        "id": "ude2",
+        "description": "High employee turnover",
+        "severity": 5
+      },
+      {
+        "id": "ude3",
+        "description": "Declining revenue",
+        "severity": 5
+      }
+    ],
+    "connections": [
+      {
+        "from": "root1",
+        "to": "int1",
+        "logic": "If poor management practices, then low morale"
+      },
+      {
+        "from": "int1",
+        "to": "ude2",
+        "logic": "If low morale, then high employee turnover"
+      },
+      {
+        "from": "int1",
+        "to": "int2",
+        "logic": "If low morale, then poor service quality"
+      },
+      {
+        "from": "int2",
+        "to": "ude1",
+        "logic": "If poor service quality, then low customer satisfaction"
+      },
+      {
+        "from": "ude1",
+        "to": "ude3",
+        "logic": "If low customer satisfaction, then declining revenue"
+      }
+    ],
+    "entities": [
+      {
+        "id": "ude1",
+        "name": "Low customer satisfaction",
+        "type": "symptom",
+        "x": 400,
+        "y": 50
+      },
+      {
+        "id": "ude2",
+        "name": "High employee turnover",
+        "type": "symptom",
+        "x": 600,
+        "y": 50
+      },
+      {
+        "id": "ude3",
+        "name": "Declining revenue",
+        "type": "symptom",
+        "x": 500,
+        "y": 150
+      },
+      {
+        "id": "int1",
+        "name": "Low morale",
+        "type": "intermediate",
+        "x": 500,
+        "y": 250
+      },
+      {
+        "id": "int2",
+        "name": "Poor service quality",
+        "type": "intermediate",
+        "x": 300,
+        "y": 250
+      },
+      {
+        "id": "root1",
+        "name": "Poor management practices",
+        "type": "root",
+        "x": 500,
+        "y": 350
+      }
+    ],
+    "viewState": {
+      "zoom": 1,
+      "panX": 0,
+      "panY": 0
+    }
+  }
+}

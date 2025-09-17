@@ -2,7 +2,7 @@
  * Transcript Buffer Agent
  * 
  * Buffers incoming transcript chunks and outputs speaker-grouped turns
- * with sequential meeting_index numbers for ordering.
+ * with sequential turn_index numbers for ordering.
  * 
  * Flush conditions:
  * 1. Speaker change detected

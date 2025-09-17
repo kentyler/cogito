@@ -60,11 +60,41 @@ export function createUserManagementRoutes(dbAgent) {
     }
   });
 
-  // Get files for a specific client
+  // Get uploaded content for a specific client (now shows file turns)
   router.get('/clients/:id/files', requireAdmin, async (req, res) => {
     try {
       const clientId = parseInt(req.params.id);
-      const files = await dbAgent.files.getClientFiles(clientId);
+      
+      // Query file turns instead of context.files
+      const query = `
+        SELECT 
+          t.id,
+          t.metadata->>'filename' as filename,
+          LENGTH(t.content) as size,
+          t.metadata->>'content_type' as content_type,
+          t.created_at as uploaded_at,
+          COUNT(te.id) as chunk_count
+        FROM meetings.turns t
+        LEFT JOIN meetings.turn_embeddings te ON t.id = te.turn_id
+        WHERE t.client_id = $1 
+          AND t.source_type = 'file_upload'
+          AND t.metadata->>'filename' IS NOT NULL
+        GROUP BY t.id, t.metadata, t.created_at
+        ORDER BY t.created_at DESC
+      `;
+      
+      const result = await dbAgent.connector.query(query, [clientId]);
+      
+      // Format for backward compatibility
+      const files = result.rows.map(row => ({
+        id: row.id,
+        filename: row.filename,
+        size: row.size,
+        content_type: row.content_type,
+        uploaded_at: row.uploaded_at,
+        chunk_count: parseInt(row.chunk_count) || 0
+      }));
+      
       return ApiResponses.success(res, files);
     } catch (error) {
       console.error('Get client files error:', error);

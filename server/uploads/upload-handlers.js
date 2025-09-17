@@ -1,7 +1,7 @@
-import { processFileContent } from './file-processor.js';
 import { extractTextFromPDF, isPDF } from './pdf-processor.js';
+import { TurnProcessor } from '../../lib/turn-processor.js';
 
-// Create text file handler
+// Create text file handler - now creates turns directly
 export async function createTextFile(req, res) {
   try {
     const { title, content } = req.body;
@@ -11,6 +11,8 @@ export async function createTextFile(req, res) {
     }
     
     const client_id = req.session?.user?.client_id;
+    const user_id = req.session?.user?.user_id;
+    
     if (!client_id) {
       return res.status(401).json({ error: 'Authentication required - no client selected' });
     }
@@ -19,54 +21,46 @@ export async function createTextFile(req, res) {
       ? title 
       : `${title}.txt`;
     
-    const buffer = Buffer.from(content, 'utf-8');
-    const size = buffer.length;
+    // Create TurnProcessor instance
+    const turnProcessor = new TurnProcessor();
     
-    const client = await req.pool.connect();
+    // Create turn data for the file content
+    const turnData = {
+      client_id: client_id,
+      user_id: user_id,
+      content: content,
+      source_type: 'file_upload',
+      meeting_id: null, // File uploads are not associated with meetings
+      metadata: {
+        filename: filename,
+        content_type: 'text/plain',
+        file_size: content.length,
+        source: 'text-input',
+        created_by: req.session?.user?.email || 'anonymous',
+        original_title: title
+      }
+    };
     
-    try {
-      await client.query('BEGIN');
-      
-      const fileResult = await client.query(`
-        INSERT INTO context.files 
-        (filename, content_data, content_type, file_size, source_type, client_id, metadata) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
-        RETURNING *
-      `, [
-        filename,
-        buffer,
-        'text/plain',
-        size,
-        'text-input',
-        client_id,
-        JSON.stringify({
-          created_by: req.session?.user?.email || 'anonymous',
-          created_at: new Date().toISOString(),
-          source: 'text-input'
-        })
-      ]);
-      
-      const file = fileResult.rows[0];
-      const chunkCount = await processFileContent({ client, fileId: file.id, content, clientId: client_id });
-      
-      await client.query('COMMIT');
-      
-      res.json({
-        id: file.id,
-        filename: file.filename,
-        size: file.file_size,
-        chunks: chunkCount,
-        uploaded_at: file.created_at,
-        content: content,
-        source_type: 'text-input'
-      });
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+    console.log('📄 Creating file as turn:', filename);
+    
+    // Use TurnProcessor to create turn with embeddings
+    const createdTurn = await turnProcessor.createTurn(turnData);
+    
+    res.json({
+      id: createdTurn.id,
+      turn_id: createdTurn.id, // For backward compatibility
+      filename: filename,
+      size: content.length,
+      chunks: createdTurn.embedding?.chunks_created || 0,
+      uploaded_at: createdTurn.created_at,
+      content: content,
+      source_type: 'file_upload',
+      embedding_info: {
+        has_embedding: createdTurn.embedding?.has_embedding || false,
+        chunks_created: createdTurn.embedding?.chunks_created || 0,
+        model: createdTurn.embedding?.model || 'none'
+      }
+    });
     
   } catch (error) {
     console.error('Text file creation error:', error);
@@ -74,7 +68,7 @@ export async function createTextFile(req, res) {
   }
 }
 
-// Upload file handler
+// Upload file handler - now creates turns directly
 export async function uploadFile(req, res) {
   try {
     if (!req.file) {
@@ -106,53 +100,58 @@ export async function uploadFile(req, res) {
     }
     
     const client_id = req.session?.user?.client_id;
+    const user_id = req.session?.user?.user_id;
+    
     if (!client_id) {
       return res.status(401).json({ error: 'Authentication required - no client selected' });
     }
     
-    const client = await req.pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      const fileResult = await client.query(`
-        INSERT INTO context.files 
-        (filename, content_data, content_type, file_size, source_type, client_id, metadata) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7) 
-        RETURNING *
-      `, [
-        originalname,
-        buffer,
-        mimetype || 'text/plain',
-        size,
-        'upload',
-        client_id,
-        JSON.stringify({
-          uploaded_by: req.session?.user?.email || 'anonymous',
-          uploaded_at: new Date().toISOString(),
-          ...extractedMetadata
-        })
-      ]);
-      
-      const file = fileResult.rows[0];
-      const chunkCount = await processFileContent({ client, fileId: file.id, content, clientId: client_id });
-      
-      await client.query('COMMIT');
-      
-      res.json({
-        id: file.id,
-        filename: file.filename,
-        size: file.file_size,
-        chunks: chunkCount,
-        uploaded_at: file.created_at
-      });
-      
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'Could not extract readable text from file' });
     }
+    
+    // Create TurnProcessor instance
+    const turnProcessor = new TurnProcessor();
+    
+    // Create turn data for the uploaded file
+    const turnData = {
+      client_id: client_id,
+      user_id: user_id,
+      content: content,
+      source_type: 'file_upload',
+      meeting_id: null, // File uploads are not associated with meetings
+      metadata: {
+        filename: originalname,
+        content_type: mimetype || 'text/plain',
+        file_size: size,
+        source: 'upload',
+        uploaded_by: req.session?.user?.email || 'anonymous',
+        original_buffer_size: size,
+        ...extractedMetadata
+      }
+    };
+    
+    console.log('📄 Creating uploaded file as turn:', originalname, `(${size} bytes)`);
+    
+    // Use TurnProcessor to create turn with embeddings
+    const createdTurn = await turnProcessor.createTurn(turnData);
+    
+    res.json({
+      id: createdTurn.id,
+      turn_id: createdTurn.id, // For backward compatibility
+      filename: originalname,
+      size: size,
+      content_length: content.length,
+      chunks: createdTurn.embedding?.chunks_created || 0,
+      uploaded_at: createdTurn.created_at,
+      source_type: 'file_upload',
+      embedding_info: {
+        has_embedding: createdTurn.embedding?.has_embedding || false,
+        chunks_created: createdTurn.embedding?.chunks_created || 0,
+        model: createdTurn.embedding?.model || 'none',
+        total_characters: createdTurn.embedding?.total_characters || content.length
+      }
+    });
     
   } catch (error) {
     console.error('File upload error:', error);

@@ -18,7 +18,7 @@ export function requireAuth(req, res, next) {
   if (req.session && req.session.user) {
     // Set up req.user for compatibility
     req.user = {
-      id: req.session.user.user_id || req.session.user.id,
+      id: req.session.user.user_id,
       email: req.session.user.email
     };
     return next();

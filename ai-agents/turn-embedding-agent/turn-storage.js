@@ -31,7 +31,7 @@ export class TurnStorage {
         user_id: turn.user_id || null,
         content: turn.content,
         content_embedding: turn.embedding,
-        meeting_index: turn.meetingIndex,
+        turn_index: turn.turnIndex || turn.meetingIndex, // Support both old and new property names
         metadata: turn.metadata,
         timestamp: turn.timestamp || new Date().toISOString()
       };
@@ -61,8 +61,8 @@ export class TurnStorage {
         COUNT(content_embedding) as turns_with_embeddings,
         COUNT(*) - COUNT(content_embedding) as turns_without_embeddings,
         AVG(LENGTH(content)) as avg_content_length,
-        MIN(meeting_index) as first_turn_index,
-        MAX(meeting_index) as last_turn_index
+        MIN(turn_index) as first_turn_index,
+        MAX(turn_index) as last_turn_index
       FROM meetings.turns 
       WHERE meeting_id = $1
     `;

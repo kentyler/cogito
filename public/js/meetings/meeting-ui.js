@@ -2,6 +2,11 @@
 
 window.setMeetingsStatus = function(message, type = 'info') {
     const statusDiv = document.getElementById('meetings-status');
+    if (!statusDiv) {
+        // Meetings tab removed - log status instead
+        console.log(`[Status ${type}]: ${message}`);
+        return;
+    }
     const colors = {
         info: 'bg-blue-50 text-blue-800 border-blue-200',
         success: 'bg-green-50 text-green-800 border-green-200',

@@ -1,17 +1,23 @@
 # Authentication System
 
 ## Purpose
-Manages user authentication, OAuth integration, client session management, and automatic meeting creation for web conversations. **All authentication operations must create session meetings to ensure data integrity.**
+Manages user authentication, OAuth integration, client session management, and conversation initialization. **Authentication establishes the user's conversation context - who they can talk to and how they participate in the unified conversation stream.**
 
 ## Core Components
 
-### Session Meeting Integration
-**Critical Pattern**: Every authenticated session must have a meeting for turn association.
+### Conversation Stream Integration
+**New Pattern**: Authentication grants access to the unified conversation stream with addressee-based interaction.
 
 ```javascript
-// REQUIRED: After successful authentication
-const meetingId = await createSessionMeeting(pool, userId, clientId);
-req.session.meeting_id = meetingId;
+// AFTER successful authentication - user joins conversation stream
+req.session.user = {
+  user_id: userId,
+  email: userEmail,
+  client_id: clientId,
+  client_name: clientName,
+  role: userRole
+};
+// No meeting_id required - user can now participate in unified turn stream
 ```
 
 ### Files and Responsibilities

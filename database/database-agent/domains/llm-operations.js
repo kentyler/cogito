@@ -143,8 +143,9 @@ export class LLMOperations {
       
       // Convert to our LLM config format
       return result.rows.map(row => ({
-        id: row.model_id, // Use model_id as the ID
+        id: row.model_db_id, // Use database ID as the ID
         name: row.name,
+        model_id: row.model_id, // Keep model_id for actual LLM calls
         provider: row.provider,
         model: row.model_id,
         maxTokens: row.max_tokens || 4000,
@@ -162,6 +163,71 @@ export class LLMOperations {
       }));
     } catch (error) {
       console.error('Error getting available models:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all models (alias for getAvailableModels for API consistency)
+   * @returns {Array} List of all available models
+   */
+  async getAllModels() {
+    return await this.getAvailableModels();
+  }
+
+  /**
+   * Get available models for a specific provider
+   * @param {string} provider - Provider name (anthropic, openai, etc.)
+   * @returns {Array} List of models for the specified provider
+   */
+  async getModelsForProvider(provider) {
+    try {
+      const query = `
+        SELECT 
+          m.id as model_db_id,
+          m.name,
+          m.model_id,
+          m.max_tokens,
+          m.temperature,
+          m.input_cost_per_token,
+          m.output_cost_per_token,
+          m.supports_streaming,
+          m.supports_images,
+          m.supports_functions,
+          m.description,
+          l.provider,
+          l.api_key,
+          l.id as llm_id
+        FROM client_mgmt.llm_models m
+        JOIN client_mgmt.llms l ON m.llm_id = l.id
+        WHERE m.is_active = true
+        AND l.provider = $1
+        AND l.api_key NOT IN ('YOUR_ANTHROPIC_API_KEY', 'YOUR_OPENAI_API_KEY')
+        ORDER BY m.name
+      `;
+      const result = await this.connector.query(query, [provider]);
+      
+      // Convert to our LLM config format
+      return result.rows.map(row => ({
+        id: row.model_id,
+        name: row.name,
+        provider: row.provider,
+        model: row.model_id,
+        maxTokens: row.max_tokens || 4000,
+        temperature: row.temperature || 0.7,
+        inputCostPerToken: parseFloat(row.input_cost_per_token),
+        outputCostPerToken: parseFloat(row.output_cost_per_token),
+        supportsStreaming: row.supports_streaming,
+        supportsImages: row.supports_images,
+        supportsFunctions: row.supports_functions,
+        description: row.description || `${row.name} via site-wide API key`,
+        hasValidKey: true,
+        apiKey: row.api_key,
+        llmId: row.llm_id,
+        modelDbId: row.model_db_id
+      }));
+    } catch (error) {
+      console.error('Error getting models for provider:', error);
       return [];
     }
   }

@@ -57,9 +57,7 @@ window.login = async function() {
                 window.updateClientIndicator(clientName);
             }
             
-            // Auto-load meetings after login
-            setMeetingsStatus('Loading meetings...', 'info');
-            window.loadMeetingsList();
+            // Meetings functionality removed - conversations now handled in talk tab
         }
         
     } catch (error) {
@@ -153,9 +151,7 @@ window.selectClient = async function(client) {
             window.updateClientIndicator(client.client_name);
         }
         
-        // Auto-load meetings after client selection
-        setMeetingsStatus('Loading meetings...', 'info');
-        window.loadMeetingsList();
+        // Meetings functionality removed - conversations now handled in talk tab
         
     } catch (error) {
         console.error('❌ Client selection error:', error);
