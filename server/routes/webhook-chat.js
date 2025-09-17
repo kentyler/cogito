@@ -7,7 +7,7 @@ import { generateDirectedResponse, generateSummaryResponse, sendChatResponse } f
 const router = express.Router();
 
 // Chat webhook endpoint - handles incoming chat messages from Recall.ai
-router.post('/webhook/chat', async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
     console.log('💬 Received chat webhook:', JSON.stringify(req.body, null, 2));
     
